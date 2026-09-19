@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "79822029956",
+    "project_id": "word-guessing-game-fb1b4",
+    "storage_bucket": "word-guessing-game-fb1b4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:79822029956:android:369a4f84fc03905da46ed1",
+        "android_client_info": {
+          "package_name": "com.wordguessing.game"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9C9FC6qT_L-VwMjrlI8ZpAB4140mM9Io"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
