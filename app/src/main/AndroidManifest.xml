@@ -22,6 +22,10 @@
     android:name=".PlayerSetupActivity"
     android:exported="false" />
 
+        <activity
+    android:name=".GameSetupActivity"
+    android:exported="false" />
+
     </application>
 
 </manifest>
