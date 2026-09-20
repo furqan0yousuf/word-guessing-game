@@ -2,8 +2,11 @@ package com.wordguessing.game
 
 import android.app.Activity
 import android.os.Bundle
+import android.content.Intent
 import android.widget.Button
-import android.widget.Toast
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
 
 class PlayerSetupActivity : Activity() {
 
@@ -11,16 +14,76 @@ class PlayerSetupActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player_setup)
 
-        findViewById<Button>(R.id.twoPlayersButton).setOnClickListener {
-            Toast.makeText(this, "2 Players selected", Toast.LENGTH_SHORT).show()
+        val twoPlayersButton = findViewById<Button>(R.id.twoPlayersButton)
+        val threePlayersButton = findViewById<Button>(R.id.threePlayersButton)
+        val fourPlayersButton = findViewById<Button>(R.id.fourPlayersButton)
+
+        twoPlayersButton.setOnClickListener {
+            showNameFields(2)
         }
 
-        findViewById<Button>(R.id.threePlayersButton).setOnClickListener {
-            Toast.makeText(this, "3 Players selected", Toast.LENGTH_SHORT).show()
+        threePlayersButton.setOnClickListener {
+            showNameFields(3)
         }
 
-        findViewById<Button>(R.id.fourPlayersButton).setOnClickListener {
-            Toast.makeText(this, "4 Players selected", Toast.LENGTH_SHORT).show()
+        fourPlayersButton.setOnClickListener {
+            showNameFields(4)
         }
+    }
+
+    private fun showNameFields(playerCount: Int) {
+
+        val layout = findViewById<LinearLayout>(R.id.playerSetupLayout)
+
+        twoPlayersButtonVisibility(false)
+
+        for (i in 1..playerCount) {
+
+            val label = TextView(this)
+            label.text = "Player $i"
+            label.textSize = 18f
+
+            val nameInput = EditText(this)
+            nameInput.hint = "Enter player $i name"
+            nameInput.tag = "player$i"
+
+            layout.addView(label)
+            layout.addView(nameInput)
+        }
+
+        val continueButton = Button(this)
+        continueButton.text = "Continue"
+        layout.addView(continueButton)
+
+        continueButton.setOnClickListener {
+            val names = ArrayList<String>()
+
+            for (i in 1..playerCount) {
+                val input = layout.findViewWithTag<EditText>("player$i")
+                val name = input.text.toString().trim()
+
+                if (name.isEmpty()) {
+                    input.error = "Enter a name"
+                    return@setOnClickListener
+                }
+
+                names.add(name)
+            }
+
+            val intent = Intent(this, GameSetupActivity::class.java)
+            intent.putStringArrayListExtra("playerNames", names)
+            startActivity(intent)
+        }
+    }
+
+    private fun twoPlayersButtonVisibility(show: Boolean) {
+        findViewById<Button>(R.id.twoPlayersButton).visibility =
+            if (show) Button.VISIBLE else Button.GONE
+
+        findViewById<Button>(R.id.threePlayersButton).visibility =
+            if (show) Button.VISIBLE else Button.GONE
+
+        findViewById<Button>(R.id.fourPlayersButton).visibility =
+            if (show) Button.VISIBLE else Button.GONE
     }
 }
