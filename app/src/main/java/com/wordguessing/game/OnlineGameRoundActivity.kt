@@ -324,6 +324,7 @@ class OnlineGameRoundActivity : Activity() {
                 Color.WHITE
             )
 
+            // GREEN = NOT GUESSED
             button.setBackgroundColor(
                 Color.rgb(
                     0,
@@ -334,12 +335,17 @@ class OnlineGameRoundActivity : Activity() {
 
             button.setOnClickListener {
 
+                // RED = GUESSED
                 button.setBackgroundColor(
                     Color.RED
                 )
 
                 button.isEnabled =
                     false
+
+                button.setTextColor(
+                    Color.WHITE
+                )
             }
 
             currentRow.addView(
@@ -351,7 +357,9 @@ class OnlineGameRoundActivity : Activity() {
                 )
             )
 
-            if ((i + 1) % 6 == 0) {
+            if (
+                (i + 1) % 6 == 0
+            ) {
 
                 currentRow =
                     LinearLayout(this)
@@ -381,7 +389,9 @@ class OnlineGameRoundActivity : Activity() {
         wholeWordButton.setOnClickListener {
 
             android.app.AlertDialog.Builder(this)
-                .setTitle("Guess Whole Word")
+                .setTitle(
+                    "Guess Whole Word"
+                )
                 .setMessage(
                     "Whole-word guessing will be connected next."
                 )
