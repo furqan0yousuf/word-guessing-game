@@ -4,11 +4,22 @@ import android.app.Activity
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.view.Gravity
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 
 class OnlineGameRoundActivity : Activity() {
+
+    private lateinit var timerText: TextView
+    private lateinit var turnText: TextView
+
+    private var timer: CountDownTimer? = null
+
+    private val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    private var currentPlayer = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,12 +39,6 @@ class OnlineGameRoundActivity : Activity() {
                 "maxPlayers",
                 playerCount
             )
-
-        val wordSelection =
-            intent.getStringExtra(
-                "wordSelection"
-            )
-                ?: "Random Word"
 
         val category =
             intent.getStringExtra(
@@ -59,16 +64,14 @@ class OnlineGameRoundActivity : Activity() {
         layout.orientation =
             LinearLayout.VERTICAL
 
-        layout.gravity =
-            Gravity.CENTER_HORIZONTAL
-
         layout.setPadding(
-            24,
-            24,
-            24,
-            24
+            16,
+            16,
+            16,
+            16
         )
 
+        // TITLE
         val title =
             TextView(this)
 
@@ -76,7 +79,7 @@ class OnlineGameRoundActivity : Activity() {
             "Online Game"
 
         title.textSize =
-            30f
+            28f
 
         title.gravity =
             Gravity.CENTER
@@ -86,61 +89,71 @@ class OnlineGameRoundActivity : Activity() {
             Typeface.BOLD
         )
 
-        title.setTextColor(
-            Color.BLACK
-        )
-
-        title.setPadding(
-            0,
-            0,
-            0,
-            30
-        )
-
         layout.addView(title)
 
-        val gameInfo =
+        // GAME INFORMATION
+        val info =
             TextView(this)
 
-        gameInfo.text =
+        info.text =
             """
             Game Code: $gameCode
-
             Players: $playerCount of $maxPlayers
-
             Category: $category
-
-            Seconds per turn: $secondsPerTurn
-
-            Word Selection: $wordSelection
-
-            Next Word Master:
-            $nextWordMaster
+            Next Word Master: $nextWordMaster
             """.trimIndent()
 
-        gameInfo.textSize =
-            19f
+        info.textSize =
+            16f
 
-        gameInfo.gravity =
+        info.gravity =
             Gravity.CENTER
 
-        gameInfo.setPadding(
+        info.setPadding(
             0,
-            10,
+            15,
             0,
-            30
+            15
         )
 
-        layout.addView(gameInfo)
+        layout.addView(info)
 
-        val turnText =
+        // WORD DISPLAY
+        val wordText =
+            TextView(this)
+
+        wordText.text =
+            "_ _ _ _ _"
+
+        wordText.textSize =
+            30f
+
+        wordText.gravity =
+            Gravity.CENTER
+
+        wordText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wordText.setPadding(
+            0,
+            15,
+            0,
+            15
+        )
+
+        layout.addView(wordText)
+
+        // TURN
+        turnText =
             TextView(this)
 
         turnText.text =
             "Player 1's Turn"
 
         turnText.textSize =
-            24f
+            22f
 
         turnText.gravity =
             Gravity.CENTER
@@ -150,29 +163,233 @@ class OnlineGameRoundActivity : Activity() {
             Typeface.BOLD
         )
 
-        turnText.setPadding(
-            0,
-            20,
-            0,
-            20
-        )
-
         layout.addView(turnText)
 
-        val message =
+        // TIMER
+        timerText =
             TextView(this)
 
-        message.text =
-            "Online game screen ready.\n\nThe actual multiplayer gameplay will be connected next."
+        timerText.text =
+            "Time: $secondsPerTurn"
 
-        message.textSize =
-            18f
+        timerText.textSize =
+            24f
 
-        message.gravity =
+        timerText.gravity =
             Gravity.CENTER
 
-        layout.addView(message)
+        timerText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        timerText.setPadding(
+            0,
+            10,
+            0,
+            15
+        )
+
+        layout.addView(timerText)
+
+        // LETTER BOARD
+        val letterBoard =
+            LinearLayout(this)
+
+        letterBoard.orientation =
+            LinearLayout.VERTICAL
+
+        layout.addView(letterBoard)
+
+        var currentRow =
+            LinearLayout(this)
+
+        currentRow.orientation =
+            LinearLayout.HORIZONTAL
+
+        currentRow.gravity =
+            Gravity.CENTER
+
+        letterBoard.addView(currentRow)
+
+        for (i in letters.indices) {
+
+            val letter =
+                letters[i].toString()
+
+            val button =
+                Button(this)
+
+            button.text =
+                letter
+
+            button.textSize =
+                14f
+
+            button.setTextColor(
+                Color.WHITE
+            )
+
+            button.setBackgroundColor(
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
+            )
+
+            button.setOnClickListener {
+
+                button.setBackgroundColor(
+                    Color.RED
+                )
+
+                button.isEnabled =
+                    false
+            }
+
+            currentRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+
+            if ((i + 1) % 6 == 0) {
+
+                currentRow =
+                    LinearLayout(this)
+
+                currentRow.orientation =
+                    LinearLayout.HORIZONTAL
+
+                currentRow.gravity =
+                    Gravity.CENTER
+
+                letterBoard.addView(
+                    currentRow
+                )
+            }
+        }
+
+        // WHOLE WORD BUTTON
+        val wholeWordButton =
+            Button(this)
+
+        wholeWordButton.text =
+            "Guess Whole Word"
+
+        wholeWordButton.textSize =
+            18f
+
+        wholeWordButton.setOnClickListener {
+
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Guess Whole Word")
+                .setMessage(
+                    "Whole-word guessing will be connected next."
+                )
+                .setPositiveButton(
+                    "OK",
+                    null
+                )
+                .show()
+        }
+
+        layout.addView(
+            wholeWordButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        // LEAVE GAME
+        val leaveButton =
+            Button(this)
+
+        leaveButton.text =
+            "Leave Game"
+
+        leaveButton.textSize =
+            18f
+
+        leaveButton.setOnClickListener {
+
+            timer?.cancel()
+
+            finish()
+        }
+
+        layout.addView(
+            leaveButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         setContentView(layout)
+
+        startTurnTimer(secondsPerTurn)
+    }
+
+    private fun startTurnTimer(
+        seconds: Int
+    ) {
+
+        timer?.cancel()
+
+        timer =
+            object :
+                CountDownTimer(
+                    seconds * 1000L,
+                    1000L
+                ) {
+
+                    override fun onTick(
+                        millisUntilFinished: Long
+                    ) {
+
+                        val remaining =
+                            millisUntilFinished / 1000L
+
+                        timerText.text =
+                            "Time: $remaining"
+                    }
+
+                    override fun onFinish() {
+
+                        timerText.text =
+                            "Time: 0"
+
+                        currentPlayer++
+
+                        if (
+                            currentPlayer >
+                            4
+                        ) {
+                            currentPlayer =
+                                1
+                        }
+
+                        turnText.text =
+                            "Player $currentPlayer's Turn"
+
+                        startTurnTimer(
+                            seconds
+                        )
+                    }
+                }
+                .start()
+    }
+
+    override fun onDestroy() {
+
+        timer?.cancel()
+
+        super.onDestroy()
     }
 }
