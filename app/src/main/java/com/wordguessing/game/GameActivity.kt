@@ -231,6 +231,6 @@ private fun updateTurnAndScores() {
 
     scoresText.text = scoreDisplay.toString()
 }
-```
+
 
 }
