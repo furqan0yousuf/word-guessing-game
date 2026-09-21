@@ -168,7 +168,7 @@ class GameWaitingActivity : Activity() {
             TextView(this)
 
         playersText.text =
-            "1 of $playerCount\n\n1. $playerName — $role"
+            "Players joined: 1 of $playerCount\n\n1. $playerName — $role"
 
         playersText.textSize =
             18f
