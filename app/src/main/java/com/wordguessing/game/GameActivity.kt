@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
+import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
@@ -68,8 +69,7 @@ class GameActivity : Activity() {
 
                 timeLeft--
 
-                timerText.text =
-                    "Time: $timeLeft"
+                updateTimerDisplay()
 
                 if (timeLeft <= 0) {
 
@@ -172,9 +172,6 @@ class GameActivity : Activity() {
             )
         }
 
-        // Prevent the same word from appearing
-        // twice in a row when possible.
-
         if (availableWords.size > 1) {
 
             availableWords.remove(
@@ -200,7 +197,7 @@ class GameActivity : Activity() {
     }
 
     // =========================
-    // UPDATE CATEGORY DISPLAY
+    // CATEGORY DISPLAY
     // =========================
 
     private fun updateCategoryDisplay() {
@@ -211,6 +208,39 @@ class GameActivity : Activity() {
             } else {
                 "Category: $actualCategory"
             }
+    }
+
+    // =========================
+    // TIMER DISPLAY
+    // =========================
+
+    private fun updateTimerDisplay() {
+
+        timerText.text =
+            "Time: $timeLeft"
+
+        if (timeLeft <= 3) {
+
+            timerText.setTypeface(
+                null,
+                Typeface.BOLD
+            )
+
+            timerText.setTextColor(
+                Color.RED
+            )
+
+        } else {
+
+            timerText.setTypeface(
+                null,
+                Typeface.BOLD
+            )
+
+            timerText.setTextColor(
+                Color.BLACK
+            )
+        }
     }
 
     // =========================
@@ -226,11 +256,15 @@ class GameActivity : Activity() {
             LinearLayout.VERTICAL
 
         layout.setPadding(
-            24,
-            24,
-            24,
-            24
+            20,
+            20,
+            20,
+            20
         )
+
+        // -------------------------
+        // TITLE
+        // -------------------------
 
         val title =
             TextView(this)
@@ -244,77 +278,139 @@ class GameActivity : Activity() {
         title.gravity =
             Gravity.CENTER
 
-        title.setTextColor(
-            Color.BLACK
+        title.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        title.setPadding(
+            0,
+            0,
+            0,
+            15
         )
 
         layout.addView(title)
+
+        // -------------------------
+        // CATEGORY + TIMER ROW
+        // -------------------------
+
+        val topRow =
+            LinearLayout(this)
+
+        topRow.orientation =
+            LinearLayout.HORIZONTAL
+
+        topRow.gravity =
+            Gravity.CENTER_VERTICAL
 
         categoryText =
             TextView(this)
 
         categoryText.textSize =
-            20f
-
-        layout.addView(
-            categoryText
-        )
-
-        updateCategoryDisplay()
-
-        turnText =
-            TextView(this)
-
-        turnText.textSize =
-            20f
-
-        turnText.setPadding(
-            0,
-            15,
-            0,
-            10
-        )
-
-        layout.addView(
-            turnText
-        )
-
-        scoresText =
-            TextView(this)
-
-        scoresText.textSize =
             18f
 
-        scoresText.setPadding(
-            0,
-            10,
-            0,
-            15
+        categoryText.setTypeface(
+            null,
+            Typeface.BOLD
         )
 
-        layout.addView(
-            scoresText
+        categoryText.setPadding(
+            0,
+            5,
+            5,
+            5
+        )
+
+        topRow.addView(
+            categoryText,
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
         )
 
         timerText =
             TextView(this)
 
         timerText.textSize =
-            22f
+            20f
 
         timerText.gravity =
             Gravity.CENTER
 
-        timerText.setPadding(
+        timerText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        topRow.addView(
+            timerText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        layout.addView(topRow)
+
+        updateCategoryDisplay()
+
+        // -------------------------
+        // TURN
+        // -------------------------
+
+        turnText =
+            TextView(this)
+
+        turnText.textSize =
+            22f
+
+        turnText.gravity =
+            Gravity.CENTER
+
+        turnText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        turnText.setPadding(
             0,
-            5,
+            15,
             0,
-            10
+            12
         )
 
         layout.addView(
-            timerText
+            turnText
         )
+
+        // -------------------------
+        // SCORES
+        // -------------------------
+
+        scoresText =
+            TextView(this)
+
+        scoresText.textSize =
+            17f
+
+        scoresText.setPadding(
+            0,
+            5,
+            0,
+            12
+        )
+
+        layout.addView(
+            scoresText
+        )
+
+        // -------------------------
+        // WORD
+        // -------------------------
 
         wordText =
             TextView(this)
@@ -325,6 +421,11 @@ class GameActivity : Activity() {
         wordText.gravity =
             Gravity.CENTER
 
+        wordText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
         wordText.setPadding(
             0,
             20,
@@ -333,8 +434,16 @@ class GameActivity : Activity() {
         )
 
         layout.addView(
-            wordText
+            wordText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
+
+        // -------------------------
+        // LETTER TITLE
+        // -------------------------
 
         val lettersTitle =
             TextView(this)
@@ -343,11 +452,30 @@ class GameActivity : Activity() {
             "Choose a letter"
 
         lettersTitle.textSize =
-            20f
+            19f
+
+        lettersTitle.gravity =
+            Gravity.CENTER
+
+        lettersTitle.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        lettersTitle.setPadding(
+            0,
+            5,
+            0,
+            8
+        )
 
         layout.addView(
             lettersTitle
         )
+
+        // -------------------------
+        // LETTERS
+        // -------------------------
 
         lettersLayout =
             LinearLayout(this)
@@ -359,6 +487,10 @@ class GameActivity : Activity() {
             lettersLayout
         )
 
+        // -------------------------
+        // WHOLE WORD BUTTON
+        // -------------------------
+
         fullWordButton =
             Button(this)
 
@@ -368,13 +500,25 @@ class GameActivity : Activity() {
         fullWordButton.textSize =
             18f
 
+        fullWordButton.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
         layout.addView(
-            fullWordButton
+            fullWordButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
 
         fullWordButton.setOnClickListener {
 
-            showWholeWordDialog()
+            if (!roundFinished) {
+
+                showWholeWordDialog()
+            }
         }
 
         setContentView(layout)
@@ -409,6 +553,9 @@ class GameActivity : Activity() {
             row.orientation =
                 LinearLayout.HORIZONTAL
 
+            row.gravity =
+                Gravity.CENTER
+
             val rowEnd =
                 minOf(
                     rowStart + 6,
@@ -429,7 +576,19 @@ class GameActivity : Activity() {
                     letter.toString()
 
                 letterButton.textSize =
-                    16f
+                    17f
+
+                letterButton.setTypeface(
+                    null,
+                    Typeface.BOLD
+                )
+
+                letterButton.setPadding(
+                    0,
+                    5,
+                    0,
+                    5
+                )
 
                 if (
                     selectedLetters.contains(
@@ -684,8 +843,7 @@ class GameActivity : Activity() {
 
         timeLeft = 0
 
-        timerText.text =
-            "Time: 0"
+        updateTimerDisplay()
 
         missedTurns[currentPlayer]++
 
@@ -790,8 +948,7 @@ class GameActivity : Activity() {
         timeLeft =
             secondsPerTurn
 
-        timerText.text =
-            "Time: $timeLeft"
+        updateTimerDisplay()
 
         handler.removeCallbacks(
             timerRunnable
@@ -829,6 +986,9 @@ class GameActivity : Activity() {
         wordText.text =
             testWord
 
+        wordText.textSize =
+            30f
+
         lettersLayout.removeAllViews()
 
         fullWordButton.isEnabled =
@@ -840,6 +1000,10 @@ class GameActivity : Activity() {
         timerText.text =
             "Round complete"
 
+        timerText.setTextColor(
+            Color.BLACK
+        )
+
         val parent =
             wordText.parent as LinearLayout
 
@@ -847,13 +1011,18 @@ class GameActivity : Activity() {
             TextView(this)
 
         winnerText.text =
-            "$winner solved the word!\n\nThe word was: $testWord"
+            "$winner solved the word!\n\nThe word was:\n$testWord"
 
         winnerText.textSize =
             22f
 
         winnerText.gravity =
             Gravity.CENTER
+
+        winnerText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
 
         winnerText.setPadding(
             0,
@@ -875,11 +1044,20 @@ class GameActivity : Activity() {
         nextWordButton.textSize =
             20f
 
+        nextWordButton.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
         parent.addView(
             nextWordButton
         )
 
         nextWordButton.setOnClickListener {
+
+            if (!roundFinished) {
+                return@setOnClickListener
+            }
 
             startNextRound(
                 parent,
