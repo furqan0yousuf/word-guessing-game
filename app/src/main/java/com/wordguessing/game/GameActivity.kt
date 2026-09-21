@@ -21,7 +21,6 @@ private lateinit var scoresText: TextView
 
 private var currentPlayer = 0
 private val scores = mutableListOf<Int>()
-
 private var playerNames = arrayListOf<String>()
 
 override fun onCreate(savedInstanceState: Bundle?) {
@@ -221,6 +220,7 @@ private fun updateTurnAndScores() {
     val scoreDisplay = StringBuilder()
 
     for (i in playerNames.indices) {
+
         scoreDisplay.append(
             "${playerNames[i]}: ${scores[i]} points"
         )
