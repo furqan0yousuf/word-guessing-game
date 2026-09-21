@@ -1,14 +1,17 @@
 package com.wordguessing.game
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.Gravity
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 
 class OnlineGameRoundActivity : Activity() {
 
@@ -21,6 +24,12 @@ class OnlineGameRoundActivity : Activity() {
     private val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     private var currentPlayer = 1
+
+    private val scores =
+        mutableMapOf<Int, Int>()
+
+    private val guessedLetters =
+        mutableSetOf<Char>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +73,17 @@ class OnlineGameRoundActivity : Activity() {
                 "nextWordMaster"
             )
                 ?: "Same Word Master"
+
+        for (player in 1..playerCount) {
+            scores[player] = 0
+        }
+
+        if (
+            wordSelection !=
+            "Random Word"
+        ) {
+            currentPlayer = 2
+        }
 
         val layout =
             LinearLayout(this)
@@ -240,9 +260,7 @@ class OnlineGameRoundActivity : Activity() {
             TextView(this)
 
         turnText.text =
-            getTurnText(
-                wordSelection
-            )
+            "Player $currentPlayer's Turn"
 
         turnText.textSize =
             22f
@@ -309,13 +327,13 @@ class OnlineGameRoundActivity : Activity() {
         for (i in letters.indices) {
 
             val letter =
-                letters[i].toString()
+                letters[i]
 
             val button =
                 Button(this)
 
             button.text =
-                letter
+                letter.toString()
 
             button.textSize =
                 14f
@@ -324,7 +342,6 @@ class OnlineGameRoundActivity : Activity() {
                 Color.WHITE
             )
 
-            // GREEN = NOT GUESSED
             button.setBackgroundColor(
                 Color.rgb(
                     0,
@@ -335,7 +352,25 @@ class OnlineGameRoundActivity : Activity() {
 
             button.setOnClickListener {
 
-                // RED = GUESSED
+                if (
+                    guessedLetters.contains(
+                        letter
+                    )
+                ) {
+
+                    Toast.makeText(
+                        this,
+                        "Already guessed.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@setOnClickListener
+                }
+
+                guessedLetters.add(
+                    letter
+                )
+
                 button.setBackgroundColor(
                     Color.RED
                 )
@@ -343,9 +378,14 @@ class OnlineGameRoundActivity : Activity() {
                 button.isEnabled =
                     false
 
-                button.setTextColor(
-                    Color.WHITE
-                )
+                // Temporary simulation:
+                // each correct letter will later
+                // be calculated from the real word.
+                Toast.makeText(
+                    this,
+                    "Letter $letter selected.",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
 
             currentRow.addView(
@@ -388,18 +428,7 @@ class OnlineGameRoundActivity : Activity() {
 
         wholeWordButton.setOnClickListener {
 
-            android.app.AlertDialog.Builder(this)
-                .setTitle(
-                    "Guess Whole Word"
-                )
-                .setMessage(
-                    "Whole-word guessing will be connected next."
-                )
-                .setPositiveButton(
-                    "OK",
-                    null
-                )
-                .show()
+            showWholeWordDialog()
         }
 
         layout.addView(
@@ -458,6 +487,10 @@ class OnlineGameRoundActivity : Activity() {
                 "$player. Player $player"
             )
 
+            builder.append(
+                " — Score: ${scores[player] ?: 0}"
+            )
+
             if (
                 wordSelection !=
                 "Random Word" &&
@@ -483,22 +516,6 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         return builder.toString().trim()
-    }
-
-    private fun getTurnText(
-        wordSelection: String
-    ): String {
-
-        if (
-            wordSelection !=
-            "Random Word" &&
-            currentPlayer == 1
-        ) {
-
-            currentPlayer = 2
-        }
-
-        return "Player $currentPlayer's Turn"
     }
 
     private fun updatePlayerList(
@@ -538,6 +555,21 @@ class OnlineGameRoundActivity : Activity() {
 
                         timerText.text =
                             "Time: $remaining"
+
+                        if (
+                            remaining <= 3
+                        ) {
+
+                            timerText.setTextColor(
+                                Color.RED
+                            )
+
+                        } else {
+
+                            timerText.setTextColor(
+                                Color.BLACK
+                            )
+                        }
                     }
 
                     override fun onFinish() {
@@ -545,39 +577,13 @@ class OnlineGameRoundActivity : Activity() {
                         timerText.text =
                             "Time: 0"
 
-                        currentPlayer++
+                        timerText.setTextColor(
+                            Color.RED
+                        )
 
-                        if (
-                            wordSelection !=
-                            "Random Word" &&
-                            currentPlayer == 1
-                        ) {
-
-                            currentPlayer = 2
-                        }
-
-                        if (
-                            currentPlayer >
+                        moveToNextPlayer(
+                            wordSelection,
                             playerCount
-                        ) {
-
-                            currentPlayer =
-                                if (
-                                    wordSelection ==
-                                    "Random Word"
-                                ) {
-                                    1
-                                } else {
-                                    2
-                                }
-                        }
-
-                        turnText.text =
-                            "Player $currentPlayer's Turn"
-
-                        updatePlayerList(
-                            playerCount,
-                            wordSelection
                         )
 
                         startTurnTimer(
@@ -588,6 +594,110 @@ class OnlineGameRoundActivity : Activity() {
                     }
                 }
                 .start()
+    }
+
+    private fun moveToNextPlayer(
+        wordSelection: String,
+        playerCount: Int
+    ) {
+
+        currentPlayer++
+
+        if (
+            wordSelection !=
+            "Random Word" &&
+            currentPlayer == 1
+        ) {
+
+            currentPlayer = 2
+        }
+
+        if (
+            currentPlayer >
+            playerCount
+        ) {
+
+            currentPlayer =
+                if (
+                    wordSelection ==
+                    "Random Word"
+                ) {
+                    1
+                } else {
+                    2
+                }
+        }
+
+        turnText.text =
+            "Player $currentPlayer's Turn"
+
+        updatePlayerList(
+            playerCount,
+            wordSelection
+        )
+    }
+
+    private fun showWholeWordDialog() {
+
+        val input =
+            EditText(this)
+
+        input.hint =
+            "Enter your word"
+
+        input.setSingleLine(true)
+
+        input.textSize =
+            18f
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "Guess Whole Word"
+                )
+                .setView(input)
+                .setNegativeButton(
+                    "Cancel",
+                    null
+                )
+                .setPositiveButton(
+                    "Guess",
+                    null
+                )
+                .create()
+
+        dialog.setOnShowListener {
+
+            dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE
+            ).setOnClickListener {
+
+                val guess =
+                    input.text
+                        .toString()
+                        .trim()
+
+                if (
+                    guess.isEmpty()
+                ) {
+
+                    input.error =
+                        "Enter a word."
+
+                    return@setOnShowListener
+                }
+
+                Toast.makeText(
+                    this,
+                    "Whole-word guess submitted.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
     }
 
     override fun onDestroy() {
