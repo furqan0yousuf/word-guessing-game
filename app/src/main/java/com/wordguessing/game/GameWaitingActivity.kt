@@ -1,6 +1,9 @@
 package com.wordguessing.game
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -8,6 +11,7 @@ import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 
 class GameWaitingActivity : Activity() {
 
@@ -128,10 +132,50 @@ class GameWaitingActivity : Activity() {
             0,
             10,
             0,
-            25
+            10
         )
 
         layout.addView(codeText)
+
+        // COPY GAME CODE
+        val copyButton =
+            Button(this)
+
+        copyButton.text =
+            "Copy Game Code"
+
+        copyButton.textSize =
+            18f
+
+        layout.addView(
+            copyButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        copyButton.setOnClickListener {
+
+            val clipboard =
+                getSystemService(
+                    Context.CLIPBOARD_SERVICE
+                ) as ClipboardManager
+
+            val clip =
+                ClipData.newPlainText(
+                    "Game Code",
+                    gameCode
+                )
+
+            clipboard.setPrimaryClip(clip)
+
+            Toast.makeText(
+                this,
+                "Game code copied.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
 
         // PLAYERS
         val playersTitle =
@@ -150,7 +194,7 @@ class GameWaitingActivity : Activity() {
 
         playersTitle.setPadding(
             0,
-            5,
+            25,
             0,
             10
         )
@@ -182,7 +226,7 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(playersText)
 
-        // RULES
+        // GAME RULES
         val rulesTitle =
             TextView(this)
 
@@ -269,7 +313,7 @@ class GameWaitingActivity : Activity() {
 
                 Waiting for the host to start.
                 """.trimIndent()
-            }
+        }
 
         statusText.textSize =
             18f
@@ -290,66 +334,6 @@ class GameWaitingActivity : Activity() {
         )
 
         layout.addView(statusText)
-
-        // READY BUTTON
-        val readyButton =
-            Button(this)
-
-        readyButton.text =
-            "Ready"
-
-        readyButton.textSize =
-            18f
-
-        readyButton.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        layout.addView(
-            readyButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        val waitingText =
-            TextView(this)
-
-        waitingText.text =
-            "Waiting for other players..."
-
-        waitingText.textSize =
-            18f
-
-        waitingText.gravity =
-            Gravity.CENTER
-
-        waitingText.setTextColor(
-            Color.DKGRAY
-        )
-
-        waitingText.setPadding(
-            0,
-            15,
-            0,
-            0
-        )
-
-        layout.addView(waitingText)
-
-        readyButton.setOnClickListener {
-
-            readyButton.isEnabled =
-                false
-
-            readyButton.text =
-                "Ready ✓"
-
-            waitingText.text =
-                "You are ready.\nWaiting for other players..."
-        }
 
         setContentView(layout)
     }
