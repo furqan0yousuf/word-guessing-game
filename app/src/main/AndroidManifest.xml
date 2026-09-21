@@ -19,14 +19,29 @@
         </activity>
 
         <activity
-    android:name=".PlayerSetupActivity"
-    android:exported="false" />
+            android:name=".PlayerSetupActivity"
+            android:exported="false" />
 
         <activity
-    android:name=".GameSetupActivity"
-    android:exported="false" />
+            android:name=".GameSetupActivity"
+            android:exported="false" />
 
-        <activity android:name=".GameActivity" />
+        <activity
+            android:name=".GameActivity"
+            android:exported="false" />
+
+        <!-- Online Game screens -->
+        <activity
+            android:name=".OnlineGameActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".CreateGameActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".JoinGameActivity"
+            android:exported="false" />
 
     </application>
 
