@@ -31,6 +31,7 @@
             android:exported="false" />
 
         <!-- Online Game screens -->
+
         <activity
             android:name=".OnlineGameActivity"
             android:exported="false" />
@@ -44,8 +45,12 @@
             android:exported="false" />
 
         <activity
-    android:name=".GameWaitingActivity"
-    android:exported="false" />
+            android:name=".GameWaitingActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".OnlineGameRoundActivity"
+            android:exported="false" />
 
     </application>
 
