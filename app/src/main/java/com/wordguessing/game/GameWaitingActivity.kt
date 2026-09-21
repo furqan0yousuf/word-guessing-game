@@ -1,9 +1,11 @@
 package com.wordguessing.game
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -14,6 +16,12 @@ import android.widget.TextView
 import android.widget.Toast
 
 class GameWaitingActivity : Activity() {
+
+    private lateinit var playersText: TextView
+    private lateinit var statusText: TextView
+    private lateinit var startButton: Button
+
+    private var joinedPlayers = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,14 +72,17 @@ class GameWaitingActivity : Activity() {
                 true
             )
 
+        val manualWord =
+            intent.getStringExtra(
+                "manualWord"
+            )
+                ?: ""
+
         val layout =
             LinearLayout(this)
 
         layout.orientation =
             LinearLayout.VERTICAL
-
-        layout.gravity =
-            Gravity.CENTER_HORIZONTAL
 
         layout.setPadding(
             24,
@@ -80,6 +91,7 @@ class GameWaitingActivity : Activity() {
             24
         )
 
+        // TITLE
         val title =
             TextView(this)
 
@@ -95,17 +107,6 @@ class GameWaitingActivity : Activity() {
         title.setTypeface(
             null,
             Typeface.BOLD
-        )
-
-        title.setTextColor(
-            Color.BLACK
-        )
-
-        title.setPadding(
-            0,
-            0,
-            0,
-            25
         )
 
         layout.addView(title)
@@ -130,14 +131,14 @@ class GameWaitingActivity : Activity() {
 
         codeText.setPadding(
             0,
-            10,
+            20,
             0,
             10
         )
 
         layout.addView(codeText)
 
-        // COPY GAME CODE
+        // COPY BUTTON
         val copyButton =
             Button(this)
 
@@ -147,13 +148,7 @@ class GameWaitingActivity : Activity() {
         copyButton.textSize =
             18f
 
-        layout.addView(
-            copyButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
+        layout.addView(copyButton)
 
         copyButton.setOnClickListener {
 
@@ -177,7 +172,7 @@ class GameWaitingActivity : Activity() {
             ).show()
         }
 
-        // PLAYERS
+        // PLAYERS TITLE
         val playersTitle =
             TextView(this)
 
@@ -201,18 +196,9 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(playersTitle)
 
-        val role =
-            if (isHost) {
-                "Host"
-            } else {
-                "Player"
-            }
-
-        val playersText =
+        // PLAYER LIST
+        playersText =
             TextView(this)
-
-        playersText.text =
-            "Players joined: 1 of $playerCount\n\n1. $playerName — $role"
 
         playersText.textSize =
             18f
@@ -221,36 +207,81 @@ class GameWaitingActivity : Activity() {
             0,
             5,
             0,
-            20
+            15
         )
 
         layout.addView(playersText)
 
-        // GAME RULES
-        val rulesTitle =
+        updatePlayerList(
+            playerName,
+            isHost,
+            playerCount
+        )
+
+        // SIMULATE JOIN BUTTON
+        if (isHost) {
+
+            val addPlayerButton =
+                Button(this)
+
+            addPlayerButton.text =
+                "Simulate Player Joining"
+
+            addPlayerButton.textSize =
+                18f
+
+            layout.addView(
+                addPlayerButton
+            )
+
+            addPlayerButton.setOnClickListener {
+
+                if (joinedPlayers < playerCount) {
+
+                    joinedPlayers++
+
+                    updatePlayerList(
+                        playerName,
+                        isHost,
+                        playerCount
+                    )
+
+                } else {
+
+                    Toast.makeText(
+                        this,
+                        "Maximum players reached.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+
+        // GAME SETTINGS
+        val settingsTitle =
             TextView(this)
 
-        rulesTitle.text =
-            "Game Rules"
+        settingsTitle.text =
+            "Game Settings"
 
-        rulesTitle.textSize =
+        settingsTitle.textSize =
             22f
 
-        rulesTitle.setTypeface(
+        settingsTitle.setTypeface(
             null,
             Typeface.BOLD
         )
 
-        rulesTitle.setPadding(
+        settingsTitle.setPadding(
             0,
-            10,
+            20,
             0,
             10
         )
 
-        layout.addView(rulesTitle)
+        layout.addView(settingsTitle)
 
-        val rulesText =
+        val settingsText =
             TextView(this)
 
         val wordMasterText =
@@ -263,7 +294,7 @@ class GameWaitingActivity : Activity() {
                 "Word Master: Host\nWord Master does not play"
             }
 
-        rulesText.text =
+        settingsText.text =
             """
             Word Selection: $wordSelection
 
@@ -277,43 +308,21 @@ class GameWaitingActivity : Activity() {
             $nextWordMaster
             """.trimIndent()
 
-        rulesText.textSize =
+        settingsText.textSize =
             18f
 
-        rulesText.setPadding(
+        settingsText.setPadding(
             0,
-            10,
+            5,
             0,
-            20
+            15
         )
 
-        layout.addView(rulesText)
+        layout.addView(settingsText)
 
         // STATUS
-        val statusText =
+        statusText =
             TextView(this)
-
-        if (isHost) {
-
-            statusText.text =
-                """
-                You are the host.
-
-                You can start the game when
-                at least 2 players have joined.
-
-                Maximum players: $playerCount
-                """.trimIndent()
-
-        } else {
-
-            statusText.text =
-                """
-                You have joined the game.
-
-                Waiting for the host to start.
-                """.trimIndent()
-        }
 
         statusText.textSize =
             18f
@@ -328,13 +337,195 @@ class GameWaitingActivity : Activity() {
 
         statusText.setPadding(
             0,
-            10,
+            15,
             0,
             15
         )
 
         layout.addView(statusText)
 
+        updateStatus(
+            isHost
+        )
+
+        // START BUTTON
+        if (isHost) {
+
+            startButton =
+                Button(this)
+
+            startButton.text =
+                "Start Game"
+
+            startButton.textSize =
+                18f
+
+            startButton.setTypeface(
+                null,
+                Typeface.BOLD
+            )
+
+            startButton.isEnabled =
+                joinedPlayers >= 2
+
+            layout.addView(
+                startButton,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+
+            startButton.setOnClickListener {
+
+                if (joinedPlayers < 2) {
+
+                    Toast.makeText(
+                        this,
+                        "At least 2 players are required.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@setOnClickListener
+                }
+
+                AlertDialog.Builder(this)
+                    .setTitle("Start Game?")
+                    .setMessage(
+                        "Start the game with $joinedPlayers of $playerCount players?"
+                    )
+                    .setNegativeButton(
+                        "Cancel",
+                        null
+                    )
+                    .setPositiveButton(
+                        "Start"
+                    ) { _, _ ->
+
+                        val intent =
+                            Intent(
+                                this,
+                                OnlineGameRoundActivity::class.java
+                            )
+
+                        intent.putExtra(
+                            "gameCode",
+                            gameCode
+                        )
+
+                        intent.putExtra(
+                            "playerCount",
+                            joinedPlayers
+                        )
+
+                        intent.putExtra(
+                            "maxPlayers",
+                            playerCount
+                        )
+
+                        intent.putExtra(
+                            "wordSelection",
+                            wordSelection
+                        )
+
+                        intent.putExtra(
+                            "manualWord",
+                            manualWord
+                        )
+
+                        intent.putExtra(
+                            "category",
+                            category
+                        )
+
+                        intent.putExtra(
+                            "secondsPerTurn",
+                            secondsPerTurn
+                        )
+
+                        intent.putExtra(
+                            "nextWordMaster",
+                            nextWordMaster
+                        )
+
+                        intent.putExtra(
+                            "playerName",
+                            playerName
+                        )
+
+                        startActivity(intent)
+                    }
+                    .show()
+            }
+        }
+
         setContentView(layout)
+    }
+
+    private fun updatePlayerList(
+        hostName: String,
+        isHost: Boolean,
+        maxPlayers: Int
+    ) {
+
+        val names =
+            mutableListOf<String>()
+
+        names.add(
+            "$hostName — Host"
+        )
+
+        if (joinedPlayers >= 2) {
+            names.add("Player 2")
+        }
+
+        if (joinedPlayers >= 3) {
+            names.add("Player 3")
+        }
+
+        if (joinedPlayers >= 4) {
+            names.add("Player 4")
+        }
+
+        val text =
+            "Players joined: $joinedPlayers of $maxPlayers\n\n" +
+                    names.mapIndexed { index, name ->
+                        "${index + 1}. $name"
+                    }.joinToString("\n")
+
+        playersText.text =
+            text
+
+        if (isHost && ::startButton.isInitialized) {
+            startButton.isEnabled =
+                joinedPlayers >= 2
+        }
+
+        if (::statusText.isInitialized) {
+            updateStatus(isHost)
+        }
+    }
+
+    private fun updateStatus(
+        isHost: Boolean
+    ) {
+
+        if (isHost) {
+
+            statusText.text =
+                if (joinedPlayers >= 2) {
+
+                    "Ready to start.\n$joinedPlayers players have joined."
+
+                } else {
+
+                    "Waiting for players.\nAt least 2 players are required to start."
+                }
+
+        } else {
+
+            statusText.text =
+                "You have joined the game.\nWaiting for the host to start."
+        }
     }
 }
