@@ -258,9 +258,16 @@ class JoinGameActivity : Activity() {
                 playerName
             )
 
+            // This player is joining an existing game.
+            intent.putExtra(
+                "isHost",
+                false
+            )
+
             startActivity(intent)
         }
 
         setContentView(layout)
     }
 }
+```
