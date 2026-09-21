@@ -1,10 +1,10 @@
 package com.wordguessing.game
 
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
-import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -76,6 +76,47 @@ class CreateGameActivity : Activity() {
         )
 
         layout.addView(wordSpinner)
+
+        // MANUAL WORD
+        val manualWordInput = EditText(this)
+        manualWordInput.hint = "Enter word"
+        manualWordInput.textSize = 18f
+        manualWordInput.setSingleLine(true)
+        manualWordInput.visibility =
+            android.view.View.GONE
+
+        layout.addView(manualWordInput)
+
+        wordSpinner.onItemSelectedListener =
+            object :
+                android.widget.AdapterView.OnItemSelectedListener {
+
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: android.view.View?,
+                    position: Int,
+                    id: Long
+                ) {
+
+                    if (position == 1) {
+
+                        manualWordInput.visibility =
+                            android.view.View.VISIBLE
+
+                    } else {
+
+                        manualWordInput.visibility =
+                            android.view.View.GONE
+
+                        manualWordInput.text.clear()
+                    }
+                }
+
+                override fun onNothingSelected(
+                    parent: android.widget.AdapterView<*>?
+                ) {
+                }
+            }
 
         // CATEGORY
         val categoryTitle = TextView(this)
@@ -185,11 +226,98 @@ class CreateGameActivity : Activity() {
 
         createButton.setOnClickListener {
 
-            Toast.makeText(
-                this,
-                "Online game setup saved. Online connection will be added later.",
-                Toast.LENGTH_LONG
-            ).show()
+            val selectedWordSelection =
+                wordSpinner.selectedItem.toString()
+
+            val manualWord =
+                manualWordInput.text
+                    .toString()
+                    .trim()
+                    .uppercase()
+
+            if (
+                selectedWordSelection ==
+                "Manual Word" &&
+                manualWord.isEmpty()
+            ) {
+
+                Toast.makeText(
+                    this,
+                    "Please enter a word.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                return@setOnClickListener
+            }
+
+            val playerCount =
+                playersSpinner.selectedItem
+                    .toString()
+                    .substringBefore(" ")
+                    .toInt()
+
+            val selectedCategory =
+                categorySpinner.selectedItem.toString()
+
+            val selectedTime =
+                timeSpinner.selectedItem
+                    .toString()
+                    .toInt()
+
+            val selectedNextMaster =
+                nextMasterSpinner
+                    .selectedItem
+                    .toString()
+
+            // Temporary game code.
+            // Firebase will generate real shared codes later.
+            val gameCode =
+                (100000..999999)
+                    .random()
+                    .toString()
+
+            val intent =
+                Intent(
+                    this,
+                    GameWaitingActivity::class.java
+                )
+
+            intent.putExtra(
+                "gameCode",
+                gameCode
+            )
+
+            intent.putExtra(
+                "playerCount",
+                playerCount
+            )
+
+            intent.putExtra(
+                "wordSelection",
+                selectedWordSelection
+            )
+
+            intent.putExtra(
+                "manualWord",
+                manualWord
+            )
+
+            intent.putExtra(
+                "category",
+                selectedCategory
+            )
+
+            intent.putExtra(
+                "secondsPerTurn",
+                selectedTime
+            )
+
+            intent.putExtra(
+                "nextWordMaster",
+                selectedNextMaster
+            )
+
+            startActivity(intent)
         }
 
         setContentView(layout)
