@@ -14,6 +14,7 @@ class OnlineGameRoundActivity : Activity() {
 
     private lateinit var timerText: TextView
     private lateinit var turnText: TextView
+    private lateinit var playersText: TextView
 
     private var timer: CountDownTimer? = null
 
@@ -113,10 +114,79 @@ class OnlineGameRoundActivity : Activity() {
             0,
             15,
             0,
-            15
+            10
         )
 
         layout.addView(info)
+
+        // PLAYERS
+        val playersTitle =
+            TextView(this)
+
+        playersTitle.text =
+            "Players"
+
+        playersTitle.textSize =
+            21f
+
+        playersTitle.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        playersTitle.setPadding(
+            0,
+            10,
+            0,
+            5
+        )
+
+        layout.addView(playersTitle)
+
+        playersText =
+            TextView(this)
+
+        playersText.text =
+            buildPlayerList(playerCount)
+
+        playersText.textSize =
+            17f
+
+        playersText.setPadding(
+            0,
+            5,
+            0,
+            10
+        )
+
+        layout.addView(playersText)
+
+        // WORD MASTER
+        val wordMasterText =
+            TextView(this)
+
+        wordMasterText.text =
+            "Word Master: None\nEveryone plays"
+
+        wordMasterText.textSize =
+            17f
+
+        wordMasterText.gravity =
+            Gravity.CENTER
+
+        wordMasterText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wordMasterText.setPadding(
+            0,
+            5,
+            0,
+            10
+        )
+
+        layout.addView(wordMasterText)
 
         // WORD DISPLAY
         val wordText =
@@ -138,9 +208,9 @@ class OnlineGameRoundActivity : Activity() {
 
         wordText.setPadding(
             0,
-            15,
+            10,
             0,
-            15
+            10
         )
 
         layout.addView(wordText)
@@ -185,9 +255,9 @@ class OnlineGameRoundActivity : Activity() {
 
         timerText.setPadding(
             0,
-            10,
+            5,
             0,
-            15
+            10
         )
 
         layout.addView(timerText)
@@ -336,6 +406,43 @@ class OnlineGameRoundActivity : Activity() {
         startTurnTimer(secondsPerTurn)
     }
 
+    private fun buildPlayerList(
+        playerCount: Int
+    ): String {
+
+        val builder =
+            StringBuilder()
+
+        for (player in 1..playerCount) {
+
+            builder.append(
+                "$player. Player $player"
+            )
+
+            if (player == currentPlayer) {
+                builder.append(
+                    " — CURRENT TURN"
+                )
+            }
+
+            builder.append("\n")
+        }
+
+        return builder.toString().trim()
+    }
+
+    private fun updatePlayerList() {
+
+        val playerCount =
+            intent.getIntExtra(
+                "playerCount",
+                2
+            )
+
+        playersText.text =
+            buildPlayerList(playerCount)
+    }
+
     private fun startTurnTimer(
         seconds: Int
     ) {
@@ -367,16 +474,23 @@ class OnlineGameRoundActivity : Activity() {
 
                         currentPlayer++
 
+                        val playerCount =
+                            intent.getIntExtra(
+                                "playerCount",
+                                2
+                            )
+
                         if (
                             currentPlayer >
-                            4
+                            playerCount
                         ) {
-                            currentPlayer =
-                                1
+                            currentPlayer = 1
                         }
 
                         turnText.text =
                             "Player $currentPlayer's Turn"
+
+                        updatePlayerList()
 
                         startTurnTimer(
                             seconds
