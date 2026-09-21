@@ -384,56 +384,22 @@ class GameWaitingActivity : Activity() {
 
     private fun startGame() {
 
-        val gameIntent =
-            Intent(
-                this@GameWaitingActivity,
-                OnlineGameRoundActivity::class.java
-            )
+    val gameIntent = Intent(
+        this,
+        OnlineGameRoundActivity::class.java
+    )
 
-        gameIntent.putExtra(
-            "gameCode",
-            gameCode
-        )
+    gameIntent.putExtra("gameCode", gameCode)
+    gameIntent.putExtra("playerCount", playerCount)
+    gameIntent.putExtra("maxPlayers", playerCount)
+    gameIntent.putExtra("wordSelection", wordSelection)
+    gameIntent.putExtra("category", category)
+    gameIntent.putExtra("secondsPerTurn", secondsPerTurn)
+    gameIntent.putExtra("nextWordMaster", nextWordMaster)
+    gameIntent.putExtra("playerName", playerName)
 
-        gameIntent.putExtra(
-            "playerCount",
-            playerCount
-        )
-
-        gameIntent.putExtra(
-            "maxPlayers",
-            playerCount
-        )
-
-        gameIntent.putExtra(
-            "wordSelection",
-            wordSelection
-        )
-
-        gameIntent.putExtra(
-            "category",
-            category
-        )
-
-        gameIntent.putExtra(
-            "secondsPerTurn",
-            secondsPerTurn
-        )
-
-        gameIntent.putExtra(
-            "nextWordMaster",
-            nextWordMaster
-        )
-
-        gameIntent.putExtra(
-            "playerName",
-            playerName
-        )
-
-        startActivity(
-            gameIntent
-        )
-    }
+    startActivity(gameIntent)
+}
 
     override fun onDestroy() {
 
