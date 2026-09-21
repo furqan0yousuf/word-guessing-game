@@ -28,6 +28,7 @@ class GameActivity : Activity() {
     private lateinit var timerText: TextView
     private lateinit var lettersLayout: LinearLayout
     private lateinit var fullWordButton: Button
+    private lateinit var wholeWordTimerText: TextView
 
     private var currentPlayer = 0
 
@@ -115,9 +116,33 @@ class GameActivity : Activity() {
 
                 wholeWordTimeLeft--
 
-                if (wholeWordTimeLeft <= 0) {
+                wholeWordTimerText.text =
+                    "Whole-word time: $wholeWordTimeLeft"
 
-                    wholeWordTimeLeft = 0
+                if (wholeWordTimeLeft <= 3) {
+
+                    wholeWordTimerText.setTypeface(
+                        null,
+                        Typeface.BOLD
+                    )
+
+                    wholeWordTimerText.setTextColor(
+                        Color.RED
+                    )
+
+                } else {
+
+                    wholeWordTimerText.setTypeface(
+                        null,
+                        Typeface.BOLD
+                    )
+
+                    wholeWordTimerText.setTextColor(
+                        Color.BLACK
+                    )
+                }
+
+                if (wholeWordTimeLeft <= 0) {
 
                     wholeWordGuessInProgress =
                         false
@@ -812,25 +837,7 @@ class GameActivity : Activity() {
         // during this turn.
         fullWordButton.isEnabled = false
 
-        val input =
-            EditText(this)
-
-        input.hint =
-            "Enter the whole word"
-
-        input.textSize =
-            20f
-
-        val padding = 40
-
-        input.setPadding(
-            padding,
-            20,
-            padding,
-            20
-        )
-
-        val wholeWordTimerText =
+        wholeWordTimerText =
             TextView(this)
 
         wholeWordTimerText.text =
@@ -847,11 +854,33 @@ class GameActivity : Activity() {
             Typeface.BOLD
         )
 
+        wholeWordTimerText.setTextColor(
+            Color.BLACK
+        )
+
         wholeWordTimerText.setPadding(
             0,
             10,
             0,
             15
+        )
+
+        val input =
+            EditText(this)
+
+        input.hint =
+            "Enter the whole word"
+
+        input.textSize =
+            20f
+
+        val padding = 40
+
+        input.setPadding(
+            padding,
+            20,
+            padding,
+            20
         )
 
         val dialogLayout =
