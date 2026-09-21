@@ -1,3 +1,4 @@
+
 package com.wordguessing.game
 
 import android.app.Activity
@@ -52,7 +53,13 @@ class GameWaitingActivity : Activity() {
             intent.getStringExtra(
                 "playerName"
             )
-                ?: "Host"
+                ?: "Player"
+
+        val isHost =
+            intent.getBooleanExtra(
+                "isHost",
+                true
+            )
 
         val layout =
             LinearLayout(this)
@@ -151,11 +158,18 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(playersTitle)
 
+        val role =
+            if (isHost) {
+                "Host"
+            } else {
+                "Player"
+            }
+
         val playersText =
             TextView(this)
 
         playersText.text =
-            "1 of $playerCount\n\n1. $playerName — Host"
+            "1 of $playerCount\n\n1. $playerName — $role"
 
         playersText.textSize =
             18f
@@ -295,3 +309,4 @@ class GameWaitingActivity : Activity() {
         setContentView(layout)
     }
 }
+```
