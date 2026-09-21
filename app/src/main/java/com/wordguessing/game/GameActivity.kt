@@ -11,7 +11,6 @@ import android.widget.Toast
 
 class GameActivity : Activity() {
 
-```
 private val testWord = "APPLE"
 private val selectedLetters = mutableSetOf<Char>()
 
