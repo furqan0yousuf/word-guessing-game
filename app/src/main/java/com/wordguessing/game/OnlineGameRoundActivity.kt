@@ -41,6 +41,12 @@ class OnlineGameRoundActivity : Activity() {
                 playerCount
             )
 
+        val wordSelection =
+            intent.getStringExtra(
+                "wordSelection"
+            )
+                ?: "Random Word"
+
         val category =
             intent.getStringExtra(
                 "category"
@@ -147,7 +153,10 @@ class OnlineGameRoundActivity : Activity() {
             TextView(this)
 
         playersText.text =
-            buildPlayerList(playerCount)
+            buildPlayerList(
+                playerCount,
+                wordSelection
+            )
 
         playersText.textSize =
             17f
@@ -165,8 +174,19 @@ class OnlineGameRoundActivity : Activity() {
         val wordMasterText =
             TextView(this)
 
-        wordMasterText.text =
-            "Word Master: None\nEveryone plays"
+        if (
+            wordSelection ==
+            "Random Word"
+        ) {
+
+            wordMasterText.text =
+                "Word Master: None\nEveryone plays"
+
+        } else {
+
+            wordMasterText.text =
+                "Word Master: Player 1\nWord Master does not play"
+        }
 
         wordMasterText.textSize =
             17f
@@ -220,7 +240,9 @@ class OnlineGameRoundActivity : Activity() {
             TextView(this)
 
         turnText.text =
-            "Player 1's Turn"
+            getTurnText(
+                wordSelection
+            )
 
         turnText.textSize =
             22f
@@ -280,7 +302,9 @@ class OnlineGameRoundActivity : Activity() {
         currentRow.gravity =
             Gravity.CENTER
 
-        letterBoard.addView(currentRow)
+        letterBoard.addView(
+            currentRow
+        )
 
         for (i in letters.indices) {
 
@@ -403,11 +427,16 @@ class OnlineGameRoundActivity : Activity() {
 
         setContentView(layout)
 
-        startTurnTimer(secondsPerTurn)
+        startTurnTimer(
+            secondsPerTurn,
+            wordSelection,
+            playerCount
+        )
     }
 
     private fun buildPlayerList(
-        playerCount: Int
+        playerCount: Int,
+        wordSelection: String
     ): String {
 
         val builder =
@@ -419,32 +448,65 @@ class OnlineGameRoundActivity : Activity() {
                 "$player. Player $player"
             )
 
-            if (player == currentPlayer) {
+            if (
+                wordSelection !=
+                "Random Word" &&
+                player == 1
+            ) {
+
+                builder.append(
+                    " — WORD MASTER"
+                )
+
+            } else if (
+                player == currentPlayer
+            ) {
+
                 builder.append(
                     " — CURRENT TURN"
                 )
             }
 
-            builder.append("\n")
+            builder.append(
+                "\n"
+            )
         }
 
         return builder.toString().trim()
     }
 
-    private fun updatePlayerList() {
+    private fun getTurnText(
+        wordSelection: String
+    ): String {
 
-        val playerCount =
-            intent.getIntExtra(
-                "playerCount",
-                2
-            )
+        if (
+            wordSelection !=
+            "Random Word" &&
+            currentPlayer == 1
+        ) {
+
+            currentPlayer = 2
+        }
+
+        return "Player $currentPlayer's Turn"
+    }
+
+    private fun updatePlayerList(
+        playerCount: Int,
+        wordSelection: String
+    ) {
 
         playersText.text =
-            buildPlayerList(playerCount)
+            buildPlayerList(
+                playerCount,
+                wordSelection
+            )
     }
 
     private fun startTurnTimer(
-        seconds: Int
+        seconds: Int,
+        wordSelection: String,
+        playerCount: Int
     ) {
 
         timer?.cancel()
@@ -461,7 +523,8 @@ class OnlineGameRoundActivity : Activity() {
                     ) {
 
                         val remaining =
-                            millisUntilFinished / 1000L
+                            millisUntilFinished /
+                                1000L
 
                         timerText.text =
                             "Time: $remaining"
@@ -474,26 +537,43 @@ class OnlineGameRoundActivity : Activity() {
 
                         currentPlayer++
 
-                        val playerCount =
-                            intent.getIntExtra(
-                                "playerCount",
-                                2
-                            )
+                        if (
+                            wordSelection !=
+                            "Random Word" &&
+                            currentPlayer == 1
+                        ) {
+
+                            currentPlayer = 2
+                        }
 
                         if (
                             currentPlayer >
                             playerCount
                         ) {
-                            currentPlayer = 1
+
+                            currentPlayer =
+                                if (
+                                    wordSelection ==
+                                    "Random Word"
+                                ) {
+                                    1
+                                } else {
+                                    2
+                                }
                         }
 
                         turnText.text =
                             "Player $currentPlayer's Turn"
 
-                        updatePlayerList()
+                        updatePlayerList(
+                            playerCount,
+                            wordSelection
+                        )
 
                         startTurnTimer(
-                            seconds
+                            seconds,
+                            wordSelection,
+                            playerCount
                         )
                     }
                 }
