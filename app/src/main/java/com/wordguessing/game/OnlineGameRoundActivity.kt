@@ -22,11 +22,15 @@ class OnlineGameRoundActivity : Activity() {
 
     private var timer: CountDownTimer? = null
 
-    private val letters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    private val secretWord =
-        "APPLE"
+    /*
+     * TEMPORARY TEST WORD
+     *
+     * Later this will come from the actual
+     * word/category system.
+     */
+    private val secretWord = "APPLE"
 
     private var currentPlayer = 1
 
@@ -88,6 +92,10 @@ class OnlineGameRoundActivity : Activity() {
             scores[player] = 0
         }
 
+        /*
+         * In temporary Manual Word mode,
+         * Player 1 is the Word Master.
+         */
         if (wordSelection != "Random Word") {
             currentPlayer = 2
         }
@@ -164,6 +172,13 @@ class OnlineGameRoundActivity : Activity() {
             Typeface.BOLD
         )
 
+        playersTitle.setPadding(
+            0,
+            10,
+            0,
+            5
+        )
+
         layout.addView(
             playersTitle
         )
@@ -217,6 +232,13 @@ class OnlineGameRoundActivity : Activity() {
         wordMasterText.setTypeface(
             null,
             Typeface.BOLD
+        )
+
+        wordMasterText.setPadding(
+            0,
+            5,
+            0,
+            10
         )
 
         layout.addView(
@@ -289,10 +311,20 @@ class OnlineGameRoundActivity : Activity() {
             Typeface.BOLD
         )
 
+        timerText.setPadding(
+            0,
+            5,
+            0,
+            10
+        )
+
         layout.addView(
             timerText
         )
 
+        /*
+         * LETTER BOARD
+         */
         val letterBoard =
             LinearLayout(this)
 
@@ -345,10 +377,14 @@ class OnlineGameRoundActivity : Activity() {
             button.setOnClickListener {
 
                 if (roundFinished) {
-
                     return@setOnClickListener
                 }
 
+                /*
+                 * Repeated letter
+                 *
+                 * Same player continues.
+                 */
                 if (
                     guessedLetters.contains(
                         letter
@@ -361,74 +397,101 @@ class OnlineGameRoundActivity : Activity() {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                } else {
+                    return@setOnClickListener
+                }
 
-                    guessedLetters.add(
+                guessedLetters.add(
+                    letter
+                )
+
+                button.setBackgroundColor(
+                    Color.RED
+                )
+
+                button.isEnabled =
+                    false
+
+                /*
+                 * CORRECT LETTER
+                 */
+                if (
+                    secretWord.contains(
+                        letter
+                    )
+                ) {
+
+                    revealedLetters.add(
                         letter
                     )
 
-                    button.setBackgroundColor(
-                        Color.RED
+                    updateWordDisplay()
+
+                    val occurrences =
+                        secretWord.count {
+                            it == letter
+                        }
+
+                    scores[currentPlayer] =
+                        (scores[currentPlayer] ?: 0) +
+                            occurrences
+
+                    updatePlayerList(
+                        playerCount,
+                        wordSelection
                     )
 
-                    button.isEnabled =
-                        false
+                    Toast.makeText(
+                        this,
+                        "Correct! You earned $occurrences point(s).",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
+                    /*
+                     * If word is complete,
+                     * current player wins.
+                     */
                     if (
-                        secretWord.contains(
-                            letter
-                        )
+                        isWordComplete()
                     ) {
 
-                        revealedLetters.add(
-                            letter
+                        finishRound(
+                            "Player $currentPlayer completed the word and wins!"
                         )
-
-                        updateWordDisplay()
-
-                        val occurrences =
-                            secretWord.count {
-                                it == letter
-                            }
-
-                        scores[currentPlayer] =
-                            (scores[currentPlayer] ?: 0) +
-                                occurrences
-
-                        updatePlayerList(
-                            playerCount,
-                            wordSelection
-                        )
-
-                        Toast.makeText(
-                            this,
-                            "Correct! You earned $occurrences point(s).",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        if (
-                            isWordComplete()
-                        ) {
-
-                            finishRound(
-                                "Player $currentPlayer completed the word and wins!"
-                            )
-                        }
 
                     } else {
 
-                        Toast.makeText(
-                            this,
-                            "Wrong letter.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        moveToNextPlayer(
+                        /*
+                         * IMPORTANT:
+                         *
+                         * Correct letter means
+                         * same player continues,
+                         * but gets a NEW FULL TIMER.
+                         */
+                        startTurnTimer(
+                            secondsPerTurn,
                             wordSelection,
-                            playerCount,
-                            secondsPerTurn
+                            playerCount
                         )
                     }
+
+                } else {
+
+                    /*
+                     * WRONG LETTER
+                     *
+                     * Turn ends immediately.
+                     */
+                    Toast.makeText(
+                        this,
+                        "Wrong letter.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    moveToNextPlayer(
+                        wordSelection,
+                        playerCount,
+                        secondsPerTurn
+                    )
                 }
             }
 
@@ -460,6 +523,9 @@ class OnlineGameRoundActivity : Activity() {
             }
         }
 
+        /*
+         * WHOLE WORD BUTTON
+         */
         val wholeWordButton =
             Button(this)
 
@@ -489,6 +555,9 @@ class OnlineGameRoundActivity : Activity() {
             )
         )
 
+        /*
+         * LEAVE GAME
+         */
         val leaveButton =
             Button(this)
 
@@ -518,6 +587,15 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
+    /*
+     * Creates:
+     *
+     * _ _ _ _ _
+     *
+     * or:
+     *
+     * A _ P P _
+     */
     private fun buildWordDisplay(): String {
 
         val builder =
@@ -632,6 +710,9 @@ class OnlineGameRoundActivity : Activity() {
             )
     }
 
+    /*
+     * START OR RESET TIMER
+     */
     private fun startTurnTimer(
         seconds: Int,
         wordSelection: String,
@@ -644,6 +725,10 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
+        /*
+         * Every time this function is called,
+         * the player receives a completely new timer.
+         */
         timer =
             object :
                 CountDownTimer(
@@ -707,6 +792,9 @@ class OnlineGameRoundActivity : Activity() {
                 .start()
     }
 
+    /*
+     * MOVE TO NEXT PLAYER
+     */
     private fun moveToNextPlayer(
         wordSelection: String,
         playerCount: Int,
@@ -717,6 +805,11 @@ class OnlineGameRoundActivity : Activity() {
 
         currentPlayer++
 
+        /*
+         * Manual Word:
+         * Player 1 is Word Master,
+         * so skip Player 1.
+         */
         if (
             wordSelection !=
             "Random Word" &&
@@ -726,6 +819,9 @@ class OnlineGameRoundActivity : Activity() {
             currentPlayer = 2
         }
 
+        /*
+         * Wrap around.
+         */
         if (
             currentPlayer >
             playerCount
@@ -750,6 +846,10 @@ class OnlineGameRoundActivity : Activity() {
             wordSelection
         )
 
+        /*
+         * New player gets a completely
+         * new full timer.
+         */
         startTurnTimer(
             secondsPerTurn,
             wordSelection,
@@ -757,12 +857,18 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
+    /*
+     * WHOLE WORD GUESS
+     */
     private fun showWholeWordDialog(
         wordSelection: String,
         playerCount: Int,
         secondsPerTurn: Int
     ) {
 
+        /*
+         * Pause normal turn timer.
+         */
         timer?.cancel()
 
         val input =
@@ -813,37 +919,49 @@ class OnlineGameRoundActivity : Activity() {
                     input.error =
                         "Enter a word."
 
+                    return@setOnClickListener
+                }
+
+                dialog.dismiss()
+
+                /*
+                 * Correct whole-word guess:
+                 * immediate round winner.
+                 */
+                if (
+                    guess ==
+                    secretWord
+                ) {
+
+                    finishRound(
+                        "Player $currentPlayer guessed the whole word and wins!"
+                    )
+
                 } else {
 
-                    dialog.dismiss()
+                    /*
+                     * Wrong whole-word guess:
+                     * turn ends.
+                     */
+                    Toast.makeText(
+                        this,
+                        "Wrong whole-word guess.",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
-                    if (
-                        guess ==
-                        secretWord
-                    ) {
-
-                        finishRound(
-                            "Player $currentPlayer guessed the whole word and wins!"
-                        )
-
-                    } else {
-
-                        Toast.makeText(
-                            this,
-                            "Wrong whole-word guess.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        moveToNextPlayer(
-                            wordSelection,
-                            playerCount,
-                            secondsPerTurn
-                        )
-                    }
+                    moveToNextPlayer(
+                        wordSelection,
+                        playerCount,
+                        secondsPerTurn
+                    )
                 }
             }
         }
 
+        /*
+         * If user cancels,
+         * resume the current player's timer.
+         */
         dialog.setOnCancelListener {
 
             if (!roundFinished) {
@@ -859,9 +977,16 @@ class OnlineGameRoundActivity : Activity() {
         dialog.show()
     }
 
+    /*
+     * END ROUND
+     */
     private fun finishRound(
         message: String
     ) {
+
+        if (roundFinished) {
+            return
+        }
 
         roundFinished = true
 
@@ -876,8 +1001,9 @@ class OnlineGameRoundActivity : Activity() {
             )
             .setPositiveButton(
                 "OK"
-            ) {
-                _, _ -> finish()
+            ) { _, _ ->
+
+                finish()
             }
             .setCancelable(false)
             .show()
