@@ -78,10 +78,7 @@ class OnlineGameRoundActivity : Activity() {
             scores[player] = 0
         }
 
-        if (
-            wordSelection !=
-            "Random Word"
-        ) {
+        if (wordSelection != "Random Word") {
             currentPlayer = 2
         }
 
@@ -98,7 +95,6 @@ class OnlineGameRoundActivity : Activity() {
             16
         )
 
-        // TITLE
         val title =
             TextView(this)
 
@@ -118,7 +114,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(title)
 
-        // GAME INFORMATION
         val info =
             TextView(this)
 
@@ -145,7 +140,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(info)
 
-        // PLAYERS
         val playersTitle =
             TextView(this)
 
@@ -190,14 +184,10 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(playersText)
 
-        // WORD MASTER
         val wordMasterText =
             TextView(this)
 
-        if (
-            wordSelection ==
-            "Random Word"
-        ) {
+        if (wordSelection == "Random Word") {
 
             wordMasterText.text =
                 "Word Master: None\nEveryone plays"
@@ -228,7 +218,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(wordMasterText)
 
-        // WORD DISPLAY
         val wordText =
             TextView(this)
 
@@ -255,7 +244,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(wordText)
 
-        // TURN
         turnText =
             TextView(this)
 
@@ -275,7 +263,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(turnText)
 
-        // TIMER
         timerText =
             TextView(this)
 
@@ -302,7 +289,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(timerText)
 
-        // LETTER BOARD
         val letterBoard =
             LinearLayout(this)
 
@@ -352,32 +338,38 @@ class OnlineGameRoundActivity : Activity() {
 
             button.setOnClickListener {
 
-    if (guessedLetters.contains(letter)) {
+                if (
+                    guessedLetters.contains(
+                        letter
+                    )
+                ) {
 
-        Toast.makeText(
-            this,
-            "Already guessed.",
-            Toast.LENGTH_SHORT
-        ).show()
+                    Toast.makeText(
+                        this,
+                        "Already guessed.",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
-    } else {
+                } else {
 
-        guessedLetters.add(letter)
+                    guessedLetters.add(
+                        letter
+                    )
 
-        button.setBackgroundColor(
-            Color.RED
-        )
+                    button.setBackgroundColor(
+                        Color.RED
+                    )
 
-        button.isEnabled = false
+                    button.isEnabled =
+                        false
 
-        Toast.makeText(
-            this,
-            "Letter $letter selected.",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-}
-}
+                    Toast.makeText(
+                        this,
+                        "Letter $letter selected.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
 
             currentRow.addView(
                 button,
@@ -407,7 +399,6 @@ class OnlineGameRoundActivity : Activity() {
             }
         }
 
-        // WHOLE WORD BUTTON
         val wholeWordButton =
             Button(this)
 
@@ -430,7 +421,6 @@ class OnlineGameRoundActivity : Activity() {
             )
         )
 
-        // LEAVE GAME
         val leaveButton =
             Button(this)
 
@@ -483,8 +473,7 @@ class OnlineGameRoundActivity : Activity() {
             )
 
             if (
-                wordSelection !=
-                "Random Word" &&
+                wordSelection != "Random Word" &&
                 player == 1
             ) {
 
@@ -541,8 +530,7 @@ class OnlineGameRoundActivity : Activity() {
                     ) {
 
                         val remaining =
-                            millisUntilFinished /
-                                1000L
+                            millisUntilFinished / 1000L
 
                         timerText.text =
                             "Time: $remaining"
@@ -595,8 +583,7 @@ class OnlineGameRoundActivity : Activity() {
         currentPlayer++
 
         if (
-            wordSelection !=
-            "Random Word" &&
+            wordSelection != "Random Word" &&
             currentPlayer == 1
         ) {
 
@@ -604,14 +591,12 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         if (
-            currentPlayer >
-            playerCount
+            currentPlayer > playerCount
         ) {
 
             currentPlayer =
                 if (
-                    wordSelection ==
-                    "Random Word"
+                    wordSelection == "Random Word"
                 ) {
                     1
                 } else {
@@ -675,16 +660,16 @@ class OnlineGameRoundActivity : Activity() {
                     input.error =
                         "Enter a word."
 
-                    return@setOnShowListener
+                } else {
+
+                    Toast.makeText(
+                        this,
+                        "Whole-word guess submitted.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    dialog.dismiss()
                 }
-
-                Toast.makeText(
-                    this,
-                    "Whole-word guess submitted.",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                dialog.dismiss()
             }
         }
 
