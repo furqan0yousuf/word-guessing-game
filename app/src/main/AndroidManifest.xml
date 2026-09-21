@@ -43,6 +43,10 @@
             android:name=".JoinGameActivity"
             android:exported="false" />
 
+        <activity
+    android:name=".GameWaitingActivity"
+    android:exported="false" />
+
     </application>
 
 </manifest>
