@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.Gravity
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -19,22 +20,56 @@ class OnlineGameRoundActivity : Activity() {
     private lateinit var turnText: TextView
     private lateinit var playersText: TextView
     private lateinit var wordText: TextView
+    private lateinit var wholeWordButton: Button
 
     private var timer: CountDownTimer? = null
-
-    private val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private var wholeWordTimer: CountDownTimer? = null
 
     /*
-     * TEMPORARY TEST WORD
+     * TEMPORARY TEST WORD.
      *
-     * Later this will come from the actual
+     * If Create Game sends a manual word,
+     * that word will be used instead.
+     *
+     * Later this will come from the real
      * word/category system.
      */
-    private val secretWord = "APPLE"
+    private var secretWord = "APPLE"
+
+    private val letters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     private var currentPlayer = 1
+    private var playerCount = 2
+
+    private var secondsPerTurn = 10
 
     private var roundFinished = false
+
+    /*
+     * Remaining time in the current normal turn.
+     *
+     * This is important because opening the
+     * whole-word dialog pauses the normal timer.
+     */
+    private var remainingTurnSeconds = 10
+
+    /*
+     * One whole-word attempt per player
+     * during each turn.
+     */
+    private var wholeWordAttemptUsed = false
+
+    /*
+     * For 3-4 player games.
+     *
+     * After 3 missed turns, a player is eliminated.
+     */
+    private val missedTurns =
+        mutableMapOf<Int, Int>()
+
+    private val eliminatedPlayers =
+        mutableSetOf<Int>()
 
     private val scores =
         mutableMapOf<Int, Int>()
@@ -52,7 +87,7 @@ class OnlineGameRoundActivity : Activity() {
             intent.getStringExtra("gameCode")
                 ?: "------"
 
-        val playerCount =
+        playerCount =
             intent.getIntExtra(
                 "playerCount",
                 2
@@ -76,7 +111,7 @@ class OnlineGameRoundActivity : Activity() {
             )
                 ?: "Random"
 
-        val secondsPerTurn =
+        secondsPerTurn =
             intent.getIntExtra(
                 "secondsPerTurn",
                 10
@@ -86,19 +121,51 @@ class OnlineGameRoundActivity : Activity() {
             intent.getStringExtra(
                 "nextWordMaster"
             )
-                ?: "Same Word Master"
+                ?: "Winner becomes Word Master"
 
-        for (player in 1..playerCount) {
-            scores[player] = 0
+        /*
+         * Use manual word if one was supplied.
+         *
+         * This lets us eventually connect the
+         * real Create Game word without changing
+         * this gameplay logic.
+         */
+        val manualWord =
+            intent.getStringExtra(
+                "manualWord"
+            )
+                ?.trim()
+                ?.uppercase()
+
+        if (
+            !manualWord.isNullOrEmpty()
+        ) {
+            secretWord = manualWord
         }
 
         /*
-         * In temporary Manual Word mode,
-         * Player 1 is the Word Master.
+         * Start scores and missed-turn counters.
          */
-        if (wordSelection != "Random Word") {
+        for (player in 1..playerCount) {
+
+            scores[player] = 0
+            missedTurns[player] = 0
+        }
+
+        /*
+         * Temporary Manual Word behavior:
+         * Player 1 is Word Master and does not play.
+         */
+        if (
+            wordSelection !=
+            "Random Word"
+        ) {
+
             currentPlayer = 2
         }
+
+        remainingTurnSeconds =
+            secondsPerTurn
 
         val layout =
             LinearLayout(this)
@@ -113,6 +180,9 @@ class OnlineGameRoundActivity : Activity() {
             16
         )
 
+        /*
+         * TITLE
+         */
         val title =
             TextView(this)
 
@@ -132,6 +202,9 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(title)
 
+        /*
+         * GAME INFORMATION
+         */
         val info =
             TextView(this)
 
@@ -140,6 +213,7 @@ class OnlineGameRoundActivity : Activity() {
             Game Code: $gameCode
             Players: $playerCount of $maxPlayers
             Category: $category
+            Seconds per Turn: $secondsPerTurn
             Next Word Master: $nextWordMaster
             """.trimIndent()
 
@@ -158,6 +232,9 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(info)
 
+        /*
+         * PLAYERS
+         */
         val playersTitle =
             TextView(this)
 
@@ -188,7 +265,6 @@ class OnlineGameRoundActivity : Activity() {
 
         playersText.text =
             buildPlayerList(
-                playerCount,
                 wordSelection
             )
 
@@ -206,6 +282,9 @@ class OnlineGameRoundActivity : Activity() {
             playersText
         )
 
+        /*
+         * WORD MASTER INFORMATION
+         */
         val wordMasterText =
             TextView(this)
 
@@ -215,12 +294,12 @@ class OnlineGameRoundActivity : Activity() {
         ) {
 
             wordMasterText.text =
-                "Word Master: None\nEveryone plays"
+                "Word Master: None\nEveryone plays."
 
         } else {
 
             wordMasterText.text =
-                "Word Master: Player 1\nWord Master does not play"
+                "Word Master: Player 1\nWord Master does not play."
         }
 
         wordMasterText.textSize =
@@ -245,6 +324,9 @@ class OnlineGameRoundActivity : Activity() {
             wordMasterText
         )
 
+        /*
+         * WORD DISPLAY
+         */
         wordText =
             TextView(this)
 
@@ -273,6 +355,9 @@ class OnlineGameRoundActivity : Activity() {
             wordText
         )
 
+        /*
+         * CURRENT TURN
+         */
         turnText =
             TextView(this)
 
@@ -294,11 +379,14 @@ class OnlineGameRoundActivity : Activity() {
             turnText
         )
 
+        /*
+         * NORMAL TIMER
+         */
         timerText =
             TextView(this)
 
         timerText.text =
-            "Time: $secondsPerTurn"
+            "Time: $remainingTurnSeconds"
 
         timerText.textSize =
             24f
@@ -376,14 +464,17 @@ class OnlineGameRoundActivity : Activity() {
 
             button.setOnClickListener {
 
-                if (roundFinished) {
+                if (
+                    roundFinished
+                ) {
                     return@setOnClickListener
                 }
 
                 /*
-                 * Repeated letter
+                 * Already guessed:
                  *
                  * Same player continues.
+                 * Timer is NOT reset.
                  */
                 if (
                     guessedLetters.contains(
@@ -426,6 +517,9 @@ class OnlineGameRoundActivity : Activity() {
 
                     updateWordDisplay()
 
+                    /*
+                     * One point for each occurrence.
+                     */
                     val occurrences =
                         secretWord.count {
                             it == letter
@@ -436,7 +530,6 @@ class OnlineGameRoundActivity : Activity() {
                             occurrences
 
                     updatePlayerList(
-                        playerCount,
                         wordSelection
                     )
 
@@ -447,8 +540,8 @@ class OnlineGameRoundActivity : Activity() {
                     ).show()
 
                     /*
-                     * If word is complete,
-                     * current player wins.
+                     * Check whether the complete
+                     * word has been revealed.
                      */
                     if (
                         isWordComplete()
@@ -461,25 +554,29 @@ class OnlineGameRoundActivity : Activity() {
                     } else {
 
                         /*
-                         * IMPORTANT:
+                         * CORRECT LETTER:
                          *
-                         * Correct letter means
-                         * same player continues,
-                         * but gets a NEW FULL TIMER.
+                         * Same player continues.
+                         *
+                         * IMPORTANT:
+                         * Give that player a completely
+                         * fresh full timer.
                          */
+                        wholeWordAttemptUsed =
+                            false
+
                         startTurnTimer(
                             secondsPerTurn,
-                            wordSelection,
-                            playerCount
+                            wordSelection
                         )
                     }
 
                 } else {
 
                     /*
-                     * WRONG LETTER
+                     * WRONG LETTER:
                      *
-                     * Turn ends immediately.
+                     * Current turn immediately ends.
                      */
                     Toast.makeText(
                         this,
@@ -488,9 +585,7 @@ class OnlineGameRoundActivity : Activity() {
                     ).show()
 
                     moveToNextPlayer(
-                        wordSelection,
-                        playerCount,
-                        secondsPerTurn
+                        wordSelection
                     )
                 }
             }
@@ -526,7 +621,7 @@ class OnlineGameRoundActivity : Activity() {
         /*
          * WHOLE WORD BUTTON
          */
-        val wholeWordButton =
+        wholeWordButton =
             Button(this)
 
         wholeWordButton.text =
@@ -537,12 +632,12 @@ class OnlineGameRoundActivity : Activity() {
 
         wholeWordButton.setOnClickListener {
 
-            if (!roundFinished) {
+            if (
+                !roundFinished
+            ) {
 
                 showWholeWordDialog(
-                    wordSelection,
-                    playerCount,
-                    secondsPerTurn
+                    wordSelection
                 )
             }
         }
@@ -570,6 +665,7 @@ class OnlineGameRoundActivity : Activity() {
         leaveButton.setOnClickListener {
 
             timer?.cancel()
+            wholeWordTimer?.cancel()
 
             finish()
         }
@@ -580,21 +676,25 @@ class OnlineGameRoundActivity : Activity() {
 
         setContentView(layout)
 
+        /*
+         * Start first turn.
+         */
         startTurnTimer(
             secondsPerTurn,
-            wordSelection,
-            playerCount
+            wordSelection
         )
     }
 
     /*
-     * Creates:
+     * WORD DISPLAY
      *
-     * _ _ _ _ _
+     * Spaces remain spaces.
      *
-     * or:
+     * Example:
      *
-     * A _ P P _
+     * NEW YORK
+     *
+     * _ _ _   _ _ _ _
      */
     private fun buildWordDisplay(): String {
 
@@ -604,6 +704,14 @@ class OnlineGameRoundActivity : Activity() {
         for (letter in secretWord) {
 
             if (
+                letter == ' '
+            ) {
+
+                builder.append(
+                    "   "
+                )
+
+            } else if (
                 revealedLetters.contains(
                     letter
                 )
@@ -613,14 +721,16 @@ class OnlineGameRoundActivity : Activity() {
                     letter
                 )
 
+                builder.append(
+                    " "
+                )
+
             } else {
 
                 builder.append(
-                    "_"
+                    "_ "
                 )
             }
-
-            builder.append(" ")
         }
 
         return builder
@@ -634,11 +744,16 @@ class OnlineGameRoundActivity : Activity() {
             buildWordDisplay()
     }
 
+    /*
+     * A word is complete when every
+     * non-space character is revealed.
+     */
     private fun isWordComplete(): Boolean {
 
         for (letter in secretWord) {
 
             if (
+                letter != ' ' &&
                 !revealedLetters.contains(
                     letter
                 )
@@ -651,8 +766,10 @@ class OnlineGameRoundActivity : Activity() {
         return true
     }
 
+    /*
+     * PLAYER LIST
+     */
     private fun buildPlayerList(
-        playerCount: Int,
         wordSelection: String
     ): String {
 
@@ -670,6 +787,16 @@ class OnlineGameRoundActivity : Activity() {
             )
 
             if (
+                eliminatedPlayers.contains(
+                    player
+                )
+            ) {
+
+                builder.append(
+                    " — ELIMINATED"
+                )
+
+            } else if (
                 wordSelection !=
                 "Random Word" &&
                 player == 1
@@ -688,6 +815,21 @@ class OnlineGameRoundActivity : Activity() {
                 )
             }
 
+            /*
+             * Show missed turns for 3-4 player games.
+             */
+            if (
+                playerCount >= 3 &&
+                !eliminatedPlayers.contains(
+                    player
+                )
+            ) {
+
+                builder.append(
+                    " — Misses: ${missedTurns[player] ?: 0}/3"
+                )
+            }
+
             builder.append(
                 "\n"
             )
@@ -699,36 +841,36 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     private fun updatePlayerList(
-        playerCount: Int,
         wordSelection: String
     ) {
 
         playersText.text =
             buildPlayerList(
-                playerCount,
                 wordSelection
             )
     }
 
     /*
-     * START OR RESET TIMER
+     * NORMAL TURN TIMER
      */
     private fun startTurnTimer(
         seconds: Int,
-        wordSelection: String,
-        playerCount: Int
+        wordSelection: String
     ) {
 
         timer?.cancel()
 
-        if (roundFinished) {
+        wholeWordTimer?.cancel()
+
+        if (
+            roundFinished
+        ) {
             return
         }
 
-        /*
-         * Every time this function is called,
-         * the player receives a completely new timer.
-         */
+        remainingTurnSeconds =
+            seconds
+
         timer =
             object :
                 CountDownTimer(
@@ -740,15 +882,17 @@ class OnlineGameRoundActivity : Activity() {
                         millisUntilFinished: Long
                     ) {
 
-                        val remaining =
-                            millisUntilFinished /
-                                1000L
+                        remainingTurnSeconds =
+                            (
+                                millisUntilFinished /
+                                    1000L
+                                ).toInt()
 
                         timerText.text =
-                            "Time: $remaining"
+                            "Time: $remainingTurnSeconds"
 
                         if (
-                            remaining <= 3
+                            remainingTurnSeconds <= 3
                         ) {
 
                             timerText.setTextColor(
@@ -765,9 +909,14 @@ class OnlineGameRoundActivity : Activity() {
 
                     override fun onFinish() {
 
-                        if (roundFinished) {
+                        if (
+                            roundFinished
+                        ) {
                             return
                         }
+
+                        remainingTurnSeconds =
+                            0
 
                         timerText.text =
                             "Time: 0"
@@ -776,16 +925,12 @@ class OnlineGameRoundActivity : Activity() {
                             Color.RED
                         )
 
-                        Toast.makeText(
-                            this@OnlineGameRoundActivity,
-                            "Time is up.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        moveToNextPlayer(
-                            wordSelection,
-                            playerCount,
-                            seconds
+                        /*
+                         * Timer expiration counts
+                         * as a missed turn.
+                         */
+                        handleMissedTurn(
+                            wordSelection
                         )
                     }
                 }
@@ -793,81 +938,226 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     /*
-     * MOVE TO NEXT PLAYER
+     * HANDLE MISSED TURN
+     */
+    private fun handleMissedTurn(
+        wordSelection: String
+    ) {
+
+        /*
+         * In 2-player games there is no
+         * elimination system.
+         */
+        if (
+            playerCount >= 3
+        ) {
+
+            val misses =
+                (missedTurns[currentPlayer] ?: 0) + 1
+
+            missedTurns[currentPlayer] =
+                misses
+
+            /*
+             * Three missed turns =
+             * eliminated.
+             */
+            if (
+                misses >= 3
+            ) {
+
+                eliminatedPlayers.add(
+                    currentPlayer
+                )
+
+                Toast.makeText(
+                    this,
+                    "Player $currentPlayer is eliminated after 3 missed turns.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+            } else {
+
+                Toast.makeText(
+                    this,
+                    "Player $currentPlayer missed a turn.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+        } else {
+
+            Toast.makeText(
+                this,
+                "Time is up.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        /*
+         * Make sure there is still someone
+         * who can play.
+         */
+        if (
+            getActivePlayerCount(
+                wordSelection
+            ) <= 1
+        ) {
+
+            finishRound(
+                "Only one player remains. Player $currentPlayer wins!"
+            )
+
+            return
+        }
+
+        moveToNextPlayer(
+            wordSelection
+        )
+    }
+
+    /*
+     * MOVE TO NEXT ELIGIBLE PLAYER
      */
     private fun moveToNextPlayer(
-        wordSelection: String,
-        playerCount: Int,
-        secondsPerTurn: Int
+        wordSelection: String
     ) {
 
         timer?.cancel()
 
-        currentPlayer++
+        wholeWordTimer?.cancel()
 
-        /*
-         * Manual Word:
-         * Player 1 is Word Master,
-         * so skip Player 1.
-         */
         if (
-            wordSelection !=
-            "Random Word" &&
-            currentPlayer == 1
+            roundFinished
         ) {
-
-            currentPlayer = 2
+            return
         }
 
-        /*
-         * Wrap around.
-         */
-        if (
-            currentPlayer >
-            playerCount
-        ) {
+        var attempts = 0
 
-            currentPlayer =
-                if (
-                    wordSelection ==
-                    "Random Word"
-                ) {
+        do {
+
+            currentPlayer++
+
+            if (
+                currentPlayer >
+                playerCount
+            ) {
+
+                currentPlayer =
                     1
-                } else {
+            }
+
+            /*
+             * Manual Word:
+             * Player 1 is Word Master.
+             */
+            if (
+                wordSelection !=
+                "Random Word" &&
+                currentPlayer == 1
+            ) {
+
+                currentPlayer =
                     2
-                }
-        }
+            }
+
+            attempts++
+
+        } while (
+            (
+                eliminatedPlayers.contains(
+                    currentPlayer
+                )
+            ) &&
+            attempts <= playerCount + 1
+        )
+
+        /*
+         * Reset whole-word attempt
+         * for the new player's turn.
+         */
+        wholeWordAttemptUsed =
+            false
 
         turnText.text =
             "Player $currentPlayer's Turn"
 
         updatePlayerList(
-            playerCount,
             wordSelection
         )
 
-        /*
-         * New player gets a completely
-         * new full timer.
-         */
         startTurnTimer(
             secondsPerTurn,
-            wordSelection,
-            playerCount
+            wordSelection
         )
     }
 
     /*
-     * WHOLE WORD GUESS
+     * COUNT ACTIVE PLAYERS
+     */
+    private fun getActivePlayerCount(
+        wordSelection: String
+    ): Int {
+
+        var count = 0
+
+        for (player in 1..playerCount) {
+
+            if (
+                eliminatedPlayers.contains(
+                    player
+                )
+            ) {
+                continue
+            }
+
+            if (
+                wordSelection !=
+                "Random Word" &&
+                player == 1
+            ) {
+                continue
+            }
+
+            count++
+        }
+
+        return count
+    }
+
+    /*
+     * WHOLE-WORD DIALOG
+     *
+     * This has its OWN 10-second timer.
+     *
+     * The normal turn timer is paused.
      */
     private fun showWholeWordDialog(
-        wordSelection: String,
-        playerCount: Int,
-        secondsPerTurn: Int
+        wordSelection: String
     ) {
 
         /*
-         * Pause normal turn timer.
+         * One attempt per player per turn.
+         */
+        if (
+            wholeWordAttemptUsed
+        ) {
+
+            Toast.makeText(
+                this,
+                "You already used your whole-word guess this turn.",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            return
+        }
+
+        wholeWordAttemptUsed =
+            true
+
+        /*
+         * Save the normal timer's remaining time.
          */
         timer?.cancel()
 
@@ -884,12 +1174,62 @@ class OnlineGameRoundActivity : Activity() {
         input.textSize =
             18f
 
+        /*
+         * Dialog layout.
+         */
+        val dialogLayout =
+            LinearLayout(this)
+
+        dialogLayout.orientation =
+            LinearLayout.VERTICAL
+
+        dialogLayout.setPadding(
+            30,
+            10,
+            30,
+            5
+        )
+
+        dialogLayout.addView(
+            input
+        )
+
+        val wholeWordTimerText =
+            TextView(this)
+
+        wholeWordTimerText.text =
+            "Time: 10"
+
+        wholeWordTimerText.textSize =
+            22f
+
+        wholeWordTimerText.gravity =
+            Gravity.CENTER
+
+        wholeWordTimerText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wholeWordTimerText.setPadding(
+            0,
+            15,
+            0,
+            5
+        )
+
+        dialogLayout.addView(
+            wholeWordTimerText
+        )
+
         val dialog =
             AlertDialog.Builder(this)
                 .setTitle(
                     "Guess Whole Word"
                 )
-                .setView(input)
+                .setView(
+                    dialogLayout
+                )
                 .setNegativeButton(
                     "Cancel",
                     null
@@ -900,6 +1240,78 @@ class OnlineGameRoundActivity : Activity() {
                 )
                 .create()
 
+        /*
+         * Separate 10-second timer.
+         */
+        var wholeWordSeconds =
+            10
+
+        wholeWordTimer =
+            object :
+                CountDownTimer(
+                    10000L,
+                    1000L
+                ) {
+
+                    override fun onTick(
+                        millisUntilFinished: Long
+                    ) {
+
+                        wholeWordSeconds =
+                            (
+                                millisUntilFinished /
+                                    1000L
+                                ).toInt()
+
+                        wholeWordTimerText.text =
+                            "Time: $wholeWordSeconds"
+
+                        if (
+                            wholeWordSeconds <= 3
+                        ) {
+
+                            wholeWordTimerText.setTextColor(
+                                Color.RED
+                            )
+
+                        } else {
+
+                            wholeWordTimerText.setTextColor(
+                                Color.BLACK
+                            )
+                        }
+                    }
+
+                    override fun onFinish() {
+
+                        wholeWordTimerText.text =
+                            "Time: 0"
+
+                        wholeWordTimerText.setTextColor(
+                            Color.RED
+                        )
+
+                        dialog.dismiss()
+
+                        Toast.makeText(
+                            this@OnlineGameRoundActivity,
+                            "Whole-word time is up.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        /*
+                         * Timeout ends the turn.
+                         */
+                        moveToNextPlayer(
+                            wordSelection
+                        )
+                    }
+                }
+                .start()
+
+        /*
+         * Positive button.
+         */
         dialog.setOnShowListener {
 
             dialog.getButton(
@@ -922,15 +1334,19 @@ class OnlineGameRoundActivity : Activity() {
                     return@setOnClickListener
                 }
 
+                wholeWordTimer?.cancel()
+
                 dialog.dismiss()
 
                 /*
-                 * Correct whole-word guess:
-                 * immediate round winner.
+                 * CORRECT WHOLE WORD
+                 *
+                 * This player wins regardless
+                 * of score.
                  */
                 if (
                     guess ==
-                    secretWord
+                    secretWord.uppercase()
                 ) {
 
                     finishRound(
@@ -940,37 +1356,58 @@ class OnlineGameRoundActivity : Activity() {
                 } else {
 
                     /*
-                     * Wrong whole-word guess:
-                     * turn ends.
+                     * WRONG WHOLE WORD
+                     *
+                     * No points.
+                     * Turn ends.
                      */
                     Toast.makeText(
                         this,
-                        "Wrong whole-word guess.",
+                        "Wrong whole-word guess!",
                         Toast.LENGTH_SHORT
                     ).show()
 
                     moveToNextPlayer(
-                        wordSelection,
-                        playerCount,
-                        secondsPerTurn
+                        wordSelection
                     )
                 }
             }
         }
 
         /*
-         * If user cancels,
-         * resume the current player's timer.
+         * Cancel button / back button.
+         *
+         * IMPORTANT:
+         * The whole-word attempt has already
+         * been consumed.
+         *
+         * The normal timer resumes using
+         * the time that was left before the
+         * dialog was opened.
          */
         dialog.setOnCancelListener {
 
-            if (!roundFinished) {
+            wholeWordTimer?.cancel()
 
-                startTurnTimer(
-                    secondsPerTurn,
-                    wordSelection,
-                    playerCount
-                )
+            if (
+                !roundFinished
+            ) {
+
+                if (
+                    remainingTurnSeconds <= 0
+                ) {
+
+                    moveToNextPlayer(
+                        wordSelection
+                    )
+
+                } else {
+
+                    startTurnTimer(
+                        remainingTurnSeconds,
+                        wordSelection
+                    )
+                }
             }
         }
 
@@ -978,19 +1415,24 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     /*
-     * END ROUND
+     * FINISH ROUND
      */
     private fun finishRound(
         message: String
     ) {
 
-        if (roundFinished) {
+        if (
+            roundFinished
+        ) {
             return
         }
 
-        roundFinished = true
+        roundFinished =
+            true
 
         timer?.cancel()
+
+        wholeWordTimer?.cancel()
 
         AlertDialog.Builder(this)
             .setTitle(
@@ -1012,6 +1454,8 @@ class OnlineGameRoundActivity : Activity() {
     override fun onDestroy() {
 
         timer?.cancel()
+
+        wholeWordTimer?.cancel()
 
         super.onDestroy()
     }
