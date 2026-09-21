@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.graphics.Color
 import android.view.Gravity
+import android.view.View
 import android.widget.*
 
 class GameSetupActivity : Activity() {
@@ -67,6 +68,38 @@ class GameSetupActivity : Activity() {
         wordSelectionSpinner.adapter = wordSelectionAdapter
 
         layout.addView(wordSelectionSpinner)
+
+        // HOST WORD INPUT
+        val hostWordInput = EditText(this)
+        hostWordInput.hint = "Host: enter the word"
+        hostWordInput.textSize = 20f
+        hostWordInput.setSingleLine(true)
+        hostWordInput.visibility = View.GONE
+
+        layout.addView(hostWordInput)
+
+        wordSelectionSpinner.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    if (position == 1) {
+                        hostWordInput.visibility = View.VISIBLE
+                    } else {
+                        hostWordInput.visibility = View.GONE
+                        hostWordInput.text.clear()
+                    }
+                }
+
+                override fun onNothingSelected(
+                    parent: android.widget.AdapterView<*>?
+                ) {
+                }
+            }
 
         // NEXT WORD CHOICE
         val nextWordTitle = TextView(this)
@@ -162,6 +195,18 @@ class GameSetupActivity : Activity() {
             val selectedWordSelection =
                 wordSelectionSpinner.selectedItem.toString()
 
+            if (
+                selectedWordSelection == "Host Chooses Word" &&
+                hostWordInput.text.toString().trim().isEmpty()
+            ) {
+                Toast.makeText(
+                    this,
+                    "Please enter a word.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
             val selectedNextWordChoice =
                 nextWordSpinner.selectedItem.toString()
 
@@ -170,6 +215,11 @@ class GameSetupActivity : Activity() {
 
             val selectedTime =
                 timeSpinner.selectedItem.toString().toInt()
+
+            val hostWord =
+                hostWordInput.text.toString()
+                    .trim()
+                    .uppercase()
 
             val intent =
                 android.content.Intent(
@@ -180,6 +230,11 @@ class GameSetupActivity : Activity() {
             intent.putExtra(
                 "wordSelection",
                 selectedWordSelection
+            )
+
+            intent.putExtra(
+                "hostWord",
+                hostWord
             )
 
             intent.putExtra(
