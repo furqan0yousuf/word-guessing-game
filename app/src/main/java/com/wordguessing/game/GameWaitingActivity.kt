@@ -2,8 +2,10 @@ package com.wordguessing.game
 
 import android.app.Activity
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -17,14 +19,21 @@ class GameWaitingActivity : Activity() {
                 ?: "------"
 
         val playerCount =
-            intent.getIntExtra("playerCount", 2)
+            intent.getIntExtra(
+                "playerCount",
+                2
+            )
 
         val wordSelection =
-            intent.getStringExtra("wordSelection")
+            intent.getStringExtra(
+                "wordSelection"
+            )
                 ?: "Random Word"
 
         val category =
-            intent.getStringExtra("category")
+            intent.getStringExtra(
+                "category"
+            )
                 ?: "Random"
 
         val secondsPerTurn =
@@ -38,6 +47,12 @@ class GameWaitingActivity : Activity() {
                 "nextWordMaster"
             )
                 ?: "Same Word Master"
+
+        val playerName =
+            intent.getStringExtra(
+                "playerName"
+            )
+                ?: "Host"
 
         val layout =
             LinearLayout(this)
@@ -67,6 +82,11 @@ class GameWaitingActivity : Activity() {
         title.gravity =
             Gravity.CENTER
 
+        title.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
         title.setTextColor(
             Color.BLACK
         )
@@ -80,6 +100,7 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(title)
 
+        // GAME CODE
         val codeText =
             TextView(this)
 
@@ -94,7 +115,7 @@ class GameWaitingActivity : Activity() {
 
         codeText.setTypeface(
             null,
-            android.graphics.Typeface.BOLD
+            Typeface.BOLD
         )
 
         codeText.setPadding(
@@ -106,27 +127,49 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(codeText)
 
+        // PLAYERS
+        val playersTitle =
+            TextView(this)
+
+        playersTitle.text =
+            "Players"
+
+        playersTitle.textSize =
+            22f
+
+        playersTitle.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        playersTitle.setPadding(
+            0,
+            5,
+            0,
+            10
+        )
+
+        layout.addView(playersTitle)
+
         val playersText =
             TextView(this)
 
         playersText.text =
-            "Players: 1 of $playerCount"
+            "1 of $playerCount\n\n1. $playerName — Host"
 
         playersText.textSize =
-            20f
-
-        playersText.gravity =
-            Gravity.CENTER
+            18f
 
         playersText.setPadding(
             0,
-            10,
+            5,
             0,
             20
         )
 
         layout.addView(playersText)
 
+        // RULES
         val rulesTitle =
             TextView(this)
 
@@ -138,7 +181,7 @@ class GameWaitingActivity : Activity() {
 
         rulesTitle.setTypeface(
             null,
-            android.graphics.Typeface.BOLD
+            Typeface.BOLD
         )
 
         rulesTitle.setPadding(
@@ -189,14 +232,37 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(rulesText)
 
+        // READY BUTTON
+        val readyButton =
+            Button(this)
+
+        readyButton.text =
+            "Ready"
+
+        readyButton.textSize =
+            18f
+
+        readyButton.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        layout.addView(
+            readyButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
         val waitingText =
             TextView(this)
 
         waitingText.text =
-            "Waiting for players to join..."
+            "Waiting for other players..."
 
         waitingText.textSize =
-            19f
+            18f
 
         waitingText.gravity =
             Gravity.CENTER
@@ -205,7 +271,26 @@ class GameWaitingActivity : Activity() {
             Color.DKGRAY
         )
 
+        waitingText.setPadding(
+            0,
+            15,
+            0,
+            0
+        )
+
         layout.addView(waitingText)
+
+        readyButton.setOnClickListener {
+
+            readyButton.isEnabled =
+                false
+
+            readyButton.text =
+                "Ready ✓"
+
+            waitingText.text =
+                "You are ready.\nWaiting for other players..."
+        }
 
         setContentView(layout)
     }
