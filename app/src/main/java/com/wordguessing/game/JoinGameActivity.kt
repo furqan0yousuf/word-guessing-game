@@ -270,4 +270,3 @@ class JoinGameActivity : Activity() {
         setContentView(layout)
     }
 }
-```
