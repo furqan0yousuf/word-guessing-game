@@ -352,41 +352,38 @@ class OnlineGameRoundActivity : Activity() {
 
             button.setOnClickListener {
 
-                if (
-                    guessedLetters.contains(
-                        letter
-                    )
-                ) {
+    if (
+        guessedLetters.contains(
+            letter
+        )
+    ) {
 
-                    Toast.makeText(
-                        this,
-                        "Already guessed.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+        Toast.makeText(
+            this,
+            "Already guessed.",
+            Toast.LENGTH_SHORT
+        ).show()
 
-                    return@setOnClickListener
-                }
+    } else {
 
-                guessedLetters.add(
-                    letter
-                )
+        guessedLetters.add(
+            letter
+        )
 
-                button.setBackgroundColor(
-                    Color.RED
-                )
+        button.setBackgroundColor(
+            Color.RED
+        )
 
-                button.isEnabled =
-                    false
+        button.isEnabled =
+            false
 
-                // Temporary simulation:
-                // each correct letter will later
-                // be calculated from the real word.
-                Toast.makeText(
-                    this,
-                    "Letter $letter selected.",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+        Toast.makeText(
+            this,
+            "Letter $letter selected.",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
 
             currentRow.addView(
                 button,
