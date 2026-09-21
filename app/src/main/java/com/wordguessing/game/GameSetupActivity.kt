@@ -1,410 +1,210 @@
 package com.wordguessing.game
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.os.Bundle
 import android.graphics.Color
-import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.*
 
 class GameSetupActivity : Activity() {
 
-    private lateinit var names: ArrayList<String>
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        names =
+        val names =
             intent.getStringArrayListExtra("playerNames")
                 ?: arrayListOf()
 
-        // Make sure we always have usable player names.
-        for (i in names.indices) {
-            if (names[i].trim().isEmpty()) {
-                names[i] = "Player ${i + 1}"
-            }
-        }
-
-        if (names.isEmpty()) {
-            names.add("Player 1")
-            names.add("Player 2")
-        }
-
-        createSetupScreen()
-    }
-
-    private fun createSetupScreen() {
-
         val layout = LinearLayout(this)
-
-        layout.orientation =
-            LinearLayout.VERTICAL
-
-        layout.setPadding(
-            24,
-            24,
-            24,
-            24
-        )
-
-        // =========================
-        // TITLE
-        // =========================
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(24, 24, 24, 24)
 
         val title = TextView(this)
-
-        title.text =
-            "Game Setup"
-
-        title.textSize =
-            28f
-
-        title.gravity =
-            Gravity.CENTER
-
-        title.setTextColor(
-            Color.BLACK
-        )
-
-        title.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        title.setPadding(
-            0,
-            0,
-            0,
-            15
-        )
+        title.text = "Game Setup"
+        title.textSize = 28f
+        title.gravity = Gravity.CENTER
+        title.setTextColor(Color.BLACK)
 
         layout.addView(title)
 
-        // =========================
-        // PLAYER COUNT
-        // =========================
-
-        val playerCount = TextView(this)
-
-        playerCount.text =
-            "${names.size} Player${if (names.size == 1) "" else "s"}"
-
-        playerCount.textSize =
-            20f
-
-        playerCount.gravity =
-            Gravity.CENTER
-
-        playerCount.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        playerCount.setTextColor(
-            Color.DKGRAY
-        )
-
-        layout.addView(
-            playerCount
-        )
-
-        // =========================
         // PLAYERS
-        // =========================
+        val playersTitle = TextView(this)
+        playersTitle.text = "Players"
+        playersTitle.textSize = 20f
+        playersTitle.setPadding(0, 30, 0, 10)
 
-        val playersTitle =
-            TextView(this)
-
-        playersTitle.text =
-            "Players"
-
-        playersTitle.textSize =
-            20f
-
-        playersTitle.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        playersTitle.setPadding(
-            0,
-            25,
-            0,
-            10
-        )
-
-        layout.addView(
-            playersTitle
-        )
+        layout.addView(playersTitle)
 
         for (i in names.indices) {
+            val player = TextView(this)
+            player.text = "Player ${i + 1}: ${names[i]}"
+            player.textSize = 18f
 
-            val player =
-                TextView(this)
-
-            player.text =
-                "Player ${i + 1}: ${names[i]}"
-
-            player.textSize =
-                18f
-
-            player.setPadding(
-                10,
-                8,
-                10,
-                8
-            )
-
-            layout.addView(
-                player
-            )
+            layout.addView(player)
         }
 
-        // =========================
+        // WORD SELECTION
+        val wordSelectionTitle = TextView(this)
+        wordSelectionTitle.text = "Word Selection"
+        wordSelectionTitle.textSize = 20f
+        wordSelectionTitle.setPadding(0, 30, 0, 10)
+
+        layout.addView(wordSelectionTitle)
+
+        val wordSelectionSpinner = Spinner(this)
+
+        val wordSelectionOptions = arrayOf(
+            "Random Word",
+            "Host Chooses Word"
+        )
+
+        val wordSelectionAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            wordSelectionOptions
+        )
+
+        wordSelectionSpinner.adapter = wordSelectionAdapter
+
+        layout.addView(wordSelectionSpinner)
+
+        // NEXT WORD CHOICE
+        val nextWordTitle = TextView(this)
+        nextWordTitle.text = "Next Word Chosen By"
+        nextWordTitle.textSize = 20f
+        nextWordTitle.setPadding(0, 30, 0, 10)
+
+        layout.addView(nextWordTitle)
+
+        val nextWordSpinner = Spinner(this)
+
+        val nextWordOptions = arrayOf(
+            "Winner",
+            "Host"
+        )
+
+        val nextWordAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            nextWordOptions
+        )
+
+        nextWordSpinner.adapter = nextWordAdapter
+
+        layout.addView(nextWordSpinner)
+
         // CATEGORY
-        // =========================
+        val categoryTitle = TextView(this)
+        categoryTitle.text = "Category"
+        categoryTitle.textSize = 20f
+        categoryTitle.setPadding(0, 30, 0, 10)
 
-        val categoryTitle =
-            TextView(this)
+        layout.addView(categoryTitle)
 
-        categoryTitle.text =
-            "Category"
+        val categorySpinner = Spinner(this)
 
-        categoryTitle.textSize =
-            20f
-
-        categoryTitle.setTypeface(
-            null,
-            Typeface.BOLD
+        val categories = arrayOf(
+            "Random",
+            "Animals",
+            "Food",
+            "Places",
+            "Sports",
+            "Movies",
+            "Things"
         )
 
-        categoryTitle.setPadding(
-            0,
-            25,
-            0,
-            10
+        val categoryAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            categories
         )
 
-        layout.addView(
-            categoryTitle
-        )
+        categorySpinner.adapter = categoryAdapter
 
-        val categorySpinner =
-            Spinner(this)
+        layout.addView(categorySpinner)
 
-        val categories =
-            arrayOf(
-                "Random",
-                "Animals",
-                "Food",
-                "Places",
-                "Sports",
-                "Movies",
-                "Things"
-            )
-
-        val adapter =
-            ArrayAdapter(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                categories
-            )
-
-        categorySpinner.adapter =
-            adapter
-
-        // Random is the default.
-        categorySpinner.setSelection(0)
-
-        layout.addView(
-            categorySpinner
-        )
-
-        // =========================
         // TIME
-        // =========================
+        val timeTitle = TextView(this)
+        timeTitle.text = "Seconds per turn"
+        timeTitle.textSize = 20f
+        timeTitle.setPadding(0, 30, 0, 10)
 
-        val timeTitle =
-            TextView(this)
+        layout.addView(timeTitle)
 
-        timeTitle.text =
-            "Seconds per turn"
+        val timeSpinner = Spinner(this)
 
-        timeTitle.textSize =
-            20f
-
-        timeTitle.setTypeface(
-            null,
-            Typeface.BOLD
+        val times = arrayOf(
+            "10",
+            "15",
+            "20",
+            "30"
         )
 
-        timeTitle.setPadding(
-            0,
-            25,
-            0,
-            10
+        val timeAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            times
         )
 
-        layout.addView(
-            timeTitle
-        )
+        timeSpinner.adapter = timeAdapter
 
-        val timeSpinner =
-            Spinner(this)
+        layout.addView(timeSpinner)
 
-        val times =
-            arrayOf(
-                "10",
-                "15",
-                "20",
-                "30"
-            )
+        // START GAME
+        val startButton = Button(this)
+        startButton.text = "Start Game"
+        startButton.textSize = 18f
 
-        val timeAdapter =
-            ArrayAdapter(
-                this,
-                android.R.layout.simple_spinner_dropdown_item,
-                times
-            )
-
-        timeSpinner.adapter =
-            timeAdapter
-
-        // 10 seconds is the default.
-        timeSpinner.setSelection(0)
-
-        layout.addView(
-            timeSpinner
-        )
-
-        // =========================
-        // START BUTTON
-        // =========================
-
-        val startButton =
-            Button(this)
-
-        startButton.text =
-            "Start Game"
-
-        startButton.textSize =
-            18f
-
-        startButton.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        startButton.setPadding(
-            0,
-            10,
-            0,
-            10
-        )
-
-        val startParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-
-        startParams.setMargins(
-            0,
-            30,
-            0,
-            10
-        )
-
-        layout.addView(
-            startButton,
-            startParams
-        )
+        layout.addView(startButton)
 
         startButton.setOnClickListener {
+
+            val selectedWordSelection =
+                wordSelectionSpinner.selectedItem.toString()
+
+            val selectedNextWordChoice =
+                nextWordSpinner.selectedItem.toString()
 
             val selectedCategory =
                 categorySpinner.selectedItem.toString()
 
             val selectedTime =
-                timeSpinner.selectedItem
-                    .toString()
-                    .toInt()
+                timeSpinner.selectedItem.toString().toInt()
 
-            val cleanNames =
-                ArrayList<String>()
-
-            for (i in names.indices) {
-
-                val cleanName =
-                    names[i].trim()
-
-                if (cleanName.isEmpty()) {
-
-                    cleanNames.add(
-                        "Player ${i + 1}"
-                    )
-
-                } else {
-
-                    cleanNames.add(
-                        cleanName
-                    )
-                }
-            }
-
-            val gameIntent =
+            val intent =
                 android.content.Intent(
                     this,
                     GameActivity::class.java
                 )
 
-            gameIntent.putExtra(
+            intent.putExtra(
+                "wordSelection",
+                selectedWordSelection
+            )
+
+            intent.putExtra(
+                "nextWordChoice",
+                selectedNextWordChoice
+            )
+
+            intent.putExtra(
                 "category",
                 selectedCategory
             )
 
-            gameIntent.putExtra(
+            intent.putExtra(
                 "secondsPerTurn",
                 selectedTime
             )
 
-            gameIntent.putStringArrayListExtra(
+            intent.putStringArrayListExtra(
                 "playerNames",
-                cleanNames
+                names
             )
 
-            startActivity(
-                gameIntent
-            )
+            startActivity(intent)
         }
 
-        setContentView(
-            layout
-        )
-    }
-
-    // =========================
-    // BACK BUTTON
-    // =========================
-
-    override fun onBackPressed() {
-
-        AlertDialog.Builder(this)
-            .setTitle("Leave Setup?")
-            .setMessage(
-                "Are you sure you want to leave the game setup?"
-            )
-            .setNegativeButton(
-                "Cancel",
-                null
-            )
-            .setPositiveButton(
-                "Leave"
-            ) { _, _ ->
-
-                finish()
-            }
-            .show()
+        setContentView(layout)
     }
 }
