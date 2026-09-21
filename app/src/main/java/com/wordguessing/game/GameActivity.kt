@@ -711,22 +711,21 @@ class GameActivity : Activity() {
     // CHECK SOLVED
     // =========================
 
-    private fun isWordSolved(): Boolean {
+private fun isWordSolved(): Boolean {
 
-        for (letter in testWord) {
+    for (letter in testWord) {
 
-            if (
-                !selectedLetters.contains(
-                    letter
-                )
-            ) {
-
-                return false
-            }
+        if (letter == ' ') {
+            continue
         }
 
-        return true
+        if (!selectedLetters.contains(letter)) {
+            return false
+        }
     }
+
+    return true
+}
 
     // =========================
     // TIME EXPIRED
