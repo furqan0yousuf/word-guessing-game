@@ -30,6 +30,21 @@ class CreateGameActivity : Activity() {
 
         layout.addView(title)
 
+        // HOST NAME
+        val nameTitle = TextView(this)
+        nameTitle.text = "Your Name"
+        nameTitle.textSize = 20f
+        nameTitle.setPadding(0, 30, 0, 10)
+
+        layout.addView(nameTitle)
+
+        val nameInput = EditText(this)
+        nameInput.hint = "Enter your name"
+        nameInput.textSize = 18f
+        nameInput.setSingleLine(true)
+
+        layout.addView(nameInput)
+
         // NUMBER OF PLAYERS
         val playersTitle = TextView(this)
         playersTitle.text = "Number of Players"
@@ -213,7 +228,7 @@ class CreateGameActivity : Activity() {
 
         // CREATE BUTTON
         val createButton = Button(this)
-        createButton.text = "Create Game"
+        createButton.text = "Create Game & Join"
         createButton.textSize = 18f
 
         layout.addView(
@@ -225,6 +240,22 @@ class CreateGameActivity : Activity() {
         )
 
         createButton.setOnClickListener {
+
+            val hostName =
+                nameInput.text
+                    .toString()
+                    .trim()
+
+            if (hostName.isEmpty()) {
+
+                Toast.makeText(
+                    this,
+                    "Please enter your name.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                return@setOnClickListener
+            }
 
             val selectedWordSelection =
                 wordSpinner.selectedItem.toString()
@@ -315,6 +346,11 @@ class CreateGameActivity : Activity() {
             intent.putExtra(
                 "nextWordMaster",
                 selectedNextMaster
+            )
+
+            intent.putExtra(
+                "playerName",
+                hostName
             )
 
             startActivity(intent)
