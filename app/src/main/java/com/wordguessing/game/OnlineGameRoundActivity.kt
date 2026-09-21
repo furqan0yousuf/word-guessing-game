@@ -352,11 +352,7 @@ class OnlineGameRoundActivity : Activity() {
 
             button.setOnClickListener {
 
-    if (
-        guessedLetters.contains(
-            letter
-        )
-    ) {
+    if (guessedLetters.contains(letter)) {
 
         Toast.makeText(
             this,
@@ -366,16 +362,13 @@ class OnlineGameRoundActivity : Activity() {
 
     } else {
 
-        guessedLetters.add(
-            letter
-        )
+        guessedLetters.add(letter)
 
         button.setBackgroundColor(
             Color.RED
         )
 
-        button.isEnabled =
-            false
+        button.isEnabled = false
 
         Toast.makeText(
             this,
@@ -383,6 +376,7 @@ class OnlineGameRoundActivity : Activity() {
             Toast.LENGTH_SHORT
         ).show()
     }
+}
 }
 
             currentRow.addView(
