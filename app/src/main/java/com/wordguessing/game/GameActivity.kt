@@ -21,6 +21,7 @@ class GameActivity : Activity() {
     private val selectedLetters = mutableSetOf<Char>()
 
     private lateinit var wordText: TextView
+    private lateinit var categoryText: TextView
     private lateinit var turnText: TextView
     private lateinit var scoresText: TextView
     private lateinit var timerText: TextView
@@ -199,6 +200,20 @@ class GameActivity : Activity() {
     }
 
     // =========================
+    // UPDATE CATEGORY DISPLAY
+    // =========================
+
+    private fun updateCategoryDisplay() {
+
+        categoryText.text =
+            if (selectedCategory == "Random") {
+                "Category: Random: $actualCategory"
+            } else {
+                "Category: $actualCategory"
+            }
+    }
+
+    // =========================
     // CREATE GAME SCREEN
     // =========================
 
@@ -235,15 +250,8 @@ class GameActivity : Activity() {
 
         layout.addView(title)
 
-        val categoryText =
+        categoryText =
             TextView(this)
-
-        categoryText.text =
-            if (selectedCategory == "Random") {
-                "Random: $actualCategory"
-            } else {
-                actualCategory
-            }
 
         categoryText.textSize =
             20f
@@ -251,6 +259,8 @@ class GameActivity : Activity() {
         layout.addView(
             categoryText
         )
+
+        updateCategoryDisplay()
 
         turnText =
             TextView(this)
@@ -924,6 +934,8 @@ class GameActivity : Activity() {
 
         fullWordButton.isEnabled =
             true
+
+        updateCategoryDisplay()
 
         updateWordDisplay()
 
