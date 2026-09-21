@@ -13,7 +13,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 
-class CreateGameActivity : Activity {
+class CreateGameActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
