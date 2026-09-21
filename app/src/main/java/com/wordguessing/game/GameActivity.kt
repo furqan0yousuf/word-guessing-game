@@ -1,3 +1,4 @@
+```kotlin
 package com.wordguessing.game
 
 import android.app.Activity
@@ -7,6 +8,14 @@ import android.view.Gravity
 import android.widget.*
 
 class GameActivity : Activity() {
+
+    // Test word for now
+    private val testWord = "APPLE"
+
+    // Letters the player has selected
+    private val selectedLetters = mutableSetOf<Char>()
+
+    private lateinit var wordText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +34,7 @@ class GameActivity : Activity() {
         layout.orientation = LinearLayout.VERTICAL
         layout.setPadding(24, 24, 24, 24)
 
+        // Title
         val title = TextView(this)
         title.text = "Word Guessing Game"
         title.textSize = 26f
@@ -32,17 +42,21 @@ class GameActivity : Activity() {
         title.setTextColor(Color.BLACK)
         layout.addView(title)
 
+        // Category
         val categoryText = TextView(this)
         categoryText.text = "Category: $category"
         categoryText.textSize = 20f
         categoryText.setPadding(0, 25, 0, 10)
         layout.addView(categoryText)
 
+        // Current player
         val turnText = TextView(this)
-        turnText.text = "Turn: ${names.firstOrNull() ?: "Player 1"}"
+        turnText.text =
+            "Turn: ${names.firstOrNull() ?: "Player 1"}"
         turnText.textSize = 20f
         layout.addView(turnText)
 
+        // Timer placeholder
         val timerText = TextView(this)
         timerText.text = "Time: $seconds"
         timerText.textSize = 22f
@@ -50,18 +64,23 @@ class GameActivity : Activity() {
         timerText.setPadding(0, 20, 0, 20)
         layout.addView(timerText)
 
-        val wordText = TextView(this)
-        wordText.text = "_ _ _ _ _"
+        // Word display
+        wordText = TextView(this)
         wordText.textSize = 32f
         wordText.gravity = Gravity.CENTER
         wordText.setPadding(0, 30, 0, 30)
+
+        updateWordDisplay()
+
         layout.addView(wordText)
 
+        // Instructions
         val lettersTitle = TextView(this)
         lettersTitle.text = "Choose a letter"
         lettersTitle.textSize = 20f
         layout.addView(lettersTitle)
 
+        // Alphabet
         val lettersLayout = LinearLayout(this)
         lettersLayout.orientation = LinearLayout.VERTICAL
 
@@ -77,9 +96,14 @@ class GameActivity : Activity() {
 
             for (i in rowStart until rowEnd) {
 
+                val letter = alphabet[i]
+
                 val letterButton = Button(this)
-                letterButton.text = alphabet[i].toString()
+                letterButton.text = letter.toString()
                 letterButton.textSize = 16f
+
+                // Unselected letters are GREEN
+                letterButton.setTextColor(Color.GREEN)
 
                 row.addView(
                     letterButton,
@@ -92,11 +116,19 @@ class GameActivity : Activity() {
 
                 letterButton.setOnClickListener {
 
-                    Toast.makeText(
-                        this,
-                        "You selected ${alphabet[i]}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // Ignore a letter if it was already selected
+                    if (selectedLetters.contains(letter)) {
+                        return@setOnClickListener
+                    }
+
+                    // Remember selected letter
+                    selectedLetters.add(letter)
+
+                    // Selected letters become RED
+                    letterButton.setTextColor(Color.RED)
+
+                    // Update the hidden word
+                    updateWordDisplay()
                 }
             }
 
@@ -105,6 +137,7 @@ class GameActivity : Activity() {
 
         layout.addView(lettersLayout)
 
+        // Whole word button
         val fullWordButton = Button(this)
         fullWordButton.text = "Guess Whole Word"
         fullWordButton.textSize = 18f
@@ -123,4 +156,24 @@ class GameActivity : Activity() {
 
         setContentView(layout)
     }
+
+    // Updates the word display
+    private fun updateWordDisplay() {
+
+        val display = StringBuilder()
+
+        for (letter in testWord) {
+
+            if (selectedLetters.contains(letter)) {
+                display.append(letter)
+            } else {
+                display.append("_")
+            }
+
+            display.append(" ")
+        }
+
+        wordText.text = display.toString().trim()
+    }
 }
+```
