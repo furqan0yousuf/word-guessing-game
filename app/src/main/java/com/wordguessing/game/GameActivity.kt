@@ -1,152 +1,44 @@
 package com.wordguessing.game
 
 import android.app.Activity
-import android.app.AlertDialog
-import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.graphics.Color
 import android.view.Gravity
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import kotlin.random.Random
+import android.app.AlertDialog
 
 class GameActivity : Activity() {
 
-    // =========================
-    // WORD BANK
-    // =========================
-
-    private val wordBanks = mapOf(
-
-        "Animals" to listOf(
-            "ELEPHANT",
-            "GIRAFFE",
-            "KANGAROO",
-            "DOLPHIN",
-            "TIGER",
-            "PENGUIN",
-            "CROCODILE",
-            "BUTTERFLY",
-            "CHEETAH",
-            "GORILLA"
-        ),
-
-        "Food" to listOf(
-            "PIZZA",
-            "HAMBURGER",
-            "CHOCOLATE",
-            "ICE CREAM",
-            "PANCAKES",
-            "SPAGHETTI",
-            "WATERMELON",
-            "POPCORN",
-            "SANDWICH",
-            "STRAWBERRY"
-        ),
-
-        "Places" to listOf(
-            "NEW YORK",
-            "CHICAGO",
-            "LOS ANGELES",
-            "LONDON",
-            "PARIS",
-            "DUBAI",
-            "NEW DELHI",
-            "GRAND CANYON",
-            "LAS VEGAS",
-            "DISNEY WORLD"
-        ),
-
-        "Sports" to listOf(
-            "BASKETBALL",
-            "FOOTBALL",
-            "BASEBALL",
-            "SOCCER",
-            "TENNIS",
-            "VOLLEYBALL",
-            "SWIMMING",
-            "BOXING",
-            "GOLF",
-            "ICE HOCKEY"
-        ),
-
-        "Movies" to listOf(
-            "THE LION KING",
-            "TOY STORY",
-            "HOME ALONE",
-            "JURASSIC PARK",
-            "STAR WARS",
-            "THE MATRIX",
-            "AVATAR",
-            "FROZEN",
-            "SPIDER MAN",
-            "SUPERMAN"
-        ),
-
-        "Things" to listOf(
-            "TELEVISION",
-            "COMPUTER",
-            "TELEPHONE",
-            "BICYCLE",
-            "UMBRELLA",
-            "BACKPACK",
-            "TOOTHBRUSH",
-            "REFRIGERATOR",
-            "KEYBOARD",
-            "AIRPLANE"
-        )
-    )
-
-    // =========================
-    // GAME VARIABLES
-    // =========================
-
-    private var selectedCategory = "Random"
-
-    private var testWord = ""
-
-    private var previousWord = ""
-
+    private val testWord = "APPLE"
     private val selectedLetters = mutableSetOf<Char>()
 
     private lateinit var wordText: TextView
     private lateinit var turnText: TextView
     private lateinit var scoresText: TextView
     private lateinit var timerText: TextView
-    private lateinit var categoryText: TextView
     private lateinit var lettersLayout: LinearLayout
     private lateinit var fullWordButton: Button
 
     private var currentPlayer = 0
-
     private val scores = mutableListOf<Int>()
-
     private val missedTurns = mutableListOf<Int>()
-
     private val eliminatedPlayers = mutableSetOf<Int>()
 
     private var playerNames = arrayListOf<String>()
-
     private var secondsPerTurn = 10
-
     private var timeLeft = 10
-
     private var roundFinished = false
 
-    // =========================
-    // TIMER
-    // =========================
-
-    private val handler = Handler(
-        Looper.getMainLooper()
-    )
+    private val handler = Handler(Looper.getMainLooper())
 
     private val timerRunnable = object : Runnable {
-
         override fun run() {
 
             if (roundFinished) {
@@ -158,364 +50,127 @@ class GameActivity : Activity() {
             timerText.text = "Time: $timeLeft"
 
             if (timeLeft <= 0) {
-
                 handleTimeExpired()
-
             } else {
-
-                handler.postDelayed(
-                    this,
-                    1000
-                )
+                handler.postDelayed(this, 1000)
             }
         }
     }
 
-    // =========================
-    // ON CREATE
-    // =========================
-
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
 
-        selectedCategory =
-            intent.getStringExtra("category")
-                ?: "Random"
-
-        secondsPerTurn =
-            intent.getIntExtra(
-                "secondsPerTurn",
-                10
-            )
+        val category = intent.getStringExtra("category") ?: "Random"
+        secondsPerTurn = intent.getIntExtra("secondsPerTurn", 10)
 
         playerNames =
-            intent.getStringArrayListExtra(
-                "playerNames"
-            )
-                ?: arrayListOf(
-                    "Player 1",
-                    "Player 2"
-                )
+            intent.getStringArrayListExtra("playerNames")
+                ?: arrayListOf("Player 1", "Player 2")
 
         if (playerNames.isEmpty()) {
-
             playerNames.add("Player 1")
             playerNames.add("Player 2")
         }
 
-        // Make sure the timer has a valid value.
-        if (secondsPerTurn < 1) {
-            secondsPerTurn = 10
-        }
-
-        // Create scores and missed-turn counters.
         for (i in playerNames.indices) {
-
             scores.add(0)
-
             missedTurns.add(0)
         }
 
-        chooseNewWord()
-
-        createGameScreen()
-
+        createGameScreen(category)
         startTimer()
     }
 
-    // =========================
-    // CHOOSE WORD
-    // =========================
+    private fun createGameScreen(category: String) {
 
-    private fun chooseNewWord() {
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(24, 24, 24, 24)
 
-        val availableWords =
-            mutableListOf<String>()
-
-        if (selectedCategory == "Random") {
-
-            for (words in wordBanks.values) {
-
-                availableWords.addAll(words)
-            }
-
-        } else {
-
-            availableWords.addAll(
-                wordBanks[selectedCategory]
-                    ?: wordBanks["Things"]!!
-            )
-        }
-
-        // Avoid immediately repeating the previous word.
-        if (availableWords.size > 1) {
-
-            availableWords.remove(previousWord)
-        }
-
-        if (availableWords.isEmpty()) {
-
-            availableWords.add("ELEPHANT")
-        }
-
-        testWord =
-            availableWords[
-                Random.nextInt(
-                    availableWords.size
-                )
-            ]
-
-        previousWord = testWord
-
-        selectedLetters.clear()
-    }
-
-    // =========================
-    // CREATE GAME SCREEN
-    // =========================
-
-    private fun createGameScreen() {
-
-        val layout =
-            LinearLayout(this)
-
-        layout.orientation =
-            LinearLayout.VERTICAL
-
-        layout.setPadding(
-            24,
-            24,
-            24,
-            24
-        )
-
-        // TITLE
-
-        val title =
-            TextView(this)
-
-        title.text =
-            "Word Guessing Game"
-
-        title.textSize =
-            26f
-
-        title.gravity =
-            Gravity.CENTER
-
-        title.setTextColor(
-            Color.BLACK
-        )
-
+        val title = TextView(this)
+        title.text = "Word Guessing Game"
+        title.textSize = 26f
+        title.gravity = Gravity.CENTER
+        title.setTextColor(Color.BLACK)
         layout.addView(title)
 
-        // CATEGORY
-
-        categoryText =
-            TextView(this)
-
-        categoryText.text =
-            "Category: $selectedCategory"
-
-        categoryText.textSize =
-            20f
-
-        categoryText.setPadding(
-            0,
-            10,
-            0,
-            10
-        )
-
+        val categoryText = TextView(this)
+        categoryText.text = "Category: $category"
+        categoryText.textSize = 20f
         layout.addView(categoryText)
 
-        // TURN
-
-        turnText =
-            TextView(this)
-
-        turnText.textSize =
-            20f
-
-        turnText.setPadding(
-            0,
-            15,
-            0,
-            10
-        )
-
+        turnText = TextView(this)
+        turnText.textSize = 20f
+        turnText.setPadding(0, 15, 0, 10)
         layout.addView(turnText)
 
-        // SCORES
-
-        scoresText =
-            TextView(this)
-
-        scoresText.textSize =
-            18f
-
-        scoresText.setPadding(
-            0,
-            10,
-            0,
-            15
-        )
-
+        scoresText = TextView(this)
+        scoresText.textSize = 18f
+        scoresText.setPadding(0, 10, 0, 15)
         layout.addView(scoresText)
 
-        // TIMER
-
-        timerText =
-            TextView(this)
-
-        timerText.textSize =
-            22f
-
-        timerText.gravity =
-            Gravity.CENTER
-
+        timerText = TextView(this)
+        timerText.textSize = 22f
+        timerText.gravity = Gravity.CENTER
+        timerText.setPadding(0, 5, 0, 10)
         layout.addView(timerText)
 
-        // WORD
-
-        wordText =
-            TextView(this)
-
-        wordText.textSize =
-            32f
-
-        wordText.gravity =
-            Gravity.CENTER
-
-        wordText.setPadding(
-            0,
-            20,
-            0,
-            20
-        )
-
+        wordText = TextView(this)
+        wordText.textSize = 32f
+        wordText.gravity = Gravity.CENTER
+        wordText.setPadding(0, 20, 0, 20)
         layout.addView(wordText)
 
-        // LETTER TITLE
+        val lettersTitle = TextView(this)
+        lettersTitle.text = "Choose a letter"
+        lettersTitle.textSize = 20f
+        layout.addView(lettersTitle)
 
-        val lettersTitle =
-            TextView(this)
+        lettersLayout = LinearLayout(this)
+        lettersLayout.orientation = LinearLayout.VERTICAL
+        layout.addView(lettersLayout)
 
-        lettersTitle.text =
-            "Choose a letter"
-
-        lettersTitle.textSize =
-            20f
-
-        layout.addView(
-            lettersTitle
-        )
-
-        // LETTER BUTTON AREA
-
-        lettersLayout =
-            LinearLayout(this)
-
-        lettersLayout.orientation =
-            LinearLayout.VERTICAL
-
-        layout.addView(
-            lettersLayout
-        )
-
-        // WHOLE WORD BUTTON
-
-        fullWordButton =
-            Button(this)
-
-        fullWordButton.text =
-            "Guess Whole Word"
-
-        fullWordButton.textSize =
-            18f
-
-        layout.addView(
-            fullWordButton
-        )
+        fullWordButton = Button(this)
+        fullWordButton.text = "Guess Whole Word"
+        fullWordButton.textSize = 18f
+        layout.addView(fullWordButton)
 
         fullWordButton.setOnClickListener {
-
             showWholeWordDialog()
         }
 
         setContentView(layout)
 
         updateTurnAndScores()
-
         updateWordDisplay()
-
         createLetterButtons()
     }
-
-    // =========================
-    // CREATE LETTER BUTTONS
-    // =========================
 
     private fun createLetterButtons() {
 
         lettersLayout.removeAllViews()
 
-        val alphabet =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-        for (
-            rowStart in
-            0 until alphabet.length
-            step 6
-        ) {
+        for (rowStart in 0 until alphabet.length step 6) {
 
-            val row =
-                LinearLayout(this)
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.HORIZONTAL
 
-            row.orientation =
-                LinearLayout.HORIZONTAL
+            val rowEnd = minOf(rowStart + 6, alphabet.length)
 
-            val rowEnd =
-                minOf(
-                    rowStart + 6,
-                    alphabet.length
-                )
+            for (i in rowStart until rowEnd) {
 
-            for (
-                i in rowStart until rowEnd
-            ) {
+                val letter = alphabet[i]
 
-                val letter =
-                    alphabet[i]
+                val letterButton = Button(this)
+                letterButton.text = letter.toString()
+                letterButton.textSize = 16f
 
-                val letterButton =
-                    Button(this)
-
-                letterButton.text =
-                    letter.toString()
-
-                letterButton.textSize =
-                    16f
-
-                // Green = available
-                // Red = already guessed
-
-                if (
-                    selectedLetters.contains(
-                        letter
-                    )
-                ) {
-
-                    letterButton.setTextColor(
-                        Color.RED
-                    )
-
+                if (selectedLetters.contains(letter)) {
+                    letterButton.setTextColor(Color.RED)
                 } else {
-
-                    letterButton.setTextColor(
-                        Color.GREEN
-                    )
+                    letterButton.setTextColor(Color.GREEN)
                 }
 
                 row.addView(
@@ -529,185 +184,68 @@ class GameActivity : Activity() {
 
                 letterButton.setOnClickListener {
 
-                    handleLetterGuess(
-                        letter,
-                        letterButton
-                    )
+                    if (roundFinished) {
+                        return@setOnClickListener
+                    }
+
+                    if (selectedLetters.contains(letter)) {
+
+                        Toast.makeText(
+                            this,
+                            "Already guessed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        return@setOnClickListener
+                    }
+
+                    selectedLetters.add(letter)
+                    letterButton.setTextColor(Color.RED)
+
+                    if (testWord.contains(letter)) {
+
+                        var pointsEarned = 0
+
+                        for (wordLetter in testWord) {
+                            if (wordLetter == letter) {
+                                pointsEarned++
+                            }
+                        }
+
+                        scores[currentPlayer] += pointsEarned
+
+                        Toast.makeText(
+                            this,
+                            "${playerNames[currentPlayer]} gets $pointsEarned point(s)!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        updateWordDisplay()
+                        updateTurnAndScores()
+
+                        if (isWordSolved()) {
+                            finishRound(playerNames[currentPlayer])
+                            return@setOnClickListener
+                        }
+
+                        restartTimer()
+
+                    } else {
+
+                        Toast.makeText(
+                            this,
+                            "Wrong letter!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        moveToNextPlayer()
+                    }
                 }
             }
 
-            lettersLayout.addView(
-                row
-            )
+            lettersLayout.addView(row)
         }
     }
-
-    // =========================
-    // HANDLE LETTER GUESS
-    // =========================
-
-    private fun handleLetterGuess(
-        letter: Char,
-        letterButton: Button
-    ) {
-
-        if (roundFinished) {
-            return
-        }
-
-        // Already guessed
-
-        if (
-            selectedLetters.contains(
-                letter
-            )
-        ) {
-
-            Toast.makeText(
-                this,
-                "Already guessed",
-                Toast.LENGTH_SHORT
-            ).show()
-
-            return
-        }
-
-        selectedLetters.add(letter)
-
-        letterButton.setTextColor(
-            Color.RED
-        )
-
-        // Correct letter
-
-        if (
-            testWord.contains(letter)
-        ) {
-
-            var pointsEarned = 0
-
-            for (
-                wordLetter in testWord
-            ) {
-
-                if (
-                    wordLetter == letter
-                ) {
-
-                    pointsEarned++
-                }
-            }
-
-            scores[currentPlayer] +=
-                pointsEarned
-
-            Toast.makeText(
-                this,
-                "${playerNames[currentPlayer]} gets $pointsEarned point(s)!",
-                Toast.LENGTH_SHORT
-            ).show()
-
-            updateWordDisplay()
-
-            updateTurnAndScores()
-
-            // Did this player solve the word?
-
-            if (isWordSolved()) {
-
-                finishRound(
-                    playerNames[currentPlayer]
-                )
-
-                return
-            }
-
-            // Correct guess = same player continues.
-
-            restartTimer()
-
-        } else {
-
-            // Wrong letter = next player.
-
-            Toast.makeText(
-                this,
-                "Wrong letter!",
-                Toast.LENGTH_SHORT
-            ).show()
-
-            moveToNextPlayer()
-        }
-    }
-
-    // =========================
-    // DISPLAY WORD
-    // =========================
-
-    private fun updateWordDisplay() {
-
-        val display =
-            StringBuilder()
-
-        for (
-            character in testWord
-        ) {
-
-            if (
-                character == ' '
-            ) {
-
-                // Spaces remain blank.
-
-                display.append("   ")
-
-            } else if (
-                selectedLetters.contains(
-                    character
-                )
-            ) {
-
-                display.append(character)
-
-                display.append(" ")
-
-            } else {
-
-                display.append("_ ")
-            }
-        }
-
-        wordText.text =
-            display.toString().trim()
-    }
-
-    // =========================
-    // CHECK WORD SOLVED
-    // =========================
-
-    private fun isWordSolved(): Boolean {
-
-        for (
-            character in testWord
-        ) {
-
-            if (
-                character != ' ' &&
-                !selectedLetters.contains(
-                    character
-                )
-            ) {
-
-                return false
-            }
-        }
-
-        return true
-    }
-
-    // =========================
-    // WHOLE WORD GUESS
-    // =========================
 
     private fun showWholeWordDialog() {
 
@@ -715,52 +253,26 @@ class GameActivity : Activity() {
             return
         }
 
-        val input =
-            EditText(this)
+        val input = EditText(this)
+        input.hint = "Enter the whole word"
+        input.textSize = 20f
 
-        input.hint =
-            "Enter the whole word"
+        val padding = 40
+        input.setPadding(padding, 20, padding, 20)
 
-        input.textSize =
-            20f
-
-        input.setPadding(
-            40,
-            20,
-            40,
-            20
-        )
-
-        val dialog =
-            AlertDialog.Builder(this)
-                .setTitle(
-                    "${playerNames[currentPlayer]}'s Guess"
-                )
-                .setMessage(
-                    "Enter your whole-word guess:"
-                )
-                .setView(input)
-                .setNegativeButton(
-                    "Cancel",
-                    null
-                )
-                .setPositiveButton(
-                    "Guess",
-                    null
-                )
-                .create()
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("${playerNames[currentPlayer]}'s Guess")
+            .setMessage("Enter your whole-word guess:")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Guess", null)
+            .create()
 
         dialog.setOnShowListener {
 
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            ).setOnClickListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
 
-                val guess =
-                    input.text
-                        .toString()
-                        .trim()
-                        .uppercase()
+                val guess = input.text.toString().trim().uppercase()
 
                 if (guess.isEmpty()) {
 
@@ -773,25 +285,14 @@ class GameActivity : Activity() {
                     return@setOnClickListener
                 }
 
-                if (
-                    guess == testWord
-                ) {
+                if (guess == testWord) {
 
                     dialog.dismiss()
 
-                    selectedLetters.addAll(
-                        testWord
-                            .filter {
-                                it != ' '
-                            }
-                            .toSet()
-                    )
-
+                    selectedLetters.addAll(testWord.toSet())
                     updateWordDisplay()
 
-                    finishRound(
-                        playerNames[currentPlayer]
-                    )
+                    finishRound(playerNames[currentPlayer])
 
                 } else {
 
@@ -811,9 +312,17 @@ class GameActivity : Activity() {
         dialog.show()
     }
 
-    // =========================
-    // TIME EXPIRED
-    // =========================
+    private fun isWordSolved(): Boolean {
+
+        for (letter in testWord) {
+
+            if (!selectedLetters.contains(letter)) {
+                return false
+            }
+        }
+
+        return true
+    }
 
     private fun handleTimeExpired() {
 
@@ -822,29 +331,16 @@ class GameActivity : Activity() {
         }
 
         timeLeft = 0
-
-        timerText.text =
-            "Time: 0"
+        timerText.text = "Time: 0"
 
         missedTurns[currentPlayer]++
 
-        val player =
-            playerNames[currentPlayer]
+        val player = playerNames[currentPlayer]
+        val misses = missedTurns[currentPlayer]
 
-        val misses =
-            missedTurns[currentPlayer]
+        if (playerNames.size >= 3 && misses >= 3) {
 
-        // 3+ players:
-        // 3 missed turns = elimination
-
-        if (
-            playerNames.size >= 3 &&
-            misses >= 3
-        ) {
-
-            eliminatedPlayers.add(
-                currentPlayer
-            )
+            eliminatedPlayers.add(currentPlayer)
 
             Toast.makeText(
                 this,
@@ -852,18 +348,12 @@ class GameActivity : Activity() {
                 Toast.LENGTH_LONG
             ).show()
 
-            if (
-                getActivePlayerCount() <= 1
-            ) {
+            if (getActivePlayerCount() <= 1) {
 
-                val winner =
-                    getLastActivePlayer()
+                val winner = getLastActivePlayer()
 
                 if (winner != -1) {
-
-                    finishRound(
-                        playerNames[winner]
-                    )
+                    finishRound(playerNames[winner])
                 }
 
                 return
@@ -881,15 +371,9 @@ class GameActivity : Activity() {
         moveToNextPlayer()
     }
 
-    // =========================
-    // NEXT PLAYER
-    // =========================
-
     private fun moveToNextPlayer() {
 
-        handler.removeCallbacks(
-            timerRunnable
-        )
+        handler.removeCallbacks(timerRunnable)
 
         if (roundFinished) {
             return
@@ -901,66 +385,35 @@ class GameActivity : Activity() {
 
             currentPlayer++
 
-            if (
-                currentPlayer >=
-                playerNames.size
-            ) {
-
+            if (currentPlayer >= playerNames.size) {
                 currentPlayer = 0
             }
 
             attempts++
 
         } while (
-            eliminatedPlayers.contains(
-                currentPlayer
-            ) &&
+            eliminatedPlayers.contains(currentPlayer) &&
             attempts <= playerNames.size
         )
 
         updateTurnAndScores()
-
         restartTimer()
     }
 
-    // =========================
-    // START TIMER
-    // =========================
-
     private fun startTimer() {
 
-        timeLeft =
-            secondsPerTurn
+        timeLeft = secondsPerTurn
+        timerText.text = "Time: $timeLeft"
 
-        timerText.text =
-            "Time: $timeLeft"
-
-        handler.removeCallbacks(
-            timerRunnable
-        )
-
-        handler.postDelayed(
-            timerRunnable,
-            1000
-        )
+        handler.removeCallbacks(timerRunnable)
+        handler.postDelayed(timerRunnable, 1000)
     }
 
-    // =========================
-    // RESTART TIMER
-    // =========================
-
     private fun restartTimer() {
-
         startTimer()
     }
 
-    // =========================
-    // FINISH ROUND
-    // =========================
-
-    private fun finishRound(
-        winner: String
-    ) {
+    private fun finishRound(winner: String) {
 
         if (roundFinished) {
             return
@@ -968,43 +421,152 @@ class GameActivity : Activity() {
 
         roundFinished = true
 
-        handler.removeCallbacks(
-            timerRunnable
-        )
+        handler.removeCallbacks(timerRunnable)
 
-        // Show the complete word.
-
-        wordText.text =
-            testWord
-
-        // Remove letter buttons.
+        wordText.text = testWord
 
         lettersLayout.removeAllViews()
+        fullWordButton.isEnabled = false
 
-        // Disable whole-word button.
+        turnText.text = "🎉 $winner wins!"
 
-        fullWordButton.isEnabled =
-            false
+        timerText.text = "Round complete"
 
-        turnText.text =
-            "🎉 $winner wins!"
+        val parent = wordText.parent as LinearLayout
 
-        timerText.text =
-            "Round complete"
-
-        val parent =
-            wordText.parent as LinearLayout
-
-        val winnerText =
-            TextView(this)
-
+        val winnerText = TextView(this)
         winnerText.text =
             "$winner solved the word!\n\nThe word was: $testWord"
 
-        winnerText.textSize =
-            22f
+        winnerText.textSize = 22f
+        winnerText.gravity = Gravity.CENTER
+        winnerText.setPadding(0, 20, 0, 20)
 
-        winnerText.gravity =
-            Gravity.CENTER
+        parent.addView(winnerText)
 
-        winnerText.se
+        val nextWordButton = Button(this)
+        nextWordButton.text = "Next Word"
+        nextWordButton.textSize = 20f
+
+        parent.addView(nextWordButton)
+
+        nextWordButton.setOnClickListener {
+
+            startNextRound(parent, winnerText, nextWordButton)
+        }
+    }
+
+    private fun startNextRound(
+        parent: LinearLayout,
+        winnerText: TextView,
+        nextWordButton: Button
+    ) {
+
+        parent.removeView(winnerText)
+        parent.removeView(nextWordButton)
+
+        selectedLetters.clear()
+        eliminatedPlayers.clear()
+
+        for (i in missedTurns.indices) {
+            missedTurns[i] = 0
+        }
+
+        currentPlayer++
+
+        if (currentPlayer >= playerNames.size) {
+            currentPlayer = 0
+        }
+
+        roundFinished = false
+
+        fullWordButton.isEnabled = true
+
+        updateWordDisplay()
+        updateTurnAndScores()
+        createLetterButtons()
+        startTimer()
+    }
+
+    private fun getActivePlayerCount(): Int {
+
+        var count = 0
+
+        for (i in playerNames.indices) {
+
+            if (!eliminatedPlayers.contains(i)) {
+                count++
+            }
+        }
+
+        return count
+    }
+
+    private fun getLastActivePlayer(): Int {
+
+        for (i in playerNames.indices) {
+
+            if (!eliminatedPlayers.contains(i)) {
+                return i
+            }
+        }
+
+        return -1
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(timerRunnable)
+        super.onDestroy()
+    }
+
+    private fun updateWordDisplay() {
+
+        val display = StringBuilder()
+
+        for (letter in testWord) {
+
+            if (selectedLetters.contains(letter)) {
+                display.append(letter)
+            } else {
+                display.append("_")
+            }
+
+            display.append(" ")
+        }
+
+        wordText.text = display.toString().trim()
+    }
+
+    private fun updateTurnAndScores() {
+
+        if (eliminatedPlayers.contains(currentPlayer)) {
+            return
+        }
+
+        turnText.text =
+            "Turn: ${playerNames[currentPlayer]}"
+
+        val scoreDisplay = StringBuilder()
+
+        for (i in playerNames.indices) {
+
+            scoreDisplay.append(
+                "${playerNames[i]}: ${scores[i]} points"
+            )
+
+            if (eliminatedPlayers.contains(i)) {
+                scoreDisplay.append(" (Eliminated)")
+            }
+
+            scoreDisplay.append(
+                " | Missed: ${missedTurns[i]}"
+            )
+
+            if (i < playerNames.size - 1) {
+                scoreDisplay.append("\n")
+            }
+        }
+
+        scoresText.text = scoreDisplay.toString()
+    }
+}
