@@ -4,145 +4,234 @@ import android.app.Activity
 import android.os.Bundle
 import android.graphics.Color
 import android.view.Gravity
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 
 class GameActivity : Activity() {
 
-    private val testWord = "APPLE"
-    private val selectedLetters = mutableSetOf<Char>()
-    private lateinit var wordText: TextView
+```
+private val testWord = "APPLE"
+private val selectedLetters = mutableSetOf<Char>()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+private lateinit var wordText: TextView
+private lateinit var turnText: TextView
+private lateinit var scoresText: TextView
 
-        val category = intent.getStringExtra("category") ?: "Random"
-        val seconds = intent.getIntExtra("secondsPerTurn", 10)
-        val names = intent.getStringArrayListExtra("playerNames")
-            ?: arrayListOf()
+private var currentPlayer = 0
+private val scores = mutableListOf<Int>()
 
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(24, 24, 24, 24)
+private var playerNames = arrayListOf<String>()
 
-        val title = TextView(this)
-        title.text = "Word Guessing Game"
-        title.textSize = 26f
-        title.gravity = Gravity.CENTER
-        title.setTextColor(Color.BLACK)
-        layout.addView(title)
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
 
-        val categoryText = TextView(this)
-        categoryText.text = "Category: $category"
-        categoryText.textSize = 20f
-        layout.addView(categoryText)
+    val category = intent.getStringExtra("category") ?: "Random"
+    val seconds = intent.getIntExtra("secondsPerTurn", 10)
 
-        val turnText = TextView(this)
-        turnText.text = "Turn: ${names.firstOrNull() ?: "Player 1"}"
-        turnText.textSize = 20f
-        layout.addView(turnText)
+    playerNames =
+        intent.getStringArrayListExtra("playerNames")
+            ?: arrayListOf("Player 1", "Player 2")
 
-        val timerText = TextView(this)
-        timerText.text = "Time: $seconds"
-        timerText.textSize = 22f
-        timerText.gravity = Gravity.CENTER
-        layout.addView(timerText)
+    if (playerNames.isEmpty()) {
+        playerNames.add("Player 1")
+        playerNames.add("Player 2")
+    }
 
-        wordText = TextView(this)
-        wordText.textSize = 32f
-        wordText.gravity = Gravity.CENTER
-        layout.addView(wordText)
+    for (i in playerNames.indices) {
+        scores.add(0)
+    }
 
-        updateWordDisplay()
+    val layout = LinearLayout(this)
+    layout.orientation = LinearLayout.VERTICAL
+    layout.setPadding(24, 24, 24, 24)
 
-        val lettersTitle = TextView(this)
-        lettersTitle.text = "Choose a letter"
-        lettersTitle.textSize = 20f
-        layout.addView(lettersTitle)
+    val title = TextView(this)
+    title.text = "Word Guessing Game"
+    title.textSize = 26f
+    title.gravity = Gravity.CENTER
+    title.setTextColor(Color.BLACK)
+    layout.addView(title)
 
-        val lettersLayout = LinearLayout(this)
-        lettersLayout.orientation = LinearLayout.VERTICAL
+    val categoryText = TextView(this)
+    categoryText.text = "Category: $category"
+    categoryText.textSize = 20f
+    layout.addView(categoryText)
 
-        val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    turnText = TextView(this)
+    turnText.textSize = 20f
+    turnText.setPadding(0, 15, 0, 10)
+    layout.addView(turnText)
 
-        for (rowStart in 0 until alphabet.length step 6) {
+    scoresText = TextView(this)
+    scoresText.textSize = 18f
+    scoresText.setPadding(0, 10, 0, 15)
+    layout.addView(scoresText)
 
-            val row = LinearLayout(this)
-            row.orientation = LinearLayout.HORIZONTAL
+    updateTurnAndScores()
 
-            val rowEnd = minOf(rowStart + 6, alphabet.length)
+    val timerText = TextView(this)
+    timerText.text = "Time: $seconds"
+    timerText.textSize = 22f
+    timerText.gravity = Gravity.CENTER
+    layout.addView(timerText)
 
-            for (i in rowStart until rowEnd) {
+    wordText = TextView(this)
+    wordText.textSize = 32f
+    wordText.gravity = Gravity.CENTER
+    wordText.setPadding(0, 30, 0, 30)
+    layout.addView(wordText)
 
-                val letter = alphabet[i]
+    updateWordDisplay()
 
-                val letterButton = Button(this)
-                letterButton.text = letter.toString()
-                letterButton.textSize = 16f
-                letterButton.setTextColor(Color.GREEN)
+    val lettersTitle = TextView(this)
+    lettersTitle.text = "Choose a letter"
+    lettersTitle.textSize = 20f
+    layout.addView(lettersTitle)
 
-                row.addView(
-                    letterButton,
-                    LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                    )
+    val lettersLayout = LinearLayout(this)
+    lettersLayout.orientation = LinearLayout.VERTICAL
+
+    val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    for (rowStart in 0 until alphabet.length step 6) {
+
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+
+        val rowEnd = minOf(rowStart + 6, alphabet.length)
+
+        for (i in rowStart until rowEnd) {
+
+            val letter = alphabet[i]
+
+            val letterButton = Button(this)
+            letterButton.text = letter.toString()
+            letterButton.textSize = 16f
+            letterButton.setTextColor(Color.GREEN)
+
+            row.addView(
+                letterButton,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
                 )
+            )
 
-                letterButton.setOnClickListener {
+            letterButton.setOnClickListener {
 
-                    if (selectedLetters.contains(letter)) {
-                        return@setOnClickListener
+                if (selectedLetters.contains(letter)) {
+                    Toast.makeText(
+                        this,
+                        "Already guessed",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@setOnClickListener
+                }
+
+                selectedLetters.add(letter)
+                letterButton.setTextColor(Color.RED)
+
+                if (testWord.contains(letter)) {
+
+                    var pointsEarned = 0
+
+                    for (wordLetter in testWord) {
+                        if (wordLetter == letter) {
+                            pointsEarned++
+                        }
                     }
 
-                    selectedLetters.add(letter)
-                    letterButton.setTextColor(Color.RED)
+                    scores[currentPlayer] += pointsEarned
 
-                    updateWordDisplay()
+                    Toast.makeText(
+                        this,
+                        "${playerNames[currentPlayer]} gets $pointsEarned point(s)!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+
+                    Toast.makeText(
+                        this,
+                        "Wrong letter!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    currentPlayer++
+
+                    if (currentPlayer >= playerNames.size) {
+                        currentPlayer = 0
+                    }
                 }
+
+                updateWordDisplay()
+                updateTurnAndScores()
             }
-
-            lettersLayout.addView(row)
         }
 
-        layout.addView(lettersLayout)
-
-        val fullWordButton = Button(this)
-        fullWordButton.text = "Guess Whole Word"
-        fullWordButton.textSize = 18f
-        layout.addView(fullWordButton)
-
-        fullWordButton.setOnClickListener {
-            Toast.makeText(
-                this,
-                "Whole word guess selected",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-
-        setContentView(layout)
+        lettersLayout.addView(row)
     }
 
-    private fun updateWordDisplay() {
+    layout.addView(lettersLayout)
 
-        val display = StringBuilder()
+    val fullWordButton = Button(this)
+    fullWordButton.text = "Guess Whole Word"
+    fullWordButton.textSize = 18f
+    layout.addView(fullWordButton)
 
-        for (letter in testWord) {
+    fullWordButton.setOnClickListener {
 
-            if (selectedLetters.contains(letter)) {
-                display.append(letter)
-            } else {
-                display.append("_")
-            }
+        Toast.makeText(
+            this,
+            "Whole word guess selected",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
 
-            display.append(" ")
+    setContentView(layout)
+}
+
+private fun updateWordDisplay() {
+
+    val display = StringBuilder()
+
+    for (letter in testWord) {
+
+        if (selectedLetters.contains(letter)) {
+            display.append(letter)
+        } else {
+            display.append("_")
         }
 
-        wordText.text = display.toString().trim()
+        display.append(" ")
     }
+
+    wordText.text = display.toString().trim()
+}
+
+private fun updateTurnAndScores() {
+
+    turnText.text =
+        "Turn: ${playerNames[currentPlayer]}"
+
+    val scoreDisplay = StringBuilder()
+
+    for (i in playerNames.indices) {
+        scoreDisplay.append(
+            "${playerNames[i]}: ${scores[i]} points"
+        )
+
+        if (i < playerNames.size - 1) {
+            scoreDisplay.append("\n")
+        }
+    }
+
+    scoresText.text = scoreDisplay.toString()
+}
+```
+
 }
