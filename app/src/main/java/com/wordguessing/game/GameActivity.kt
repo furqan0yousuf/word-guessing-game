@@ -1,6 +1,7 @@
 package com.wordguessing.game
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,33 +13,38 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import android.app.AlertDialog
 import kotlin.random.Random
 
 class GameActivity : Activity() {
 
     private var testWord = ""
 
-    private val selectedLetters = mutableSetOf<Char>()
+    private val selectedLetters =
+        mutableSetOf<Char>()
 
     private lateinit var wordText: TextView
     private lateinit var categoryText: TextView
     private lateinit var turnText: TextView
     private lateinit var scoresText: TextView
     private lateinit var timerText: TextView
+    private lateinit var statusText: TextView
     private lateinit var lettersLayout: LinearLayout
     private lateinit var fullWordButton: Button
     private lateinit var wholeWordTimerText: TextView
 
     private var currentPlayer = 0
 
-    private val scores = mutableListOf<Int>()
+    private val scores =
+        mutableListOf<Int>()
 
-    private val missedTurns = mutableListOf<Int>()
+    private val missedTurns =
+        mutableListOf<Int>()
 
-    private val eliminatedPlayers = mutableSetOf<Int>()
+    private val eliminatedPlayers =
+        mutableSetOf<Int>()
 
-    private var playerNames = arrayListOf<String>()
+    private var playerNames =
+        arrayListOf<String>()
 
     private var secondsPerTurn = 10
 
@@ -55,7 +61,7 @@ class GameActivity : Activity() {
     // Only one whole-word attempt is allowed per turn.
     private var wholeWordAttemptUsed = false
 
-    // True while the whole-word dialog/timer is active.
+    // True while whole-word dialog/timer is active.
     private var wholeWordGuessInProgress = false
 
     private var wholeWordTimeLeft = 10
@@ -153,6 +159,9 @@ class GameActivity : Activity() {
                         Toast.LENGTH_SHORT
                     ).show()
 
+                    statusText.text =
+                        "Whole-word time expired!"
+
                     moveToNextPlayer()
 
                 } else {
@@ -173,7 +182,9 @@ class GameActivity : Activity() {
         savedInstanceState: Bundle?
     ) {
 
-        super.onCreate(savedInstanceState)
+        super.onCreate(
+            savedInstanceState
+        )
 
         selectedCategory =
             intent.getStringExtra(
@@ -198,6 +209,20 @@ class GameActivity : Activity() {
 
             playerNames.add("Player 1")
             playerNames.add("Player 2")
+        }
+
+        // Clean up empty names.
+        for (i in playerNames.indices) {
+
+            if (
+                playerNames[i]
+                    .trim()
+                    .isEmpty()
+            ) {
+
+                playerNames[i] =
+                    "Player ${i + 1}"
+            }
         }
 
         for (i in playerNames.indices) {
@@ -247,8 +272,11 @@ class GameActivity : Activity() {
                 selectedCategory
 
             availableWords.addAll(
-                WordBank.categories[selectedCategory]
-                    ?: WordBank.categories["Things"]!!
+                WordBank.categories[
+                    selectedCategory
+                ] ?: WordBank.categories[
+                    "Things"
+                ]!!
             )
         }
 
@@ -261,7 +289,9 @@ class GameActivity : Activity() {
 
         if (availableWords.isEmpty()) {
 
-            availableWords.add("APPLE")
+            availableWords.add(
+                "APPLE"
+            )
         }
 
         testWord =
@@ -271,7 +301,8 @@ class GameActivity : Activity() {
                 )
             ]
 
-        previousWord = testWord
+        previousWord =
+            testWord
 
         selectedLetters.clear()
     }
@@ -284,8 +315,11 @@ class GameActivity : Activity() {
 
         categoryText.text =
             if (selectedCategory == "Random") {
+
                 "Category: Random: $actualCategory"
+
             } else {
+
                 "Category: $actualCategory"
             }
     }
@@ -342,9 +376,9 @@ class GameActivity : Activity() {
             20
         )
 
-        // -------------------------
+        // =========================
         // TITLE
-        // -------------------------
+        // =========================
 
         val title =
             TextView(this)
@@ -372,9 +406,9 @@ class GameActivity : Activity() {
 
         layout.addView(title)
 
-        // -------------------------
-        // CATEGORY + TIMER ROW
-        // -------------------------
+        // =========================
+        // CATEGORY + TIMER
+        // =========================
 
         val topRow =
             LinearLayout(this)
@@ -434,19 +468,21 @@ class GameActivity : Activity() {
             )
         )
 
-        layout.addView(topRow)
+        layout.addView(
+            topRow
+        )
 
         updateCategoryDisplay()
 
-        // -------------------------
+        // =========================
         // TURN
-        // -------------------------
+        // =========================
 
         turnText =
             TextView(this)
 
         turnText.textSize =
-            22f
+            23f
 
         turnText.gravity =
             Gravity.CENTER
@@ -460,16 +496,44 @@ class GameActivity : Activity() {
             0,
             15,
             0,
-            12
+            5
         )
 
         layout.addView(
             turnText
         )
 
-        // -------------------------
+        // =========================
+        // STATUS
+        // =========================
+
+        statusText =
+            TextView(this)
+
+        statusText.textSize =
+            16f
+
+        statusText.gravity =
+            Gravity.CENTER
+
+        statusText.setTextColor(
+            Color.DKGRAY
+        )
+
+        statusText.setPadding(
+            0,
+            2,
+            0,
+            10
+        )
+
+        layout.addView(
+            statusText
+        )
+
+        // =========================
         // SCORES
-        // -------------------------
+        // =========================
 
         scoresText =
             TextView(this)
@@ -488,9 +552,9 @@ class GameActivity : Activity() {
             scoresText
         )
 
-        // -------------------------
+        // =========================
         // WORD
-        // -------------------------
+        // =========================
 
         wordText =
             TextView(this)
@@ -521,9 +585,9 @@ class GameActivity : Activity() {
             )
         )
 
-        // -------------------------
+        // =========================
         // LETTER TITLE
-        // -------------------------
+        // =========================
 
         val lettersTitle =
             TextView(this)
@@ -553,9 +617,9 @@ class GameActivity : Activity() {
             lettersTitle
         )
 
-        // -------------------------
+        // =========================
         // LETTERS
-        // -------------------------
+        // =========================
 
         lettersLayout =
             LinearLayout(this)
@@ -567,9 +631,9 @@ class GameActivity : Activity() {
             lettersLayout
         )
 
-        // -------------------------
+        // =========================
         // WHOLE WORD BUTTON
-        // -------------------------
+        // =========================
 
         fullWordButton =
             Button(this)
@@ -606,6 +670,9 @@ class GameActivity : Activity() {
         updateTurnAndScores()
 
         updateWordDisplay()
+
+        statusText.text =
+            "Choose a letter or guess the whole word."
 
         createLetterButtons()
     }
@@ -676,14 +743,12 @@ class GameActivity : Activity() {
                     )
                 ) {
 
-                    // Selected letters = RED
                     letterButton.setTextColor(
                         Color.RED
                     )
 
                 } else {
 
-                    // Unselected letters = DARK GREEN
                     letterButton.setTextColor(
                         Color.rgb(
                             0,
@@ -724,6 +789,9 @@ class GameActivity : Activity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
+                        statusText.text =
+                            "Already guessed. Try another letter."
+
                         return@setOnClickListener
                     }
 
@@ -741,7 +809,8 @@ class GameActivity : Activity() {
                         )
                     ) {
 
-                        var pointsEarned = 0
+                        var pointsEarned =
+                            0
 
                         for (
                             wordLetter in testWord
@@ -764,6 +833,9 @@ class GameActivity : Activity() {
                             "${playerNames[currentPlayer]} gets $pointsEarned point(s)!",
                             Toast.LENGTH_SHORT
                         ).show()
+
+                        statusText.text =
+                            "Correct! $pointsEarned point(s) earned."
 
                         updateWordDisplay()
 
@@ -790,12 +862,17 @@ class GameActivity : Activity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
+                        statusText.text =
+                            "Wrong letter. Next player's turn."
+
                         moveToNextPlayer()
                     }
                 }
             }
 
-            lettersLayout.addView(row)
+            lettersLayout.addView(
+                row
+            )
         }
     }
 
@@ -809,7 +886,6 @@ class GameActivity : Activity() {
             return
         }
 
-        // Only one attempt per turn.
         if (wholeWordAttemptUsed) {
 
             Toast.makeText(
@@ -821,21 +897,24 @@ class GameActivity : Activity() {
             return
         }
 
-        // Mark the attempt as used immediately.
-        wholeWordAttemptUsed = true
+        wholeWordAttemptUsed =
+            true
 
-        // Pause the normal timer.
         handler.removeCallbacks(
             timerRunnable
         )
 
-        wholeWordGuessInProgress = true
+        wholeWordGuessInProgress =
+            true
 
-        wholeWordTimeLeft = 10
+        wholeWordTimeLeft =
+            10
 
-        // Disable the button so it cannot be used again
-        // during this turn.
-        fullWordButton.isEnabled = false
+        fullWordButton.isEnabled =
+            false
+
+        statusText.text =
+            "Whole-word guess in progress."
 
         wholeWordTimerText =
             TextView(this)
@@ -874,7 +953,8 @@ class GameActivity : Activity() {
         input.textSize =
             20f
 
-        val padding = 40
+        val padding =
+            40
 
         input.setPadding(
             padding,
@@ -905,7 +985,9 @@ class GameActivity : Activity() {
                 .setMessage(
                     "You have 10 seconds to guess the whole word:"
                 )
-                .setView(dialogLayout)
+                .setView(
+                    dialogLayout
+                )
                 .setNegativeButton(
                     "Cancel",
                     null
@@ -918,10 +1000,6 @@ class GameActivity : Activity() {
 
         dialog.setOnShowListener {
 
-            // -------------------------
-            // START WHOLE WORD TIMER
-            // -------------------------
-
             handler.removeCallbacks(
                 wholeWordTimerRunnable
             )
@@ -931,9 +1009,9 @@ class GameActivity : Activity() {
                 1000
             )
 
-            // -------------------------
+            // =========================
             // CANCEL
-            // -------------------------
+            // =========================
 
             dialog.getButton(
                 AlertDialog.BUTTON_NEGATIVE
@@ -954,14 +1032,15 @@ class GameActivity : Activity() {
                     Toast.LENGTH_SHORT
                 ).show()
 
-                // Resume the normal timer
-                // from the remaining time.
+                statusText.text =
+                    "Whole-word guess canceled. Choose a letter."
+
                 resumeNormalTimer()
             }
 
-            // -------------------------
+            // =========================
             // GUESS
-            // -------------------------
+            // =========================
 
             dialog.getButton(
                 AlertDialog.BUTTON_POSITIVE
@@ -1002,7 +1081,9 @@ class GameActivity : Activity() {
                     updateWordDisplay()
 
                     finishRound(
-                        playerNames[currentPlayer]
+                        playerNames[
+                            currentPlayer
+                        ]
                     )
 
                 } else {
@@ -1012,6 +1093,9 @@ class GameActivity : Activity() {
                         "Wrong whole-word guess!",
                         Toast.LENGTH_SHORT
                     ).show()
+
+                    statusText.text =
+                        "Wrong whole-word guess. Next player's turn."
 
                     moveToNextPlayer()
                 }
@@ -1027,9 +1111,10 @@ class GameActivity : Activity() {
             wholeWordGuessInProgress =
                 false
 
-            // If the dialog is dismissed by the
-            // Android back button, resume the timer.
             if (!roundFinished) {
+
+                statusText.text =
+                    "Whole-word guess canceled. Choose a letter."
 
                 resumeNormalTimer()
             }
@@ -1097,7 +1182,8 @@ class GameActivity : Activity() {
             return
         }
 
-        timeLeft = 0
+        timeLeft =
+            0
 
         updateTimerDisplay()
 
@@ -1124,6 +1210,9 @@ class GameActivity : Activity() {
                 Toast.LENGTH_LONG
             ).show()
 
+            statusText.text =
+                "$player is eliminated after 3 missed turns."
+
             if (
                 getActivePlayerCount() <= 1
             ) {
@@ -1148,6 +1237,9 @@ class GameActivity : Activity() {
                 "$player missed the turn!",
                 Toast.LENGTH_SHORT
             ).show()
+
+            statusText.text =
+                "$player missed the turn."
         }
 
         moveToNextPlayer()
@@ -1174,7 +1266,8 @@ class GameActivity : Activity() {
             return
         }
 
-        var attempts = 0
+        var attempts =
+            0
 
         do {
 
@@ -1185,7 +1278,8 @@ class GameActivity : Activity() {
                 playerNames.size
             ) {
 
-                currentPlayer = 0
+                currentPlayer =
+                    0
             }
 
             attempts++
@@ -1197,8 +1291,8 @@ class GameActivity : Activity() {
             attempts <= playerNames.size
         )
 
-        // New turn = new whole-word opportunity.
-        wholeWordAttemptUsed = false
+        wholeWordAttemptUsed =
+            false
 
         fullWordButton.isEnabled =
             true
@@ -1246,7 +1340,8 @@ class GameActivity : Activity() {
             return
         }
 
-        roundFinished = true
+        roundFinished =
+            true
 
         handler.removeCallbacks(
             timerRunnable
@@ -1271,7 +1366,7 @@ class GameActivity : Activity() {
             false
 
         turnText.text =
-            "🎉 $winner wins!"
+            "🎉 $winner WINS!"
 
         timerText.text =
             "Round complete"
@@ -1280,17 +1375,43 @@ class GameActivity : Activity() {
             Color.BLACK
         )
 
+        statusText.text =
+            "$winner solved the word!"
+
         val parent =
             wordText.parent as LinearLayout
 
         val winnerText =
             TextView(this)
 
+        val scoreSummary =
+            StringBuilder()
+
+        for (i in playerNames.indices) {
+
+            scoreSummary.append(
+                "${playerNames[i]}: ${scores[i]} points"
+            )
+
+            if (
+                i < playerNames.size - 1
+            ) {
+
+                scoreSummary.append(
+                    "\n"
+                )
+            }
+        }
+
         winnerText.text =
-            "$winner solved the word!\n\nThe word was:\n$testWord"
+            "$winner solved the word!\n\n" +
+            "The word was:\n" +
+            "$testWord\n\n" +
+            "Scores:\n" +
+            scoreSummary.toString()
 
         winnerText.textSize =
-            22f
+            20f
 
         winnerText.gravity =
             Gravity.CENTER
@@ -1310,6 +1431,10 @@ class GameActivity : Activity() {
         parent.addView(
             winnerText
         )
+
+        // =========================
+        // NEXT WORD
+        // =========================
 
         val nextWordButton =
             Button(this)
@@ -1338,8 +1463,31 @@ class GameActivity : Activity() {
             startNextRound(
                 parent,
                 winnerText,
-                nextWordButton
+                nextWordButton,
+                null
             )
+        }
+
+        // =========================
+        // NEW GAME
+        // =========================
+
+        val newGameButton =
+            Button(this)
+
+        newGameButton.text =
+            "New Game"
+
+        newGameButton.textSize =
+            18f
+
+        parent.addView(
+            newGameButton
+        )
+
+        newGameButton.setOnClickListener {
+
+            startNewGame()
         }
     }
 
@@ -1350,7 +1498,8 @@ class GameActivity : Activity() {
     private fun startNextRound(
         parent: LinearLayout,
         winnerText: TextView,
-        nextWordButton: Button
+        nextWordButton: Button,
+        unusedButton: Button?
     ) {
 
         parent.removeView(
@@ -1361,6 +1510,10 @@ class GameActivity : Activity() {
             nextWordButton
         )
 
+        unusedButton?.let {
+            parent.removeView(it)
+        }
+
         selectedLetters.clear()
 
         eliminatedPlayers.clear()
@@ -1369,7 +1522,8 @@ class GameActivity : Activity() {
             i in missedTurns.indices
         ) {
 
-            missedTurns[i] = 0
+            missedTurns[i] =
+                0
         }
 
         chooseNewWord()
@@ -1381,14 +1535,21 @@ class GameActivity : Activity() {
             playerNames.size
         ) {
 
-            currentPlayer = 0
+            currentPlayer =
+                0
         }
 
-        roundFinished = false
+        roundFinished =
+            false
 
-        wholeWordAttemptUsed = false
+        wholeWordAttemptUsed =
+            false
 
-        wholeWordGuessInProgress = false
+        wholeWordGuessInProgress =
+            false
+
+        wholeWordTimeLeft =
+            10
 
         fullWordButton.isEnabled =
             true
@@ -1399,9 +1560,44 @@ class GameActivity : Activity() {
 
         updateTurnAndScores()
 
+        statusText.text =
+            "New round started. Choose a letter."
+
         createLetterButtons()
 
         startTimer()
+    }
+
+    // =========================
+    // NEW GAME
+    // =========================
+
+    private fun startNewGame() {
+
+        handler.removeCallbacks(
+            timerRunnable
+        )
+
+        handler.removeCallbacks(
+            wholeWordTimerRunnable
+        )
+
+        val setupIntent =
+            android.content.Intent(
+                this,
+                GameSetupActivity::class.java
+            )
+
+        setupIntent.putStringArrayListExtra(
+            "playerNames",
+            ArrayList(playerNames)
+        )
+
+        startActivity(
+            setupIntent
+        )
+
+        finish()
     }
 
     // =========================
@@ -1410,7 +1606,8 @@ class GameActivity : Activity() {
 
     private fun getActivePlayerCount(): Int {
 
-        var count = 0
+        var count =
+            0
 
         for (
             i in playerNames.indices
@@ -1461,7 +1658,9 @@ class GameActivity : Activity() {
 
             if (letter == ' ') {
 
-                display.append("   ")
+                display.append(
+                    "   "
+                )
 
             } else if (
                 selectedLetters.contains(
@@ -1469,12 +1668,19 @@ class GameActivity : Activity() {
                 )
             ) {
 
-                display.append(letter)
-                display.append(" ")
+                display.append(
+                    letter
+                )
+
+                display.append(
+                    " "
+                )
 
             } else {
 
-                display.append("_ ")
+                display.append(
+                    "_ "
+                )
             }
         }
 
@@ -1498,7 +1704,8 @@ class GameActivity : Activity() {
         }
 
         turnText.text =
-            "Turn: ${playerNames[currentPlayer]}"
+            "PLAYER ${currentPlayer + 1}'S TURN\n" +
+            playerNames[currentPlayer]
 
         val scoreDisplay =
             StringBuilder()
@@ -1508,7 +1715,7 @@ class GameActivity : Activity() {
         ) {
 
             scoreDisplay.append(
-                "${playerNames[i]}: ${scores[i]} points"
+                "${playerNames[i]} — ${scores[i]} points"
             )
 
             if (
@@ -1536,6 +1743,49 @@ class GameActivity : Activity() {
 
         scoresText.text =
             scoreDisplay.toString()
+    }
+
+    // =========================
+    // BACK BUTTON
+    // =========================
+
+    override fun onBackPressed() {
+
+        // Once the round is finished,
+        // normal Android Back behavior is allowed.
+        if (roundFinished) {
+
+            super.onBackPressed()
+
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "Quit Game?"
+            )
+            .setMessage(
+                "Are you sure you want to quit the game?"
+            )
+            .setNegativeButton(
+                "Cancel",
+                null
+            )
+            .setPositiveButton(
+                "Quit"
+            ) { _, _ ->
+
+                handler.removeCallbacks(
+                    timerRunnable
+                )
+
+                handler.removeCallbacks(
+                    wholeWordTimerRunnable
+                )
+
+                finish()
+            }
+            .show()
     }
 
     // =========================
