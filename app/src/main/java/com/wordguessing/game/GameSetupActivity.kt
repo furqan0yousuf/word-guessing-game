@@ -96,17 +96,25 @@ class GameSetupActivity : Activity() {
 
         startButton.setOnClickListener {
 
-            val selectedCategory =
-                categorySpinner.selectedItem.toString()
+    val selectedCategory =
+        categorySpinner.selectedItem.toString()
 
-            val selectedTime =
-                timeSpinner.selectedItem.toString().toInt()
+    val selectedTime =
+        timeSpinner.selectedItem.toString().toInt()
 
-            Toast.makeText(
-                this,
-                "Starting game: $selectedCategory, $selectedTime seconds",
-                Toast.LENGTH_LONG
-            ).show()
+    val intent = android.content.Intent(
+        this,
+        GameActivity::class.java
+    )
+
+    intent.putExtra("category", selectedCategory)
+    intent.putExtra("secondsPerTurn", selectedTime)
+    intent.putStringArrayListExtra(
+        "playerNames",
+        names
+    )
+
+    startActivity(intent)
         }
 
         setContentView(layout)
