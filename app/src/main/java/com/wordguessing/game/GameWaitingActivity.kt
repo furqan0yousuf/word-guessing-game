@@ -245,6 +245,46 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(rulesText)
 
+        // START / READY INFORMATION
+        val statusText =
+            TextView(this)
+
+        if (isHost) {
+
+            statusText.text =
+                """
+                Minimum 2 players required to start.
+
+                Maximum players: $playerCount
+                """.trimIndent()
+
+        } else {
+
+            statusText.text =
+                "Waiting for the host to start the game."
+
+        }
+
+        statusText.textSize =
+            18f
+
+        statusText.gravity =
+            Gravity.CENTER
+
+        statusText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        statusText.setPadding(
+            0,
+            10,
+            0,
+            15
+        )
+
+        layout.addView(statusText)
+
         // READY BUTTON
         val readyButton =
             Button(this)
