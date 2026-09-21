@@ -1,4 +1,3 @@
-
 package com.wordguessing.game
 
 import android.app.Activity
@@ -309,4 +308,3 @@ class GameWaitingActivity : Activity() {
         setContentView(layout)
     }
 }
-```
