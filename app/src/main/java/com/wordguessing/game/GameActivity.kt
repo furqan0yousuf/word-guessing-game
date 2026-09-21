@@ -51,11 +51,19 @@ class GameActivity : Activity() {
 
     private var previousWord = ""
 
+    // Only one whole-word attempt is allowed per turn.
+    private var wholeWordAttemptUsed = false
+
+    // True while the whole-word dialog/timer is active.
+    private var wholeWordGuessInProgress = false
+
+    private var wholeWordTimeLeft = 10
+
     private val handler =
         Handler(Looper.getMainLooper())
 
     // =========================
-    // TIMER
+    // NORMAL TURN TIMER
     // =========================
 
     private val timerRunnable =
@@ -67,6 +75,10 @@ class GameActivity : Activity() {
                     return
                 }
 
+                if (wholeWordGuessInProgress) {
+                    return
+                }
+
                 timeLeft--
 
                 updateTimerDisplay()
@@ -74,6 +86,49 @@ class GameActivity : Activity() {
                 if (timeLeft <= 0) {
 
                     handleTimeExpired()
+
+                } else {
+
+                    handler.postDelayed(
+                        this,
+                        1000
+                    )
+                }
+            }
+        }
+
+    // =========================
+    // WHOLE WORD TIMER
+    // =========================
+
+    private val wholeWordTimerRunnable =
+        object : Runnable {
+
+            override fun run() {
+
+                if (
+                    roundFinished ||
+                    !wholeWordGuessInProgress
+                ) {
+                    return
+                }
+
+                wholeWordTimeLeft--
+
+                if (wholeWordTimeLeft <= 0) {
+
+                    wholeWordTimeLeft = 0
+
+                    wholeWordGuessInProgress =
+                        false
+
+                    Toast.makeText(
+                        this@GameActivity,
+                        "Whole-word time expired!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    moveToNextPlayer()
 
                 } else {
 
@@ -211,7 +266,7 @@ class GameActivity : Activity() {
     }
 
     // =========================
-    // TIMER DISPLAY
+    // NORMAL TIMER DISPLAY
     // =========================
 
     private fun updateTimerDisplay() {
@@ -596,14 +651,20 @@ class GameActivity : Activity() {
                     )
                 ) {
 
+                    // Selected letters = RED
                     letterButton.setTextColor(
                         Color.RED
                     )
 
                 } else {
 
+                    // Unselected letters = DARK GREEN
                     letterButton.setTextColor(
-                        Color.GREEN
+                        Color.rgb(
+                            0,
+                            100,
+                            0
+                        )
                     )
                 }
 
@@ -619,6 +680,10 @@ class GameActivity : Activity() {
                 letterButton.setOnClickListener {
 
                     if (roundFinished) {
+                        return@setOnClickListener
+                    }
+
+                    if (wholeWordGuessInProgress) {
                         return@setOnClickListener
                     }
 
@@ -719,6 +784,34 @@ class GameActivity : Activity() {
             return
         }
 
+        // Only one attempt per turn.
+        if (wholeWordAttemptUsed) {
+
+            Toast.makeText(
+                this,
+                "You already used your whole-word guess this turn.",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            return
+        }
+
+        // Mark the attempt as used immediately.
+        wholeWordAttemptUsed = true
+
+        // Pause the normal timer.
+        handler.removeCallbacks(
+            timerRunnable
+        )
+
+        wholeWordGuessInProgress = true
+
+        wholeWordTimeLeft = 10
+
+        // Disable the button so it cannot be used again
+        // during this turn.
+        fullWordButton.isEnabled = false
+
         val input =
             EditText(this)
 
@@ -737,15 +830,53 @@ class GameActivity : Activity() {
             20
         )
 
+        val wholeWordTimerText =
+            TextView(this)
+
+        wholeWordTimerText.text =
+            "Whole-word time: 10"
+
+        wholeWordTimerText.textSize =
+            22f
+
+        wholeWordTimerText.gravity =
+            Gravity.CENTER
+
+        wholeWordTimerText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wholeWordTimerText.setPadding(
+            0,
+            10,
+            0,
+            15
+        )
+
+        val dialogLayout =
+            LinearLayout(this)
+
+        dialogLayout.orientation =
+            LinearLayout.VERTICAL
+
+        dialogLayout.addView(
+            wholeWordTimerText
+        )
+
+        dialogLayout.addView(
+            input
+        )
+
         val dialog =
             AlertDialog.Builder(this)
                 .setTitle(
                     "${playerNames[currentPlayer]}'s Guess"
                 )
                 .setMessage(
-                    "Enter your whole-word guess:"
+                    "You have 10 seconds to guess the whole word:"
                 )
-                .setView(input)
+                .setView(dialogLayout)
                 .setNegativeButton(
                     "Cancel",
                     null
@@ -757,6 +888,51 @@ class GameActivity : Activity() {
                 .create()
 
         dialog.setOnShowListener {
+
+            // -------------------------
+            // START WHOLE WORD TIMER
+            // -------------------------
+
+            handler.removeCallbacks(
+                wholeWordTimerRunnable
+            )
+
+            handler.postDelayed(
+                wholeWordTimerRunnable,
+                1000
+            )
+
+            // -------------------------
+            // CANCEL
+            // -------------------------
+
+            dialog.getButton(
+                AlertDialog.BUTTON_NEGATIVE
+            ).setOnClickListener {
+
+                handler.removeCallbacks(
+                    wholeWordTimerRunnable
+                )
+
+                wholeWordGuessInProgress =
+                    false
+
+                dialog.dismiss()
+
+                Toast.makeText(
+                    this,
+                    "Whole-word guess canceled. You cannot use it again this turn.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                // Resume the normal timer
+                // from the remaining time.
+                resumeNormalTimer()
+            }
+
+            // -------------------------
+            // GUESS
+            // -------------------------
 
             dialog.getButton(
                 AlertDialog.BUTTON_POSITIVE
@@ -779,9 +955,16 @@ class GameActivity : Activity() {
                     return@setOnClickListener
                 }
 
-                if (guess == testWord) {
+                handler.removeCallbacks(
+                    wholeWordTimerRunnable
+                )
 
-                    dialog.dismiss()
+                wholeWordGuessInProgress =
+                    false
+
+                dialog.dismiss()
+
+                if (guess == testWord) {
 
                     selectedLetters.addAll(
                         testWord.toSet()
@@ -795,8 +978,6 @@ class GameActivity : Activity() {
 
                 } else {
 
-                    dialog.dismiss()
-
                     Toast.makeText(
                         this,
                         "Wrong whole-word guess!",
@@ -808,7 +989,53 @@ class GameActivity : Activity() {
             }
         }
 
+        dialog.setOnCancelListener {
+
+            handler.removeCallbacks(
+                wholeWordTimerRunnable
+            )
+
+            wholeWordGuessInProgress =
+                false
+
+            // If the dialog is dismissed by the
+            // Android back button, resume the timer.
+            if (!roundFinished) {
+
+                resumeNormalTimer()
+            }
+        }
+
         dialog.show()
+    }
+
+    // =========================
+    // RESUME NORMAL TIMER
+    // =========================
+
+    private fun resumeNormalTimer() {
+
+        if (roundFinished) {
+            return
+        }
+
+        if (timeLeft <= 0) {
+
+            handleTimeExpired()
+
+            return
+        }
+
+        updateTimerDisplay()
+
+        handler.removeCallbacks(
+            timerRunnable
+        )
+
+        handler.postDelayed(
+            timerRunnable,
+            1000
+        )
     }
 
     // =========================
@@ -907,6 +1134,13 @@ class GameActivity : Activity() {
             timerRunnable
         )
 
+        handler.removeCallbacks(
+            wholeWordTimerRunnable
+        )
+
+        wholeWordGuessInProgress =
+            false
+
         if (roundFinished) {
             return
         }
@@ -933,6 +1167,12 @@ class GameActivity : Activity() {
             ) &&
             attempts <= playerNames.size
         )
+
+        // New turn = new whole-word opportunity.
+        wholeWordAttemptUsed = false
+
+        fullWordButton.isEnabled =
+            true
 
         updateTurnAndScores()
 
@@ -982,6 +1222,13 @@ class GameActivity : Activity() {
         handler.removeCallbacks(
             timerRunnable
         )
+
+        handler.removeCallbacks(
+            wholeWordTimerRunnable
+        )
+
+        wholeWordGuessInProgress =
+            false
 
         wordText.text =
             testWord
@@ -1109,6 +1356,10 @@ class GameActivity : Activity() {
         }
 
         roundFinished = false
+
+        wholeWordAttemptUsed = false
+
+        wholeWordGuessInProgress = false
 
         fullWordButton.isEnabled =
             true
@@ -1266,6 +1517,10 @@ class GameActivity : Activity() {
 
         handler.removeCallbacks(
             timerRunnable
+        )
+
+        handler.removeCallbacks(
+            wholeWordTimerRunnable
         )
 
         super.onDestroy()
