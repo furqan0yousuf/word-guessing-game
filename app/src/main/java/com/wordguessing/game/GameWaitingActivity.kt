@@ -245,7 +245,7 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(rulesText)
 
-        // START / READY INFORMATION
+        // STATUS
         val statusText =
             TextView(this)
 
@@ -253,7 +253,10 @@ class GameWaitingActivity : Activity() {
 
             statusText.text =
                 """
-                Minimum 2 players required to start.
+                You are the host.
+
+                You can start the game when
+                at least 2 players have joined.
 
                 Maximum players: $playerCount
                 """.trimIndent()
@@ -261,9 +264,12 @@ class GameWaitingActivity : Activity() {
         } else {
 
             statusText.text =
-                "Waiting for the host to start the game."
+                """
+                You have joined the game.
 
-        }
+                Waiting for the host to start.
+                """.trimIndent()
+            }
 
         statusText.textSize =
             18f
