@@ -109,6 +109,10 @@ class GameWaitingActivity : Activity() {
             Typeface.BOLD
         )
 
+        title.setTextColor(
+            Color.BLACK
+        )
+
         layout.addView(title)
 
         // GAME CODE
@@ -138,7 +142,7 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(codeText)
 
-        // COPY BUTTON
+        // COPY GAME CODE
         val copyButton =
             Button(this)
 
@@ -218,7 +222,7 @@ class GameWaitingActivity : Activity() {
             playerCount
         )
 
-        // SIMULATE JOIN BUTTON
+        // SIMULATE PLAYER JOINING
         if (isHost) {
 
             val addPlayerButton =
@@ -348,7 +352,7 @@ class GameWaitingActivity : Activity() {
             isHost
         )
 
-        // START BUTTON
+        // START GAME
         if (isHost) {
 
             startButton =
@@ -402,58 +406,60 @@ class GameWaitingActivity : Activity() {
                         "Start"
                     ) { _, _ ->
 
-                        val intent =
+                        val gameIntent =
                             Intent(
-                                this,
+                                this@GameWaitingActivity,
                                 OnlineGameRoundActivity::class.java
                             )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "gameCode",
                             gameCode
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "playerCount",
                             joinedPlayers
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "maxPlayers",
                             playerCount
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "wordSelection",
                             wordSelection
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "manualWord",
                             manualWord
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "category",
                             category
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "secondsPerTurn",
                             secondsPerTurn
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "nextWordMaster",
                             nextWordMaster
                         )
 
-                        intent.putExtra(
+                        gameIntent.putExtra(
                             "playerName",
                             playerName
                         )
 
-                        startActivity(intent)
+                        startActivity(
+                            gameIntent
+                        )
                     }
                     .show()
             }
@@ -496,7 +502,7 @@ class GameWaitingActivity : Activity() {
         playersText.text =
             text
 
-        if (isHost && ::startButton.isInitialized) {
+        if (::startButton.isInitialized) {
             startButton.isEnabled =
                 joinedPlayers >= 2
         }
