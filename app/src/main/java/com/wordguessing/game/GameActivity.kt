@@ -45,6 +45,8 @@ class GameActivity : Activity() {
 
     private var selectedCategory = "Random"
 
+    private var actualCategory = ""
+
     private var previousWord = ""
 
     private val handler =
@@ -142,12 +144,26 @@ class GameActivity : Activity() {
 
         if (selectedCategory == "Random") {
 
-            for (words in WordBank.categories.values) {
+            val categoryNames =
+                WordBank.categories.keys.toList()
 
-                availableWords.addAll(words)
-            }
+            actualCategory =
+                categoryNames[
+                    Random.nextInt(
+                        categoryNames.size
+                    )
+                ]
+
+            availableWords.addAll(
+                WordBank.categories[
+                    actualCategory
+                ] ?: emptyList()
+            )
 
         } else {
+
+            actualCategory =
+                selectedCategory
 
             availableWords.addAll(
                 WordBank.categories[selectedCategory]
@@ -223,7 +239,11 @@ class GameActivity : Activity() {
             TextView(this)
 
         categoryText.text =
-            "Category: $selectedCategory"
+            if (selectedCategory == "Random") {
+                "Random: $actualCategory"
+            } else {
+                actualCategory
+            }
 
         categoryText.textSize =
             20f
