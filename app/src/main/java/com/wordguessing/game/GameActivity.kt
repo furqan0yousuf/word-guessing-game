@@ -16,91 +16,6 @@ import kotlin.random.Random
 
 class GameActivity : Activity() {
 
-    // =========================
-    // WORD BANK
-    // =========================
-
-    private val wordBanks = mapOf(
-
-        "Animals" to listOf(
-            "ELEPHANT",
-            "GIRAFFE",
-            "KANGAROO",
-            "DOLPHIN",
-            "TIGER",
-            "PENGUIN",
-            "CROCODILE",
-            "BUTTERFLY",
-            "CHEETAH",
-            "GORILLA"
-        ),
-
-        "Food" to listOf(
-            "PIZZA",
-            "HAMBURGER",
-            "CHOCOLATE",
-            "ICE CREAM",
-            "PANCAKES",
-            "SPAGHETTI",
-            "WATERMELON",
-            "POPCORN",
-            "SANDWICH",
-            "STRAWBERRY"
-        ),
-
-        "Places" to listOf(
-            "NEW YORK",
-            "CHICAGO",
-            "LOS ANGELES",
-            "LONDON",
-            "PARIS",
-            "DUBAI",
-            "NEW DELHI",
-            "GRAND CANYON",
-            "LAS VEGAS",
-            "DISNEY WORLD"
-        ),
-
-        "Sports" to listOf(
-            "BASKETBALL",
-            "FOOTBALL",
-            "BASEBALL",
-            "SOCCER",
-            "TENNIS",
-            "VOLLEYBALL",
-            "SWIMMING",
-            "BOXING",
-            "GOLF",
-            "ICE HOCKEY"
-        ),
-
-        "Movies" to listOf(
-            "THE LION KING",
-            "TOY STORY",
-            "HOME ALONE",
-            "JURASSIC PARK",
-            "STAR WARS",
-            "THE MATRIX",
-            "AVATAR",
-            "FROZEN",
-            "SPIDER MAN",
-            "SUPERMAN"
-        ),
-
-        "Things" to listOf(
-            "TELEVISION",
-            "COMPUTER",
-            "TELEPHONE",
-            "BICYCLE",
-            "UMBRELLA",
-            "BACKPACK",
-            "TOOTHBRUSH",
-            "REFRIGERATOR",
-            "KEYBOARD",
-            "AIRPLANE"
-        )
-    )
-
     private var testWord = ""
 
     private val selectedLetters = mutableSetOf<Char>()
@@ -227,7 +142,7 @@ class GameActivity : Activity() {
 
         if (selectedCategory == "Random") {
 
-            for (words in wordBanks.values) {
+            for (words in WordBank.categories.values) {
 
                 availableWords.addAll(words)
             }
@@ -235,8 +150,8 @@ class GameActivity : Activity() {
         } else {
 
             availableWords.addAll(
-                wordBanks[selectedCategory]
-                    ?: wordBanks["Things"]!!
+                WordBank.categories[selectedCategory]
+                    ?: WordBank.categories["Things"]!!
             )
         }
 
@@ -711,21 +626,21 @@ class GameActivity : Activity() {
     // CHECK SOLVED
     // =========================
 
-private fun isWordSolved(): Boolean {
+    private fun isWordSolved(): Boolean {
 
-    for (letter in testWord) {
+        for (letter in testWord) {
 
-        if (letter == ' ') {
-            continue
+            if (letter == ' ') {
+                continue
+            }
+
+            if (!selectedLetters.contains(letter)) {
+                return false
+            }
         }
 
-        if (!selectedLetters.contains(letter)) {
-            return false
-        }
+        return true
     }
-
-    return true
-}
 
     // =========================
     // TIME EXPIRED
