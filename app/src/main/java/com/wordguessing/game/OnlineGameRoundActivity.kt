@@ -16,7 +16,7 @@ import kotlin.random.Random
 
 class OnlineGameRoundActivity : Activity() {
 
-```
+
 private lateinit var timerText: TextView
 private lateinit var turnText: TextView
 private lateinit var playersText: TextView
