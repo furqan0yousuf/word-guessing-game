@@ -22,8 +22,9 @@ class GameWaitingActivity : Activity() {
     private var manualWord = ""
     private var category = "Random"
     private var secondsPerTurn = 10
-    private var nextWordMaster = "Same Word Master"
+    private var nextWordMaster = "Winner becomes Word Master"
     private var playerName = "Player 1"
+    private var password = ""
     private var isHost = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,17 +46,17 @@ class GameWaitingActivity : Activity() {
             )
                 ?: "Random Word"
 
+        manualWord =
+            intent.getStringExtra(
+                "manualWord"
+            )
+                ?: ""
+
         category =
             intent.getStringExtra(
                 "category"
             )
                 ?: "Random"
-
-        manualWord =
-    intent.getStringExtra(
-        "manualWord"
-    )
-        ?: ""
 
         secondsPerTurn =
             intent.getIntExtra(
@@ -67,7 +68,7 @@ class GameWaitingActivity : Activity() {
             intent.getStringExtra(
                 "nextWordMaster"
             )
-                ?: "Same Word Master"
+                ?: "Winner becomes Word Master"
 
         playerName =
             intent.getStringExtra(
@@ -75,11 +76,22 @@ class GameWaitingActivity : Activity() {
             )
                 ?: "Player 1"
 
+        password =
+            intent.getStringExtra(
+                "password"
+            )
+                ?: ""
+
         isHost =
             intent.getBooleanExtra(
                 "isHost",
                 true
             )
+
+        createScreen()
+    }
+
+    private fun createScreen() {
 
         val layout =
             LinearLayout(this)
@@ -173,21 +185,21 @@ class GameWaitingActivity : Activity() {
             copyButton
         )
 
-        val playersTitle =
+        val joinedTitle =
             TextView(this)
 
-        playersTitle.text =
-            "Players"
+        joinedTitle.text =
+            "Players Joined: 1 / $playerCount"
 
-        playersTitle.textSize =
+        joinedTitle.textSize =
             21f
 
-        playersTitle.setTypeface(
+        joinedTitle.setTypeface(
             null,
             Typeface.BOLD
         )
 
-        playersTitle.setPadding(
+        joinedTitle.setPadding(
             0,
             25,
             0,
@@ -195,7 +207,7 @@ class GameWaitingActivity : Activity() {
         )
 
         layout.addView(
-            playersTitle
+            joinedTitle
         )
 
         val playersText =
@@ -271,7 +283,7 @@ class GameWaitingActivity : Activity() {
             ) {
                 "\nWord Master: None\nEveryone plays."
             } else {
-                "\nWord Master: Player 1\nWord Master does not play."
+                "\nWord Master: Not assigned yet\nThe Word Master does not play that round."
             }
 
         ruleText.textSize =
@@ -293,7 +305,11 @@ class GameWaitingActivity : Activity() {
             TextView(this)
 
         statusText.text =
-            "\nPlayers are ready."
+            if (isHost) {
+                "\nYou are the HOST.\nWaiting for players..."
+            } else {
+                "\nWaiting for the host to start the game..."
+            }
 
         statusText.textSize =
             18f
@@ -370,47 +386,77 @@ class GameWaitingActivity : Activity() {
             StringBuilder()
 
         builder.append(
-            "1. $playerName"
+            "1. $playerName — HOST"
         )
-
-        builder.append(
-            " — HOST"
-        )
-
-        for (
-            player in 2..playerCount
-        ) {
-
-            builder.append(
-                "\n$player. Player $player"
-            )
-        }
 
         return builder.toString()
     }
 
     private fun startGame() {
 
-    val gameIntent = Intent(
-        this,
-        OnlineGameRoundActivity::class.java
-    )
+        val gameIntent =
+            Intent(
+                this,
+                OnlineGameRoundActivity::class.java
+            )
 
-    gameIntent.putExtra("gameCode", gameCode)
-    gameIntent.putExtra("playerCount", playerCount)
-    gameIntent.putExtra("maxPlayers", playerCount)
-    gameIntent.putExtra("wordSelection", wordSelection)
-gameIntent.putExtra("manualWord", manualWord)
-gameIntent.putExtra("category", category)
-    gameIntent.putExtra("secondsPerTurn", secondsPerTurn)
-    gameIntent.putExtra("nextWordMaster", nextWordMaster)
-    gameIntent.putExtra("playerName", playerName)
+        gameIntent.putExtra(
+            "gameCode",
+            gameCode
+        )
 
-    startActivity(gameIntent)
-}
+        gameIntent.putExtra(
+            "playerCount",
+            playerCount
+        )
 
-    override fun onDestroy() {
+        gameIntent.putExtra(
+            "maxPlayers",
+            playerCount
+        )
 
-        super.onDestroy()
+        gameIntent.putExtra(
+            "wordSelection",
+            wordSelection
+        )
+
+        gameIntent.putExtra(
+            "manualWord",
+            manualWord
+        )
+
+        gameIntent.putExtra(
+            "category",
+            category
+        )
+
+        gameIntent.putExtra(
+            "secondsPerTurn",
+            secondsPerTurn
+        )
+
+        gameIntent.putExtra(
+            "nextWordMaster",
+            nextWordMaster
+        )
+
+        gameIntent.putExtra(
+            "playerName",
+            playerName
+        )
+
+        gameIntent.putExtra(
+            "password",
+            password
+        )
+
+        gameIntent.putExtra(
+            "isHost",
+            isHost
+        )
+
+        startActivity(
+            gameIntent
+        )
     }
 }
