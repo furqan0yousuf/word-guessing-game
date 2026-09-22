@@ -104,10 +104,14 @@ class CreateGameActivity : Activity() {
                     position: Int,
                     id: Long
                 ) {
+
                     if (position == 1) {
+
                         manualWordInput.visibility =
                             android.view.View.VISIBLE
+
                     } else {
+
                         manualWordInput.visibility =
                             android.view.View.GONE
 
@@ -147,8 +151,15 @@ class CreateGameActivity : Activity() {
 
         layout.addView(categorySpinner)
 
+        /*
+         * TURN TIME
+         *
+         * Minimum = 20 seconds
+         * Default = 20 seconds
+         * Unlimited = no countdown
+         */
         val timeTitle = TextView(this)
-        timeTitle.text = "Seconds per Turn"
+        timeTitle.text = "Time per Turn"
         timeTitle.textSize = 20f
         timeTitle.setPadding(0, 30, 0, 10)
         layout.addView(timeTitle)
@@ -156,10 +167,11 @@ class CreateGameActivity : Activity() {
         val timeSpinner = Spinner(this)
 
         val times = arrayOf(
-            "10",
-            "15",
-            "20",
-            "30"
+            "20 seconds",
+            "30 seconds",
+            "45 seconds",
+            "60 seconds",
+            "Unlimited"
         )
 
         timeSpinner.adapter = ArrayAdapter(
@@ -167,6 +179,11 @@ class CreateGameActivity : Activity() {
             android.R.layout.simple_spinner_dropdown_item,
             times
         )
+
+        /*
+         * Default = 20 seconds
+         */
+        timeSpinner.setSelection(0)
 
         layout.addView(timeSpinner)
 
@@ -191,7 +208,9 @@ class CreateGameActivity : Activity() {
             nextMasterOptions
         )
 
-        // Default to "Winner becomes Word Master"
+        /*
+         * Default = Winner becomes Word Master
+         */
         nextMasterSpinner.setSelection(1)
 
         layout.addView(nextMasterSpinner)
@@ -271,10 +290,26 @@ class CreateGameActivity : Activity() {
             val selectedCategory =
                 categorySpinner.selectedItem.toString()
 
+            /*
+             * Convert the selected display text
+             * into seconds.
+             *
+             * Unlimited = 0
+             */
+            val selectedTimeText =
+                timeSpinner.selectedItem.toString()
+
             val selectedTime =
-                timeSpinner.selectedItem
-                    .toString()
-                    .toInt()
+                when {
+
+                    selectedTimeText ==
+                        "Unlimited" -> 0
+
+                    else ->
+                        selectedTimeText
+                            .substringBefore(" ")
+                            .toInt()
+                }
 
             val selectedNextMaster =
                 nextMasterSpinner
