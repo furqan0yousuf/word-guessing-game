@@ -51,6 +51,12 @@ class GameWaitingActivity : Activity() {
             )
                 ?: "Random"
 
+        manualWord =
+    intent.getStringExtra(
+        "manualWord"
+    )
+        ?: ""
+
         secondsPerTurn =
             intent.getIntExtra(
                 "secondsPerTurn",
@@ -394,7 +400,8 @@ class GameWaitingActivity : Activity() {
     gameIntent.putExtra("playerCount", playerCount)
     gameIntent.putExtra("maxPlayers", playerCount)
     gameIntent.putExtra("wordSelection", wordSelection)
-    gameIntent.putExtra("category", category)
+gameIntent.putExtra("manualWord", manualWord)
+gameIntent.putExtra("category", category)
     gameIntent.putExtra("secondsPerTurn", secondsPerTurn)
     gameIntent.putExtra("nextWordMaster", nextWordMaster)
     gameIntent.putExtra("playerName", playerName)
