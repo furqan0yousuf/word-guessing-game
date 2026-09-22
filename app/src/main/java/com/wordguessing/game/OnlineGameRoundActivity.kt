@@ -7,7 +7,6 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.Gravity
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -171,10 +170,6 @@ class OnlineGameRoundActivity : Activity() {
         nextWordMaster: String
     ) {
 
-        /*
-         * ScrollView allows the complete game screen
-         * to be reached on smaller phones.
-         */
         val scrollView =
             ScrollView(this)
 
@@ -193,9 +188,6 @@ class OnlineGameRoundActivity : Activity() {
 
         scrollView.addView(layout)
 
-        /*
-         * TITLE
-         */
         val title =
             TextView(this)
 
@@ -222,9 +214,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(title)
 
-        /*
-         * GAME CODE
-         */
         val codeText =
             TextView(this)
 
@@ -259,9 +248,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(codeText)
 
-        /*
-         * CATEGORY
-         */
         val categoryBox =
             TextView(this)
 
@@ -303,9 +289,6 @@ class OnlineGameRoundActivity : Activity() {
             categoryBox
         )
 
-        /*
-         * SETTINGS
-         */
         val info =
             TextView(this)
 
@@ -331,9 +314,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(info)
 
-        /*
-         * PLAYERS TITLE
-         */
         val playersTitle =
             TextView(this)
 
@@ -360,9 +340,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(playersTitle)
 
-        /*
-         * PLAYER LIST
-         */
         playersText =
             TextView(this)
 
@@ -382,9 +359,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(playersText)
 
-        /*
-         * WORD MASTER
-         */
         val wordMasterText =
             TextView(this)
 
@@ -426,9 +400,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(wordMasterText)
 
-        /*
-         * WORD DISPLAY
-         */
         wordText =
             TextView(this)
 
@@ -455,9 +426,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(wordText)
 
-        /*
-         * CURRENT TURN
-         */
         turnText =
             TextView(this)
 
@@ -492,9 +460,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(turnText)
 
-        /*
-         * TIMER
-         */
         timerText =
             TextView(this)
 
@@ -523,8 +488,6 @@ class OnlineGameRoundActivity : Activity() {
 
         /*
          * WHOLE WORD BUTTON
-         *
-         * MOVED UP so it is easy to see.
          */
         wholeWordButton =
             Button(this)
@@ -560,9 +523,6 @@ class OnlineGameRoundActivity : Activity() {
             )
         )
 
-        /*
-         * STATUS
-         */
         statusText =
             TextView(this)
 
@@ -593,9 +553,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(statusText)
 
-        /*
-         * LETTER BOARD
-         */
         val letterBoard =
             LinearLayout(this)
 
@@ -772,9 +729,6 @@ class OnlineGameRoundActivity : Activity() {
             }
         }
 
-        /*
-         * LEAVE GAME
-         */
         val leaveButton =
             Button(this)
 
@@ -1135,6 +1089,13 @@ class OnlineGameRoundActivity : Activity() {
             .trim()
     }
 
+    /*
+     * NORMAL TURN TIMER
+     *
+     * The timer pauses while the whole-word dialog
+     * is open. When Cancel is pressed, it resumes
+     * from the exact displayed remaining seconds.
+     */
     private fun startTurnTimer(
         seconds: Int,
         wordSelection: String
@@ -1184,7 +1145,7 @@ class OnlineGameRoundActivity : Activity() {
             object :
                 CountDownTimer(
                     seconds * 1000L,
-                    1000L
+                    250L
                 ) {
 
                     override fun onTick(
@@ -1193,7 +1154,7 @@ class OnlineGameRoundActivity : Activity() {
 
                         remainingTurnSeconds =
                             (
-                                millisUntilFinished /
+                                (millisUntilFinished + 999L) /
                                     1000L
                                 ).toInt()
 
@@ -1409,6 +1370,14 @@ class OnlineGameRoundActivity : Activity() {
         return count
     }
 
+    /*
+     * WHOLE WORD GUESS
+     *
+     * Separate 20-second timer.
+     *
+     * The normal turn timer is paused while
+     * this dialog is open.
+     */
     private fun showWholeWordDialog(
         wordSelection: String
     ) {
@@ -1463,8 +1432,11 @@ class OnlineGameRoundActivity : Activity() {
         val wholeWordTimerText =
             TextView(this)
 
+        /*
+         * Whole-word timer is now 20 seconds.
+         */
         wholeWordTimerText.text =
-            "Time: 10"
+            "Time: 20"
 
         wholeWordTimerText.textSize =
             22f
@@ -1506,14 +1478,17 @@ class OnlineGameRoundActivity : Activity() {
                 )
                 .create()
 
+        /*
+         * Separate 20-second whole-word timer.
+         */
         var wholeWordSeconds =
-            10
+            20
 
         wholeWordTimer =
             object :
                 CountDownTimer(
-                    10000L,
-                    1000L
+                    20000L,
+                    250L
                 ) {
 
                     override fun onTick(
@@ -1522,7 +1497,7 @@ class OnlineGameRoundActivity : Activity() {
 
                         wholeWordSeconds =
                             (
-                                millisUntilFinished /
+                                (millisUntilFinished + 999L) /
                                     1000L
                                 ).toInt()
 
@@ -1629,6 +1604,9 @@ class OnlineGameRoundActivity : Activity() {
                     isUnlimited()
                 ) {
 
+                    /*
+                     * Unlimited remains unlimited.
+                     */
                     startTurnTimer(
                         0,
                         wordSelection
@@ -1638,11 +1616,33 @@ class OnlineGameRoundActivity : Activity() {
                     remainingTurnSeconds <= 0
                 ) {
 
+                    /*
+                     * If the original turn
+                     * has already expired, move on.
+                     */
                     moveToNextPlayer(
                         wordSelection
                     )
 
                 } else {
+
+                    /*
+                     * Resume using the remaining
+                     * time and immediately refresh
+                     * the display.
+                     */
+                    timerText.text =
+                        "Time: $remainingTurnSeconds"
+
+                    timerText.setTextColor(
+                        if (
+                            remainingTurnSeconds <= 3
+                        ) {
+                            Color.RED
+                        } else {
+                            Color.BLACK
+                        }
+                    )
 
                     startTurnTimer(
                         remainingTurnSeconds,
