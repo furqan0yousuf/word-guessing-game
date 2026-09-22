@@ -7,9 +7,11 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.Gravity
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import kotlin.random.Random
@@ -161,9 +163,6 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
-    /*
-     * CREATE GAME SCREEN
-     */
     private fun createGameScreen(
         gameCode: String,
         maxPlayers: Int,
@@ -171,6 +170,13 @@ class OnlineGameRoundActivity : Activity() {
         selectedCategory: String,
         nextWordMaster: String
     ) {
+
+        /*
+         * ScrollView allows the complete game screen
+         * to be reached on smaller phones.
+         */
+        val scrollView =
+            ScrollView(this)
 
         val layout =
             LinearLayout(this)
@@ -180,10 +186,12 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.setPadding(
             16,
+            10,
             16,
-            16,
-            16
+            20
         )
+
+        scrollView.addView(layout)
 
         /*
          * TITLE
@@ -195,7 +203,7 @@ class OnlineGameRoundActivity : Activity() {
             "Online Game"
 
         title.textSize =
-            28f
+            25f
 
         title.gravity =
             Gravity.CENTER
@@ -209,7 +217,7 @@ class OnlineGameRoundActivity : Activity() {
             0,
             0,
             0,
-            8
+            5
         )
 
         layout.addView(title)
@@ -224,7 +232,7 @@ class OnlineGameRoundActivity : Activity() {
             "Game Code: $gameCode"
 
         codeText.textSize =
-            18f
+            17f
 
         codeText.gravity =
             Gravity.CENTER
@@ -244,9 +252,9 @@ class OnlineGameRoundActivity : Activity() {
 
         codeText.setPadding(
             0,
-            4,
+            2,
             0,
-            8
+            5
         )
 
         layout.addView(codeText)
@@ -266,7 +274,7 @@ class OnlineGameRoundActivity : Activity() {
             }"
 
         categoryBox.textSize =
-            21f
+            20f
 
         categoryBox.gravity =
             Gravity.CENTER
@@ -285,22 +293,18 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         categoryBox.setPadding(
-            12,
-            12,
-            12,
-            12
+            8,
+            8,
+            8,
+            8
         )
 
         layout.addView(
-            categoryBox,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            categoryBox
         )
 
         /*
-         * GAME SETTINGS
+         * SETTINGS
          */
         val info =
             TextView(this)
@@ -313,16 +317,16 @@ class OnlineGameRoundActivity : Activity() {
             """.trimIndent()
 
         info.textSize =
-            15f
+            14f
 
         info.gravity =
             Gravity.CENTER
 
         info.setPadding(
             0,
-            8,
+            5,
             0,
-            8
+            5
         )
 
         layout.addView(info)
@@ -337,7 +341,7 @@ class OnlineGameRoundActivity : Activity() {
             "PLAYERS"
 
         playersTitle.textSize =
-            21f
+            19f
 
         playersTitle.setTypeface(
             null,
@@ -349,14 +353,12 @@ class OnlineGameRoundActivity : Activity() {
 
         playersTitle.setPadding(
             0,
-            8,
+            5,
             0,
-            4
+            2
         )
 
-        layout.addView(
-            playersTitle
-        )
+        layout.addView(playersTitle)
 
         /*
          * PLAYER LIST
@@ -364,23 +366,21 @@ class OnlineGameRoundActivity : Activity() {
         playersText =
             TextView(this)
 
+        playersText.textSize =
+            16f
+
+        playersText.setPadding(
+            0,
+            2,
+            0,
+            5
+        )
+
         updatePlayerList(
             wordSelection
         )
 
-        playersText.textSize =
-            17f
-
-        playersText.setPadding(
-            0,
-            4,
-            0,
-            8
-        )
-
-        layout.addView(
-            playersText
-        )
+        layout.addView(playersText)
 
         /*
          * WORD MASTER
@@ -403,7 +403,7 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         wordMasterText.textSize =
-            17f
+            15f
 
         wordMasterText.gravity =
             Gravity.CENTER
@@ -419,17 +419,15 @@ class OnlineGameRoundActivity : Activity() {
 
         wordMasterText.setPadding(
             0,
-            4,
+            3,
             0,
-            8
+            5
         )
 
-        layout.addView(
-            wordMasterText
-        )
+        layout.addView(wordMasterText)
 
         /*
-         * WORD
+         * WORD DISPLAY
          */
         wordText =
             TextView(this)
@@ -450,14 +448,12 @@ class OnlineGameRoundActivity : Activity() {
 
         wordText.setPadding(
             0,
-            12,
+            8,
             0,
-            12
+            8
         )
 
-        layout.addView(
-            wordText
-        )
+        layout.addView(wordText)
 
         /*
          * CURRENT TURN
@@ -469,7 +465,7 @@ class OnlineGameRoundActivity : Activity() {
             "PLAYER $currentPlayer'S TURN"
 
         turnText.textSize =
-            23f
+            21f
 
         turnText.gravity =
             Gravity.CENTER
@@ -489,14 +485,12 @@ class OnlineGameRoundActivity : Activity() {
 
         turnText.setPadding(
             0,
-            8,
+            4,
             0,
-            4
+            2
         )
 
-        layout.addView(
-            turnText
-        )
+        layout.addView(turnText)
 
         /*
          * TIMER
@@ -508,7 +502,7 @@ class OnlineGameRoundActivity : Activity() {
             getTimerDisplay()
 
         timerText.textSize =
-            24f
+            23f
 
         timerText.gravity =
             Gravity.CENTER
@@ -520,23 +514,54 @@ class OnlineGameRoundActivity : Activity() {
 
         timerText.setPadding(
             0,
-            4,
+            2,
             0,
-            5
+            3
         )
 
+        layout.addView(timerText)
+
+        /*
+         * WHOLE WORD BUTTON
+         *
+         * MOVED UP so it is easy to see.
+         */
+        wholeWordButton =
+            Button(this)
+
+        wholeWordButton.text =
+            "GUESS WHOLE WORD"
+
+        wholeWordButton.textSize =
+            17f
+
+        wholeWordButton.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wholeWordButton.setOnClickListener {
+
+            if (
+                !roundFinished
+            ) {
+
+                showWholeWordDialog(
+                    wordSelection
+                )
+            }
+        }
+
         layout.addView(
-            timerText
+            wholeWordButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
 
         /*
-         * GAME STATUS MESSAGE
-         *
-         * This replaces Toast messages for
-         * normal gameplay feedback.
-         *
-         * It stays ABOVE the letter board so
-         * it never covers the letters.
+         * STATUS
          */
         statusText =
             TextView(this)
@@ -545,7 +570,7 @@ class OnlineGameRoundActivity : Activity() {
             "Choose a letter"
 
         statusText.textSize =
-            16f
+            15f
 
         statusText.gravity =
             Gravity.CENTER
@@ -561,14 +586,12 @@ class OnlineGameRoundActivity : Activity() {
 
         statusText.setPadding(
             4,
+            3,
             4,
-            4,
-            6
+            5
         )
 
-        layout.addView(
-            statusText
-        )
+        layout.addView(statusText)
 
         /*
          * LETTER BOARD
@@ -608,7 +631,7 @@ class OnlineGameRoundActivity : Activity() {
                 letter.toString()
 
             button.textSize =
-                14f
+                13f
 
             button.setTextColor(
                 Color.WHITE
@@ -655,9 +678,6 @@ class OnlineGameRoundActivity : Activity() {
                 button.isEnabled =
                     false
 
-                /*
-                 * CORRECT LETTER
-                 */
                 if (
                     secretWord.contains(
                         letter
@@ -753,43 +773,6 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         /*
-         * WHOLE WORD BUTTON
-         */
-        wholeWordButton =
-            Button(this)
-
-        wholeWordButton.text =
-            "Guess Whole Word"
-
-        wholeWordButton.textSize =
-            18f
-
-        wholeWordButton.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        wholeWordButton.setOnClickListener {
-
-            if (
-                !roundFinished
-            ) {
-
-                showWholeWordDialog(
-                    wordSelection
-                )
-            }
-        }
-
-        layout.addView(
-            wholeWordButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        /*
          * LEAVE GAME
          */
         val leaveButton =
@@ -799,7 +782,7 @@ class OnlineGameRoundActivity : Activity() {
             "Leave Game"
 
         leaveButton.textSize =
-            18f
+            16f
 
         leaveButton.setOnClickListener {
 
@@ -813,14 +796,9 @@ class OnlineGameRoundActivity : Activity() {
             leaveButton
         )
 
-        setContentView(layout)
+        setContentView(scrollView)
     }
 
-    /*
-     * STATUS MESSAGE
-     *
-     * Appears above the letter board.
-     */
     private fun showStatus(
         message: String,
         color: Int
@@ -839,17 +817,11 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
-    /*
-     * IS TIMER UNLIMITED?
-     */
     private fun isUnlimited(): Boolean {
 
         return secondsPerTurn <= 0
     }
 
-    /*
-     * TIMER DISPLAY
-     */
     private fun getTimerDisplay(): String {
 
         return if (
@@ -864,9 +836,6 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    /*
-     * TURN TIME DISPLAY
-     */
     private fun getTurnTimeDisplay(): String {
 
         return if (
@@ -881,9 +850,6 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    /*
-     * WORD SELECTION
-     */
     private fun chooseWord(
         wordSelection: String,
         selectedCategory: String,
@@ -993,9 +959,6 @@ class OnlineGameRoundActivity : Activity() {
         revealedLetters.clear()
     }
 
-    /*
-     * CATEGORY DISPLAY
-     */
     private fun getCategoryDisplay(
         selectedCategory: String,
         wordSelection: String
@@ -1023,9 +986,6 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    /*
-     * WORD DISPLAY
-     */
     private fun buildWordDisplay(): String {
 
         val builder =
@@ -1074,9 +1034,6 @@ class OnlineGameRoundActivity : Activity() {
             buildWordDisplay()
     }
 
-    /*
-     * COMPLETE WORD?
-     */
     private fun isWordComplete(): Boolean {
 
         for (letter in secretWord) {
@@ -1095,12 +1052,6 @@ class OnlineGameRoundActivity : Activity() {
         return true
     }
 
-    /*
-     * PLAYER LIST
-     *
-     * Each player is now displayed
-     * individually with visual status.
-     */
     private fun updatePlayerList(
         wordSelection: String
     ) {
@@ -1184,9 +1135,6 @@ class OnlineGameRoundActivity : Activity() {
             .trim()
     }
 
-    /*
-     * NORMAL TURN TIMER
-     */
     private fun startTurnTimer(
         seconds: Int,
         wordSelection: String
@@ -1201,9 +1149,6 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        /*
-         * UNLIMITED
-         */
         if (
             seconds <= 0
         ) {
@@ -1225,9 +1170,6 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        /*
-         * TIMED
-         */
         remainingTurnSeconds =
             seconds
 
@@ -1300,9 +1242,6 @@ class OnlineGameRoundActivity : Activity() {
                 .start()
     }
 
-    /*
-     * MISSED TURN
-     */
     private fun handleMissedTurn(
         wordSelection: String
     ) {
@@ -1368,9 +1307,6 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
-    /*
-     * NEXT PLAYER
-     */
     private fun moveToNextPlayer(
         wordSelection: String
     ) {
@@ -1443,9 +1379,6 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
-    /*
-     * ACTIVE PLAYERS
-     */
     private fun getActivePlayerCount(
         wordSelection: String
     ): Int {
@@ -1476,11 +1409,6 @@ class OnlineGameRoundActivity : Activity() {
         return count
     }
 
-    /*
-     * WHOLE WORD DIALOG
-     *
-     * Still 10 seconds.
-     */
     private fun showWholeWordDialog(
         wordSelection: String
     ) {
@@ -1727,9 +1655,6 @@ class OnlineGameRoundActivity : Activity() {
         dialog.show()
     }
 
-    /*
-     * FINISH ROUND
-     */
     private fun finishRound(
         message: String
     ) {
