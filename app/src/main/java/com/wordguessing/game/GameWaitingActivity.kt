@@ -19,6 +19,7 @@ class GameWaitingActivity : Activity() {
     private var gameCode = "------"
     private var playerCount = 2
     private var wordSelection = "Random Word"
+    private var manualWord = ""
     private var category = "Random"
     private var secondsPerTurn = 10
     private var nextWordMaster = "Same Word Master"
