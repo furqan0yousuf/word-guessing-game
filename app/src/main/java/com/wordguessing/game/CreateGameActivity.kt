@@ -6,8 +6,8 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.ArrayAdapter
-import android.widget.Button
 import android.widget.EditText
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -30,27 +30,22 @@ class CreateGameActivity : Activity() {
 
         layout.addView(title)
 
-        // HOST NAME
         val nameTitle = TextView(this)
         nameTitle.text = "Your Name"
         nameTitle.textSize = 20f
         nameTitle.setPadding(0, 30, 0, 10)
-
         layout.addView(nameTitle)
 
         val nameInput = EditText(this)
         nameInput.hint = "Enter your name"
         nameInput.textSize = 18f
         nameInput.setSingleLine(true)
-
         layout.addView(nameInput)
 
-        // NUMBER OF PLAYERS
         val playersTitle = TextView(this)
-        playersTitle.text = "Number of Players"
+        playersTitle.text = "Maximum Players"
         playersTitle.textSize = 20f
         playersTitle.setPadding(0, 30, 0, 10)
-
         layout.addView(playersTitle)
 
         val playersSpinner = Spinner(this)
@@ -69,12 +64,10 @@ class CreateGameActivity : Activity() {
 
         layout.addView(playersSpinner)
 
-        // WORD SELECTION
         val wordTitle = TextView(this)
         wordTitle.text = "Word Selection"
         wordTitle.textSize = 20f
         wordTitle.setPadding(0, 30, 0, 10)
-
         layout.addView(wordTitle)
 
         val wordSpinner = Spinner(this)
@@ -92,7 +85,6 @@ class CreateGameActivity : Activity() {
 
         layout.addView(wordSpinner)
 
-        // MANUAL WORD
         val manualWordInput = EditText(this)
         manualWordInput.hint = "Enter word"
         manualWordInput.textSize = 18f
@@ -112,14 +104,10 @@ class CreateGameActivity : Activity() {
                     position: Int,
                     id: Long
                 ) {
-
                     if (position == 1) {
-
                         manualWordInput.visibility =
                             android.view.View.VISIBLE
-
                     } else {
-
                         manualWordInput.visibility =
                             android.view.View.GONE
 
@@ -133,12 +121,10 @@ class CreateGameActivity : Activity() {
                 }
             }
 
-        // CATEGORY
         val categoryTitle = TextView(this)
         categoryTitle.text = "Category"
         categoryTitle.textSize = 20f
         categoryTitle.setPadding(0, 30, 0, 10)
-
         layout.addView(categoryTitle)
 
         val categorySpinner = Spinner(this)
@@ -161,12 +147,10 @@ class CreateGameActivity : Activity() {
 
         layout.addView(categorySpinner)
 
-        // SECONDS PER TURN
         val timeTitle = TextView(this)
         timeTitle.text = "Seconds per Turn"
         timeTitle.textSize = 20f
         timeTitle.setPadding(0, 30, 0, 10)
-
         layout.addView(timeTitle)
 
         val timeSpinner = Spinner(this)
@@ -186,12 +170,10 @@ class CreateGameActivity : Activity() {
 
         layout.addView(timeSpinner)
 
-        // NEXT WORD MASTER
         val nextMasterTitle = TextView(this)
         nextMasterTitle.text = "Next Word Master"
         nextMasterTitle.textSize = 20f
         nextMasterTitle.setPadding(0, 30, 0, 10)
-
         layout.addView(nextMasterTitle)
 
         val nextMasterSpinner = Spinner(this)
@@ -209,24 +191,23 @@ class CreateGameActivity : Activity() {
             nextMasterOptions
         )
 
+        // Default to "Winner becomes Word Master"
+        nextMasterSpinner.setSelection(1)
+
         layout.addView(nextMasterSpinner)
 
-        // PASSWORD
         val passwordTitle = TextView(this)
         passwordTitle.text = "Game Password (Optional)"
         passwordTitle.textSize = 20f
         passwordTitle.setPadding(0, 30, 0, 10)
-
         layout.addView(passwordTitle)
 
         val passwordInput = EditText(this)
         passwordInput.hint = "Enter password or leave blank"
         passwordInput.textSize = 18f
         passwordInput.setSingleLine(true)
-
         layout.addView(passwordInput)
 
-        // CREATE BUTTON
         val createButton = Button(this)
         createButton.text = "Create Game & Join"
         createButton.textSize = 18f
@@ -300,8 +281,11 @@ class CreateGameActivity : Activity() {
                     .selectedItem
                     .toString()
 
-            // Temporary game code.
-            // Firebase will generate real shared codes later.
+            val password =
+                passwordInput.text
+                    .toString()
+                    .trim()
+
             val gameCode =
                 (100000..999999)
                     .random()
@@ -349,8 +333,18 @@ class CreateGameActivity : Activity() {
             )
 
             intent.putExtra(
+                "password",
+                password
+            )
+
+            intent.putExtra(
                 "playerName",
                 hostName
+            )
+
+            intent.putExtra(
+                "isHost",
+                true
             )
 
             startActivity(intent)
