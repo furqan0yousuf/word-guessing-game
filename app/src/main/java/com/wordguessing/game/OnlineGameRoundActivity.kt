@@ -946,6 +946,7 @@ private fun buildPlayerList(
 
             builder.append(
                 " — WORD MASTER"
+                )
 
         } else if (
             player == currentPlayer
