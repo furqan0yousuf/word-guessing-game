@@ -20,6 +20,7 @@ class OnlineGameRoundActivity : Activity() {
     private lateinit var turnText: TextView
     private lateinit var playersText: TextView
     private lateinit var wordText: TextView
+    private lateinit var statusText: TextView
     private lateinit var wholeWordButton: Button
 
     private var timer: CountDownTimer? = null
@@ -33,12 +34,6 @@ class OnlineGameRoundActivity : Activity() {
     private var currentPlayer = 1
     private var playerCount = 2
 
-    /*
-     * 20 seconds is now the default.
-     *
-     * 20 / 30 / 45 / 60 = timed
-     * 0 or -1 = Unlimited
-     */
     private var secondsPerTurn = 20
 
     private var roundFinished = false
@@ -97,15 +92,6 @@ class OnlineGameRoundActivity : Activity() {
             )
                 ?: "Random"
 
-        /*
-         * Default is now 20.
-         *
-         * Older screens may still send 10.
-         * We intentionally convert anything below
-         * 20 to 20 so the new minimum is enforced.
-         *
-         * 0 or -1 means Unlimited.
-         */
         val requestedSeconds =
             intent.getIntExtra(
                 "secondsPerTurn",
@@ -147,10 +133,6 @@ class OnlineGameRoundActivity : Activity() {
             missedTurns[player] = 0
         }
 
-        /*
-         * Manual Word:
-         * Player 1 is Word Master.
-         */
         if (
             wordSelection !=
             "Random Word"
@@ -180,7 +162,7 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     /*
-     * CREATE SCREEN
+     * CREATE GAME SCREEN
      */
     private fun createGameScreen(
         gameCode: String,
@@ -253,7 +235,11 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         codeText.setTextColor(
-            Color.rgb(0, 70, 140)
+            Color.rgb(
+                0,
+                70,
+                140
+            )
         )
 
         codeText.setPadding(
@@ -267,8 +253,6 @@ class OnlineGameRoundActivity : Activity() {
 
         /*
          * CATEGORY
-         *
-         * Made intentionally prominent.
          */
         val categoryBox =
             TextView(this)
@@ -293,7 +277,11 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         categoryBox.setTextColor(
-            Color.rgb(0, 70, 140)
+            Color.rgb(
+                0,
+                70,
+                140
+            )
         )
 
         categoryBox.setPadding(
@@ -376,10 +364,9 @@ class OnlineGameRoundActivity : Activity() {
         playersText =
             TextView(this)
 
-        playersText.text =
-            buildPlayerList(
-                wordSelection
-            )
+        updatePlayerList(
+            wordSelection
+        )
 
         playersText.textSize =
             17f
@@ -493,7 +480,11 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         turnText.setTextColor(
-            Color.rgb(0, 100, 0)
+            Color.rgb(
+                0,
+                100,
+                0
+            )
         )
 
         turnText.setPadding(
@@ -531,11 +522,52 @@ class OnlineGameRoundActivity : Activity() {
             0,
             4,
             0,
-            10
+            5
         )
 
         layout.addView(
             timerText
+        )
+
+        /*
+         * GAME STATUS MESSAGE
+         *
+         * This replaces Toast messages for
+         * normal gameplay feedback.
+         *
+         * It stays ABOVE the letter board so
+         * it never covers the letters.
+         */
+        statusText =
+            TextView(this)
+
+        statusText.text =
+            "Choose a letter"
+
+        statusText.textSize =
+            16f
+
+        statusText.gravity =
+            Gravity.CENTER
+
+        statusText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        statusText.setTextColor(
+            Color.DKGRAY
+        )
+
+        statusText.setPadding(
+            4,
+            4,
+            4,
+            6
+        )
+
+        layout.addView(
+            statusText
         )
 
         /*
@@ -604,11 +636,10 @@ class OnlineGameRoundActivity : Activity() {
                     )
                 ) {
 
-                    Toast.makeText(
-                        this,
+                    showStatus(
                         "Already guessed.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                        Color.RED
+                    )
 
                     return@setOnClickListener
                 }
@@ -625,7 +656,7 @@ class OnlineGameRoundActivity : Activity() {
                     false
 
                 /*
-                 * CORRECT
+                 * CORRECT LETTER
                  */
                 if (
                     secretWord.contains(
@@ -652,11 +683,14 @@ class OnlineGameRoundActivity : Activity() {
                         wordSelection
                     )
 
-                    Toast.makeText(
-                        this,
+                    showStatus(
                         "Correct! You earned $occurrences point(s).",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                        Color.rgb(
+                            0,
+                            100,
+                            0
+                        )
+                    )
 
                     if (
                         isWordComplete()
@@ -668,11 +702,6 @@ class OnlineGameRoundActivity : Activity() {
 
                     } else {
 
-                        /*
-                         * Correct letter:
-                         * same player continues.
-                         * Fresh timer.
-                         */
                         wholeWordAttemptUsed =
                             false
 
@@ -684,15 +713,10 @@ class OnlineGameRoundActivity : Activity() {
 
                 } else {
 
-                    /*
-                     * WRONG:
-                     * Turn immediately ends.
-                     */
-                    Toast.makeText(
-                        this,
+                    showStatus(
                         "Wrong letter.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                        Color.RED
+                    )
 
                     moveToNextPlayer(
                         wordSelection
@@ -729,7 +753,7 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         /*
-         * WHOLE WORD
+         * WHOLE WORD BUTTON
          */
         wholeWordButton =
             Button(this)
@@ -766,7 +790,7 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         /*
-         * LEAVE
+         * LEAVE GAME
          */
         val leaveButton =
             Button(this)
@@ -790,6 +814,29 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         setContentView(layout)
+    }
+
+    /*
+     * STATUS MESSAGE
+     *
+     * Appears above the letter board.
+     */
+    private fun showStatus(
+        message: String,
+        color: Int
+    ) {
+
+        statusText.text =
+            message
+
+        statusText.setTextColor(
+            color
+        )
+
+        statusText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
     }
 
     /*
@@ -843,9 +890,6 @@ class OnlineGameRoundActivity : Activity() {
         manualWord: String?
     ) {
 
-        /*
-         * MANUAL WORD
-         */
         if (
             wordSelection !=
             "Random Word"
@@ -879,9 +923,6 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        /*
-         * RANDOM WORD
-         */
         val availableWords =
             mutableListOf<String>()
 
@@ -919,9 +960,6 @@ class OnlineGameRoundActivity : Activity() {
             )
         }
 
-        /*
-         * Avoid immediate repeat.
-         */
         if (
             availableWords.size > 1 &&
             previousWord.isNotEmpty()
@@ -1059,7 +1097,25 @@ class OnlineGameRoundActivity : Activity() {
 
     /*
      * PLAYER LIST
+     *
+     * Each player is now displayed
+     * individually with visual status.
      */
+    private fun updatePlayerList(
+        wordSelection: String
+    ) {
+
+        playersText.text =
+            buildPlayerList(
+                wordSelection
+            )
+
+        playersText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+    }
+
     private fun buildPlayerList(
         wordSelection: String
     ): String {
@@ -1128,26 +1184,6 @@ class OnlineGameRoundActivity : Activity() {
             .trim()
     }
 
-    private fun updatePlayerList(
-        wordSelection: String
-    ) {
-
-        playersText.text =
-            buildPlayerList(
-                wordSelection
-            )
-
-        /*
-         * Make the whole player list bold.
-         * The status wording itself identifies
-         * CURRENT TURN / WORD MASTER / ELIMINATED.
-         */
-        playersText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-    }
-
     /*
      * NORMAL TURN TIMER
      */
@@ -1190,7 +1226,7 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         /*
-         * TIMED TURN
+         * TIMED
          */
         remainingTurnSeconds =
             seconds
@@ -1289,29 +1325,30 @@ class OnlineGameRoundActivity : Activity() {
                     currentPlayer
                 )
 
-                Toast.makeText(
-                    this,
+                showStatus(
                     "Player $currentPlayer is eliminated after 3 missed turns.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    Color.RED
+                )
 
             } else {
 
-                Toast.makeText(
-                    this,
+                showStatus(
                     "Player $currentPlayer missed a turn.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    Color.RED
+                )
             }
 
         } else {
 
-            Toast.makeText(
-                this,
+            showStatus(
                 "Time is up.",
-                Toast.LENGTH_SHORT
-            ).show()
+                Color.RED
+            )
         }
+
+        updatePlayerList(
+            wordSelection
+        )
 
         if (
             getActivePlayerCount(
@@ -1362,10 +1399,6 @@ class OnlineGameRoundActivity : Activity() {
                     1
             }
 
-            /*
-             * Player 1 is Word Master
-             * when using manual word.
-             */
             if (
                 wordSelection !=
                 "Random Word" &&
@@ -1391,6 +1424,14 @@ class OnlineGameRoundActivity : Activity() {
 
         turnText.text =
             "PLAYER $currentPlayer'S TURN"
+
+        turnText.setTextColor(
+            Color.rgb(
+                0,
+                100,
+                0
+            )
+        )
 
         updatePlayerList(
             wordSelection
@@ -1448,11 +1489,10 @@ class OnlineGameRoundActivity : Activity() {
             wholeWordAttemptUsed
         ) {
 
-            Toast.makeText(
-                this,
+            showStatus(
                 "You already used your whole-word guess this turn.",
-                Toast.LENGTH_SHORT
-            ).show()
+                Color.RED
+            )
 
             return
         }
@@ -1460,9 +1500,6 @@ class OnlineGameRoundActivity : Activity() {
         wholeWordAttemptUsed =
             true
 
-        /*
-         * Pause normal timer.
-         */
         timer?.cancel()
 
         val input =
@@ -1541,9 +1578,6 @@ class OnlineGameRoundActivity : Activity() {
                 )
                 .create()
 
-        /*
-         * Separate 10-second whole-word timer.
-         */
         var wholeWordSeconds =
             10
 
@@ -1594,11 +1628,10 @@ class OnlineGameRoundActivity : Activity() {
 
                         dialog.dismiss()
 
-                        Toast.makeText(
-                            this@OnlineGameRoundActivity,
+                        showStatus(
                             "Whole-word time is up.",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                            Color.RED
+                        )
 
                         moveToNextPlayer(
                             wordSelection
@@ -1607,9 +1640,6 @@ class OnlineGameRoundActivity : Activity() {
                 }
                 .start()
 
-        /*
-         * Dialog buttons.
-         */
         dialog.setOnShowListener {
 
             dialog.getButton(
@@ -1647,11 +1677,10 @@ class OnlineGameRoundActivity : Activity() {
 
                 } else {
 
-                    Toast.makeText(
-                        this,
+                    showStatus(
                         "Wrong whole-word guess!",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                        Color.RED
+                    )
 
                     moveToNextPlayer(
                         wordSelection
@@ -1660,13 +1689,6 @@ class OnlineGameRoundActivity : Activity() {
             }
         }
 
-        /*
-         * Cancel / back.
-         *
-         * The whole-word attempt is consumed,
-         * but the normal timer resumes from
-         * where it was.
-         */
         dialog.setOnCancelListener {
 
             wholeWordTimer?.cancel()
