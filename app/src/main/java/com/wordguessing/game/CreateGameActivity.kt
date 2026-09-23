@@ -152,11 +152,7 @@ class CreateGameActivity : Activity() {
         layout.addView(categorySpinner)
 
         /*
-         * TURN TIME
-         *
-         * Minimum = 20 seconds
-         * Default = 20 seconds
-         * Unlimited = no countdown
+         * TIME PER TURN
          */
         val timeTitle = TextView(this)
         timeTitle.text = "Time per Turn"
@@ -180,12 +176,41 @@ class CreateGameActivity : Activity() {
             times
         )
 
-        /*
-         * Default = 20 seconds
-         */
+        // Default = 20 seconds
         timeSpinner.setSelection(0)
 
         layout.addView(timeSpinner)
+
+        /*
+         * TOTAL TURNS
+         */
+        val totalTurnsTitle = TextView(this)
+        totalTurnsTitle.text = "Total Turns"
+        totalTurnsTitle.textSize = 20f
+        totalTurnsTitle.setPadding(0, 30, 0, 10)
+        layout.addView(totalTurnsTitle)
+
+        val totalTurnsSpinner = Spinner(this)
+
+        val totalTurnOptions = arrayOf(
+            "Unlimited",
+            "5 Turns",
+            "10 Turns",
+            "15 Turns",
+            "20 Turns",
+            "30 Turns"
+        )
+
+        totalTurnsSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            totalTurnOptions
+        )
+
+        // Default = Unlimited
+        totalTurnsSpinner.setSelection(0)
+
+        layout.addView(totalTurnsSpinner)
 
         val nextMasterTitle = TextView(this)
         nextMasterTitle.text = "Next Word Master"
@@ -208,9 +233,7 @@ class CreateGameActivity : Activity() {
             nextMasterOptions
         )
 
-        /*
-         * Default = Winner becomes Word Master
-         */
+        // Default = Winner becomes Word Master
         nextMasterSpinner.setSelection(1)
 
         layout.addView(nextMasterSpinner)
@@ -291,8 +314,7 @@ class CreateGameActivity : Activity() {
                 categorySpinner.selectedItem.toString()
 
             /*
-             * Convert the selected display text
-             * into seconds.
+             * Convert Time per Turn
              *
              * Unlimited = 0
              */
@@ -307,6 +329,28 @@ class CreateGameActivity : Activity() {
 
                     else ->
                         selectedTimeText
+                            .substringBefore(" ")
+                            .toInt()
+                }
+
+            /*
+             * Convert Total Turns
+             *
+             * Unlimited = 0
+             */
+            val selectedTotalTurnsText =
+                totalTurnsSpinner
+                    .selectedItem
+                    .toString()
+
+            val selectedTotalTurns =
+                when {
+
+                    selectedTotalTurnsText ==
+                        "Unlimited" -> 0
+
+                    else ->
+                        selectedTotalTurnsText
                             .substringBefore(" ")
                             .toInt()
                 }
@@ -360,6 +404,11 @@ class CreateGameActivity : Activity() {
             intent.putExtra(
                 "secondsPerTurn",
                 selectedTime
+            )
+
+            intent.putExtra(
+                "totalTurns",
+                selectedTotalTurns
             )
 
             intent.putExtra(
