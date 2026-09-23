@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
@@ -99,6 +100,9 @@ class GameWaitingActivity : Activity() {
 
     private fun createScreen() {
 
+        val scrollView =
+            ScrollView(this)
+
         val layout =
             LinearLayout(this)
 
@@ -145,9 +149,9 @@ class GameWaitingActivity : Activity() {
 
         codeText.setPadding(
             0,
-            25,
+            20,
             0,
-            10
+            8
         )
 
         codeText.setTypeface(
@@ -207,9 +211,9 @@ class GameWaitingActivity : Activity() {
 
         joinedTitle.setPadding(
             0,
-            25,
+            18,
             0,
-            10
+            8
         )
 
         layout.addView(
@@ -229,7 +233,7 @@ class GameWaitingActivity : Activity() {
             0,
             5,
             0,
-            10
+            8
         )
 
         layout.addView(
@@ -252,9 +256,9 @@ class GameWaitingActivity : Activity() {
 
         settingsTitle.setPadding(
             0,
-            20,
+            12,
             0,
-            10
+            8
         )
 
         layout.addView(
@@ -324,9 +328,23 @@ class GameWaitingActivity : Activity() {
         statusText.gravity =
             Gravity.CENTER
 
+        statusText.setPadding(
+            0,
+            5,
+            0,
+            5
+        )
+
         layout.addView(
             statusText
         )
+
+        /*
+         * IMPORTANT:
+         * Keep the main action buttons close to the
+         * waiting/status information so they are easy
+         * to see and tap on a phone.
+         */
 
         if (isHost) {
 
@@ -334,10 +352,22 @@ class GameWaitingActivity : Activity() {
                 Button(this)
 
             startButton.text =
-                "Start Game"
+                "START GAME"
 
             startButton.textSize =
-                18f
+                20f
+
+            startButton.setTypeface(
+                null,
+                Typeface.BOLD
+            )
+
+            startButton.setPadding(
+                10,
+                12,
+                10,
+                12
+            )
 
             startButton.setOnClickListener {
 
@@ -375,6 +405,13 @@ class GameWaitingActivity : Activity() {
         leaveButton.textSize =
             18f
 
+        leaveButton.setPadding(
+            10,
+            10,
+            10,
+            10
+        )
+
         leaveButton.setOnClickListener {
 
             finish()
@@ -384,7 +421,13 @@ class GameWaitingActivity : Activity() {
             leaveButton
         )
 
-        setContentView(layout)
+        scrollView.addView(
+            layout
+        )
+
+        setContentView(
+            scrollView
+        )
     }
 
     private fun formatSecondsPerTurn(): String {
