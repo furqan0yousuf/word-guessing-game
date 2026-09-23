@@ -12,7 +12,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import kotlin.random.Random
 
 class OnlineGameRoundActivity : Activity() {
@@ -503,16 +502,41 @@ class OnlineGameRoundActivity : Activity() {
             Typeface.BOLD
         )
 
+        wholeWordButton.setTextColor(
+            Color.WHITE
+        )
+
+        wholeWordButton.setBackgroundColor(
+            Color.rgb(
+                0,
+                70,
+                140
+            )
+        )
+
         wholeWordButton.setOnClickListener {
 
             if (
-                !roundFinished
+                roundFinished
+            ) {
+                return@setOnClickListener
+            }
+
+            if (
+                wholeWordAttemptUsed
             ) {
 
-                showWholeWordDialog(
-                    wordSelection
+                showStatus(
+                    "You already used your whole-word guess this turn.",
+                    Color.RED
                 )
+
+                return@setOnClickListener
             }
+
+            showWholeWordDialog(
+                wordSelection
+            )
         }
 
         layout.addView(
@@ -679,8 +703,20 @@ class OnlineGameRoundActivity : Activity() {
 
                     } else {
 
+                        /*
+                         * Correct letter keeps
+                         * the same player's turn.
+                         *
+                         * Their whole-word attempt
+                         * is available again because
+                         * this is a new letter attempt.
+                         */
                         wholeWordAttemptUsed =
                             false
+
+                        setWholeWordButtonEnabled(
+                            true
+                        )
 
                         startTurnTimer(
                             secondsPerTurn,
@@ -751,6 +787,39 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         setContentView(scrollView)
+    }
+
+    private fun setWholeWordButtonEnabled(
+        enabled: Boolean
+    ) {
+
+        wholeWordButton.isEnabled =
+            enabled
+
+        if (enabled) {
+
+            wholeWordButton.setTextColor(
+                Color.WHITE
+            )
+
+            wholeWordButton.setBackgroundColor(
+                Color.rgb(
+                    0,
+                    70,
+                    140
+                )
+            )
+
+        } else {
+
+            wholeWordButton.setTextColor(
+                Color.DKGRAY
+            )
+
+            wholeWordButton.setBackgroundColor(
+                Color.LTGRAY
+            )
+        }
     }
 
     private fun showStatus(
@@ -1089,13 +1158,6 @@ class OnlineGameRoundActivity : Activity() {
             .trim()
     }
 
-    /*
-     * NORMAL TURN TIMER
-     *
-     * The timer pauses while the whole-word dialog
-     * is open. When Cancel is pressed, it resumes
-     * from the exact displayed remaining seconds.
-     */
     private fun startTurnTimer(
         seconds: Int,
         wordSelection: String
@@ -1319,6 +1381,10 @@ class OnlineGameRoundActivity : Activity() {
         wholeWordAttemptUsed =
             false
 
+        setWholeWordButtonEnabled(
+            true
+        )
+
         turnText.text =
             "PLAYER $currentPlayer'S TURN"
 
@@ -1370,13 +1436,91 @@ class OnlineGameRoundActivity : Activity() {
         return count
     }
 
+    private fun resumeNormalTurnAfterWholeWordCancel(
+        wordSelection: String
+    ) {
+
+        if (
+            roundFinished
+        ) {
+            return
+        }
+
+        if (
+            isUnlimited()
+        ) {
+
+            timerText.text =
+                "Time: Unlimited"
+
+            timerText.setTextColor(
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
+            )
+
+            startTurnTimer(
+                0,
+                wordSelection
+            )
+
+            return
+        }
+
+        if (
+            remainingTurnSeconds <= 0
+        ) {
+
+            timerText.text =
+                "Time: 0"
+
+            timerText.setTextColor(
+                Color.RED
+            )
+
+            moveToNextPlayer(
+                wordSelection
+            )
+
+            return
+        }
+
+        /*
+         * Refresh the visible timer FIRST.
+         */
+        timerText.text =
+            "Time: $remainingTurnSeconds"
+
+        timerText.setTextColor(
+            if (
+                remainingTurnSeconds <= 3
+            ) {
+                Color.RED
+            } else {
+                Color.BLACK
+            }
+        )
+
+        /*
+         * Restart from the actual remaining
+         * seconds rather than the original
+         * turn duration.
+         */
+        startTurnTimer(
+            remainingTurnSeconds,
+            wordSelection
+        )
+    }
+
     /*
      * WHOLE WORD GUESS
      *
      * Separate 20-second timer.
      *
-     * The normal turn timer is paused while
-     * this dialog is open.
+     * Once the player opens this dialog,
+     * their whole-word attempt is consumed.
      */
     private fun showWholeWordDialog(
         wordSelection: String
@@ -1394,9 +1538,22 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
+        /*
+         * Consume the attempt immediately.
+         */
         wholeWordAttemptUsed =
             true
 
+        /*
+         * Disable the button immediately.
+         */
+        setWholeWordButtonEnabled(
+            false
+        )
+
+        /*
+         * Pause normal turn timer.
+         */
         timer?.cancel()
 
         val input =
@@ -1432,9 +1589,6 @@ class OnlineGameRoundActivity : Activity() {
         val wholeWordTimerText =
             TextView(this)
 
-        /*
-         * Whole-word timer is now 20 seconds.
-         */
         wholeWordTimerText.text =
             "Time: 20"
 
@@ -1478,9 +1632,6 @@ class OnlineGameRoundActivity : Activity() {
                 )
                 .create()
 
-        /*
-         * Separate 20-second whole-word timer.
-         */
         var wholeWordSeconds =
             20
 
@@ -1545,6 +1696,25 @@ class OnlineGameRoundActivity : Activity() {
 
         dialog.setOnShowListener {
 
+            /*
+             * IMPORTANT:
+             * Explicitly handle Cancel so the
+             * normal timer is immediately
+             * restored and displayed.
+             */
+            dialog.getButton(
+                AlertDialog.BUTTON_NEGATIVE
+            ).setOnClickListener {
+
+                wholeWordTimer?.cancel()
+
+                dialog.dismiss()
+
+                resumeNormalTurnAfterWholeWordCancel(
+                    wordSelection
+                )
+            }
+
             dialog.getButton(
                 AlertDialog.BUTTON_POSITIVE
             ).setOnClickListener {
@@ -1592,64 +1762,16 @@ class OnlineGameRoundActivity : Activity() {
             }
         }
 
+        /*
+         * Back button / outside-tap cancellation.
+         */
         dialog.setOnCancelListener {
 
             wholeWordTimer?.cancel()
 
-            if (
-                !roundFinished
-            ) {
-
-                if (
-                    isUnlimited()
-                ) {
-
-                    /*
-                     * Unlimited remains unlimited.
-                     */
-                    startTurnTimer(
-                        0,
-                        wordSelection
-                    )
-
-                } else if (
-                    remainingTurnSeconds <= 0
-                ) {
-
-                    /*
-                     * If the original turn
-                     * has already expired, move on.
-                     */
-                    moveToNextPlayer(
-                        wordSelection
-                    )
-
-                } else {
-
-                    /*
-                     * Resume using the remaining
-                     * time and immediately refresh
-                     * the display.
-                     */
-                    timerText.text =
-                        "Time: $remainingTurnSeconds"
-
-                    timerText.setTextColor(
-                        if (
-                            remainingTurnSeconds <= 3
-                        ) {
-                            Color.RED
-                        } else {
-                            Color.BLACK
-                        }
-                    )
-
-                    startTurnTimer(
-                        remainingTurnSeconds,
-                        wordSelection
-                    )
-                }
-            }
+            resumeNormalTurnAfterWholeWordCancel(
+                wordSelection
+            )
         }
 
         dialog.show()
@@ -1670,6 +1792,10 @@ class OnlineGameRoundActivity : Activity() {
 
         timer?.cancel()
         wholeWordTimer?.cancel()
+
+        setWholeWordButtonEnabled(
+            false
+        )
 
         val title =
             TextView(this)
