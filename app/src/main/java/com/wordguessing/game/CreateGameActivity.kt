@@ -5,10 +5,13 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.EditText
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -17,6 +20,17 @@ class CreateGameActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        /*
+         * Main screen
+         */
+        val mainLayout = LinearLayout(this)
+        mainLayout.orientation = LinearLayout.VERTICAL
+
+        /*
+         * Scrollable settings area
+         */
+        val scrollView = ScrollView(this)
 
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
@@ -89,18 +103,16 @@ class CreateGameActivity : Activity() {
         manualWordInput.hint = "Enter word"
         manualWordInput.textSize = 18f
         manualWordInput.setSingleLine(true)
-        manualWordInput.visibility =
-            android.view.View.GONE
+        manualWordInput.visibility = View.GONE
 
         layout.addView(manualWordInput)
 
         wordSpinner.onItemSelectedListener =
-            object :
-                android.widget.AdapterView.OnItemSelectedListener {
+            object : AdapterView.OnItemSelectedListener {
 
                 override fun onItemSelected(
-                    parent: android.widget.AdapterView<*>?,
-                    view: android.view.View?,
+                    parent: AdapterView<*>?,
+                    view: View?,
                     position: Int,
                     id: Long
                 ) {
@@ -108,19 +120,19 @@ class CreateGameActivity : Activity() {
                     if (position == 1) {
 
                         manualWordInput.visibility =
-                            android.view.View.VISIBLE
+                            View.VISIBLE
 
                     } else {
 
                         manualWordInput.visibility =
-                            android.view.View.GONE
+                            View.GONE
 
                         manualWordInput.text.clear()
                     }
                 }
 
                 override fun onNothingSelected(
-                    parent: android.widget.AdapterView<*>?
+                    parent: AdapterView<*>?
                 ) {
                 }
             }
@@ -176,7 +188,6 @@ class CreateGameActivity : Activity() {
             times
         )
 
-        // Default = 20 seconds
         timeSpinner.setSelection(0)
 
         layout.addView(timeSpinner)
@@ -207,11 +218,13 @@ class CreateGameActivity : Activity() {
             totalTurnOptions
         )
 
-        // Default = Unlimited
         totalTurnsSpinner.setSelection(0)
 
         layout.addView(totalTurnsSpinner)
 
+        /*
+         * NEXT WORD MASTER
+         */
         val nextMasterTitle = TextView(this)
         nextMasterTitle.text = "Next Word Master"
         nextMasterTitle.textSize = 20f
@@ -233,11 +246,13 @@ class CreateGameActivity : Activity() {
             nextMasterOptions
         )
 
-        // Default = Winner becomes Word Master
         nextMasterSpinner.setSelection(1)
 
         layout.addView(nextMasterSpinner)
 
+        /*
+         * PASSWORD
+         */
         val passwordTitle = TextView(this)
         passwordTitle.text = "Game Password (Optional)"
         passwordTitle.textSize = 20f
@@ -250,16 +265,27 @@ class CreateGameActivity : Activity() {
         passwordInput.setSingleLine(true)
         layout.addView(passwordInput)
 
-        val createButton = Button(this)
-        createButton.text = "Create Game & Join"
-        createButton.textSize = 18f
+        /*
+         * Put all settings inside the scroll area.
+         */
+        scrollView.addView(layout)
 
-        layout.addView(
-            createButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+        /*
+         * CREATE & JOIN BUTTON
+         *
+         * This stays outside the ScrollView.
+         * Therefore it remains visible and easy to tap.
+         */
+        val createButton = Button(this)
+
+        createButton.text = "CREATE GAME & JOIN"
+        createButton.textSize = 19f
+
+        createButton.setPadding(
+            10,
+            12,
+            10,
+            12
         )
 
         createButton.setOnClickListener {
@@ -276,6 +302,16 @@ class CreateGameActivity : Activity() {
                     "Please enter your name.",
                     Toast.LENGTH_SHORT
                 ).show()
+
+                /*
+                 * Scroll to the top so the name field
+                 * is visible.
+                 */
+                scrollView.post {
+                    scrollView.fullScroll(
+                        ScrollView.FOCUS_UP
+                    )
+                }
 
                 return@setOnClickListener
             }
@@ -311,10 +347,11 @@ class CreateGameActivity : Activity() {
                     .toInt()
 
             val selectedCategory =
-                categorySpinner.selectedItem.toString()
+                categorySpinner.selectedItem
+                    .toString()
 
             /*
-             * Convert Time per Turn
+             * TIME PER TURN
              *
              * Unlimited = 0
              */
@@ -334,7 +371,7 @@ class CreateGameActivity : Activity() {
                 }
 
             /*
-             * Convert Total Turns
+             * TOTAL TURNS
              *
              * Unlimited = 0
              */
@@ -434,6 +471,27 @@ class CreateGameActivity : Activity() {
             startActivity(intent)
         }
 
-        setContentView(layout)
+        /*
+         * Add button below the ScrollView,
+         * keeping it permanently visible.
+         */
+        mainLayout.addView(
+            scrollView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
+
+        mainLayout.addView(
+            createButton,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        setContentView(mainLayout)
     }
 }
