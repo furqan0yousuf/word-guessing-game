@@ -5,7 +5,6 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
@@ -21,7 +20,8 @@ class GameWaitingActivity : Activity() {
     private var wordSelection = "Random Word"
     private var manualWord = ""
     private var category = "Random"
-    private var secondsPerTurn = 10
+    private var secondsPerTurn = 20
+    private var totalTurns = 0
     private var nextWordMaster = "Winner becomes Word Master"
     private var playerName = "Player 1"
     private var password = ""
@@ -61,7 +61,13 @@ class GameWaitingActivity : Activity() {
         secondsPerTurn =
             intent.getIntExtra(
                 "secondsPerTurn",
-                10
+                20
+            )
+
+        totalTurns =
+            intent.getIntExtra(
+                "totalTurns",
+                0
             )
 
         nextWordMaster =
@@ -263,7 +269,8 @@ class GameWaitingActivity : Activity() {
             Maximum Players: $playerCount
             Word Selection: $wordSelection
             Category: $category
-            Seconds per Turn: $secondsPerTurn
+            Time per Turn: ${formatSecondsPerTurn()}
+            Total Turns: ${formatTotalTurns()}
             Next Word Master: $nextWordMaster
             """.trimIndent()
 
@@ -380,6 +387,24 @@ class GameWaitingActivity : Activity() {
         setContentView(layout)
     }
 
+    private fun formatSecondsPerTurn(): String {
+
+        return if (secondsPerTurn <= 0) {
+            "Unlimited"
+        } else {
+            "$secondsPerTurn seconds"
+        }
+    }
+
+    private fun formatTotalTurns(): String {
+
+        return if (totalTurns <= 0) {
+            "Unlimited"
+        } else {
+            "$totalTurns Turns"
+        }
+    }
+
     private fun buildPlayerList(): String {
 
         val builder =
@@ -433,6 +458,11 @@ class GameWaitingActivity : Activity() {
         gameIntent.putExtra(
             "secondsPerTurn",
             secondsPerTurn
+        )
+
+        gameIntent.putExtra(
+            "totalTurns",
+            totalTurns
         )
 
         gameIntent.putExtra(
