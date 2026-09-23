@@ -36,26 +36,14 @@ class OnlineGameRoundActivity : Activity() {
 
     private var secondsPerTurn = 20
 
-    /*
-     * 0 = Unlimited
-     */
+    // 0 = Unlimited
     private var totalTurns = 0
 
-    /*
-     * Number of completed normal player turns.
-     */
+    // Number of completed normal player turns
     private var completedTurns = 0
 
-    /*
-     * Prevents the normal game from
-     * continuing after the final challenge starts.
-     */
     private var finalChallengeActive = false
 
-    /*
-     * Players who still get a final
-     * whole-word opportunity.
-     */
     private val finalChallengePlayers =
         mutableListOf<Int>()
 
@@ -140,10 +128,6 @@ class OnlineGameRoundActivity : Activity() {
                 0
             )
 
-        /*
-         * Safety:
-         * Negative values are treated as Unlimited.
-         */
         if (totalTurns < 0) {
             totalTurns = 0
         }
@@ -525,9 +509,6 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(timerText)
 
-        /*
-         * WHOLE WORD BUTTON
-         */
         wholeWordButton =
             Button(this)
 
@@ -875,7 +856,6 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     private fun isUnlimited(): Boolean {
-
         return secondsPerTurn <= 0
     }
 
@@ -884,11 +864,8 @@ class OnlineGameRoundActivity : Activity() {
         return if (
             isUnlimited()
         ) {
-
             "Time: Unlimited"
-
         } else {
-
             "Time: $remainingTurnSeconds"
         }
     }
@@ -898,11 +875,8 @@ class OnlineGameRoundActivity : Activity() {
         return if (
             isUnlimited()
         ) {
-
             "Unlimited"
-
         } else {
-
             "$secondsPerTurn seconds"
         }
     }
@@ -912,11 +886,8 @@ class OnlineGameRoundActivity : Activity() {
         return if (
             totalTurns <= 0
         ) {
-
             "Unlimited"
-
         } else {
-
             "$totalTurns turns"
         }
     }
@@ -1043,11 +1014,8 @@ class OnlineGameRoundActivity : Activity() {
                 wordSelection ==
                 "Random Word"
             ) {
-
                 "Random: $actualCategory"
-
             } else {
-
                 "Random"
             }
 
@@ -1115,7 +1083,6 @@ class OnlineGameRoundActivity : Activity() {
                     letter
                 )
             ) {
-
                 return false
             }
         }
@@ -1394,16 +1361,10 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        /*
-         * A normal player turn has just ended.
-         */
+        // One normal player turn has ended.
         completedTurns++
 
-        /*
-         * If the selected total-turn limit
-         * has now been reached, stop normal
-         * play and begin the final challenge.
-         */
+        // Start final whole-word challenge when limit is reached.
         if (
             totalTurns > 0 &&
             completedTurns >= totalTurns
@@ -1427,8 +1388,7 @@ class OnlineGameRoundActivity : Activity() {
                 playerCount
             ) {
 
-                currentPlayer =
-                    1
+                currentPlayer = 1
             }
 
             if (
@@ -1437,8 +1397,7 @@ class OnlineGameRoundActivity : Activity() {
                 currentPlayer == 1
             ) {
 
-                currentPlayer =
-                    2
+                currentPlayer = 2
             }
 
             attempts++
@@ -1509,12 +1468,6 @@ class OnlineGameRoundActivity : Activity() {
         return count
     }
 
-    /*
-     * FINAL WHOLE-WORD CHALLENGE
-     *
-     * Each active player gets one
-     * 20-second whole-word attempt.
-     */
     private fun startFinalWholeWordChallenge(
         wordSelection: String
     ) {
@@ -1635,13 +1588,7 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         updatePlayerList(
-            if (
-                finalChallengePlayers.isNotEmpty()
-            ) {
-                "Random Word"
-            } else {
-                "Random Word"
-            }
+            "Random Word"
         )
 
         showFinalWholeWordDialog(
@@ -1649,6 +1596,9 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
+    /*
+     * FINAL WHOLE-WORD GUESS
+     */
     private fun showFinalWholeWordDialog(
         player: Int
     ) {
@@ -1657,14 +1607,19 @@ class OnlineGameRoundActivity : Activity() {
             EditText(this)
 
         input.hint =
-            "Enter your whole-word guess"
+            "Type the entire word"
 
-        input.setSingleLine(
-            true
-        )
+        input.setSingleLine(true)
 
         input.textSize =
             18f
+
+        input.setPadding(
+            10,
+            10,
+            10,
+            10
+        )
 
         val dialogLayout =
             LinearLayout(this)
@@ -1680,7 +1635,11 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         dialogLayout.addView(
-            input
+            input,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
 
         val finalTimerText =
@@ -1714,7 +1673,10 @@ class OnlineGameRoundActivity : Activity() {
         val dialog =
             AlertDialog.Builder(this)
                 .setTitle(
-                    "Player $player — Final Whole-Word Guess"
+                    "PLAYER $player — FINAL WHOLE-WORD GUESS"
+                )
+                .setMessage(
+                    "Type the entire word and press Guess."
                 )
                 .setView(
                     dialogLayout
@@ -1730,87 +1692,19 @@ class OnlineGameRoundActivity : Activity() {
                 .setCancelable(false)
                 .create()
 
-        var finalSeconds =
-            20
-
-        wholeWordTimer =
-            object :
-                CountDownTimer(
-                    20000L,
-                    250L
-                ) {
-
-                    override fun onTick(
-                        millisUntilFinished: Long
-                    ) {
-
-                        finalSeconds =
-                            (
-                                (millisUntilFinished + 999L) /
-                                    1000L
-                                ).toInt()
-
-                        finalTimerText.text =
-                            "Time: $finalSeconds"
-
-                        if (
-                            finalSeconds <= 3
-                        ) {
-
-                            finalTimerText.setTextColor(
-                                Color.RED
-                            )
-
-                        } else {
-
-                            finalTimerText.setTextColor(
-                                Color.BLACK
-                            )
-                        }
-                    }
-
-                    override fun onFinish() {
-
-                        finalTimerText.text =
-                            "Time: 0"
-
-                        finalTimerText.setTextColor(
-                            Color.RED
-                        )
-
-                        dialog.dismiss()
-
-                        showStatus(
-                            "Player $player ran out of time.",
-                            Color.RED
-                        )
-
-                        moveToNextFinalChallengePlayer()
-                    }
-                }
-                .start()
-
         dialog.setOnShowListener {
 
-            dialog.getButton(
-                AlertDialog.BUTTON_NEGATIVE
-            ).setOnClickListener {
-
-                wholeWordTimer?.cancel()
-
-                dialog.dismiss()
-
-                showStatus(
-                    "Player $player skipped the final guess.",
-                    Color.RED
+            val guessButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_POSITIVE
                 )
 
-                moveToNextFinalChallengePlayer()
-            }
+            val skipButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_NEGATIVE
+                )
 
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            ).setOnClickListener {
+            guessButton.setOnClickListener {
 
                 val guess =
                     input.text
@@ -1823,7 +1717,9 @@ class OnlineGameRoundActivity : Activity() {
                 ) {
 
                     input.error =
-                        "Enter a word."
+                        "Please enter the entire word."
+
+                    input.requestFocus()
 
                     return@setOnClickListener
                 }
@@ -1834,7 +1730,9 @@ class OnlineGameRoundActivity : Activity() {
 
                 if (
                     guess ==
-                    secretWord.uppercase()
+                    secretWord
+                        .trim()
+                        .uppercase()
                 ) {
 
                     finalChallengeActive =
@@ -1854,7 +1752,82 @@ class OnlineGameRoundActivity : Activity() {
                     moveToNextFinalChallengePlayer()
                 }
             }
+
+            skipButton.setOnClickListener {
+
+                wholeWordTimer?.cancel()
+
+                dialog.dismiss()
+
+                showStatus(
+                    "Player $player skipped the final guess.",
+                    Color.RED
+                )
+
+                moveToNextFinalChallengePlayer()
+            }
+
+            input.requestFocus()
+
+            wholeWordTimer =
+                object :
+                    CountDownTimer(
+                        20000L,
+                        250L
+                    ) {
+
+                        override fun onTick(
+                            millisUntilFinished: Long
+                        ) {
+
+                            val seconds =
+                                (
+                                    (millisUntilFinished + 999L) /
+                                        1000L
+                                    ).toInt()
+
+                            finalTimerText.text =
+                                "Time: $seconds"
+
+                            if (
+                                seconds <= 3
+                            ) {
+
+                                finalTimerText.setTextColor(
+                                    Color.RED
+                                )
+
+                            } else {
+
+                                finalTimerText.setTextColor(
+                                    Color.BLACK
+                                )
+                            }
+                        }
+
+                        override fun onFinish() {
+
+                            finalTimerText.text =
+                                "Time: 0"
+
+                            finalTimerText.setTextColor(
+                                Color.RED
+                            )
+
+                            dialog.dismiss()
+
+                            showStatus(
+                                "Player $player ran out of time.",
+                                Color.RED
+                            )
+
+                            moveToNextFinalChallengePlayer()
+                        }
+                    }
+                    .start()
         }
+
+        dialog.show()
     }
 
     private fun moveToNextFinalChallengePlayer() {
@@ -1959,9 +1932,7 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     /*
-     * NORMAL WHOLE WORD GUESS
-     *
-     * Separate 20-second timer.
+     * NORMAL WHOLE-WORD GUESS
      */
     private fun showWholeWordDialog(
         wordSelection: String
