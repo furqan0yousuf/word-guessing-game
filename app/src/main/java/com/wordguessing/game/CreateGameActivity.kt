@@ -36,6 +36,9 @@ class CreateGameActivity : Activity() {
         layout.orientation = LinearLayout.VERTICAL
         layout.setPadding(24, 24, 24, 24)
 
+        /*
+         * TITLE
+         */
         val title = TextView(this)
         title.text = "Create Game"
         title.textSize = 28f
@@ -44,6 +47,9 @@ class CreateGameActivity : Activity() {
 
         layout.addView(title)
 
+        /*
+         * YOUR NAME
+         */
         val nameTitle = TextView(this)
         nameTitle.text = "Your Name"
         nameTitle.textSize = 20f
@@ -56,6 +62,9 @@ class CreateGameActivity : Activity() {
         nameInput.setSingleLine(true)
         layout.addView(nameInput)
 
+        /*
+         * MAXIMUM PLAYERS
+         */
         val playersTitle = TextView(this)
         playersTitle.text = "Maximum Players"
         playersTitle.textSize = 20f
@@ -78,6 +87,9 @@ class CreateGameActivity : Activity() {
 
         layout.addView(playersSpinner)
 
+        /*
+         * WORD SELECTION
+         */
         val wordTitle = TextView(this)
         wordTitle.text = "Word Selection"
         wordTitle.textSize = 20f
@@ -118,15 +130,9 @@ class CreateGameActivity : Activity() {
                 ) {
 
                     if (position == 1) {
-
-                        manualWordInput.visibility =
-                            View.VISIBLE
-
+                        manualWordInput.visibility = View.VISIBLE
                     } else {
-
-                        manualWordInput.visibility =
-                            View.GONE
-
+                        manualWordInput.visibility = View.GONE
                         manualWordInput.text.clear()
                     }
                 }
@@ -137,6 +143,9 @@ class CreateGameActivity : Activity() {
                 }
             }
 
+        /*
+         * CATEGORY
+         */
         val categoryTitle = TextView(this)
         categoryTitle.text = "Category"
         categoryTitle.textSize = 20f
@@ -164,13 +173,34 @@ class CreateGameActivity : Activity() {
         layout.addView(categorySpinner)
 
         /*
+         * ADVANCED SETTINGS
+         */
+
+        val advancedButton = Button(this)
+        advancedButton.text = "Advanced Settings ▼"
+        advancedButton.textSize = 18f
+
+        advancedButton.setPadding(
+            10,
+            12,
+            10,
+            12
+        )
+
+        layout.addView(advancedButton)
+
+        val advancedLayout = LinearLayout(this)
+        advancedLayout.orientation = LinearLayout.VERTICAL
+        advancedLayout.visibility = View.GONE
+
+        /*
          * TIME PER TURN
          */
         val timeTitle = TextView(this)
         timeTitle.text = "Time per Turn"
         timeTitle.textSize = 20f
-        timeTitle.setPadding(0, 30, 0, 10)
-        layout.addView(timeTitle)
+        timeTitle.setPadding(0, 20, 0, 10)
+        advancedLayout.addView(timeTitle)
 
         val timeSpinner = Spinner(this)
 
@@ -190,7 +220,7 @@ class CreateGameActivity : Activity() {
 
         timeSpinner.setSelection(0)
 
-        layout.addView(timeSpinner)
+        advancedLayout.addView(timeSpinner)
 
         /*
          * TOTAL TURNS
@@ -198,8 +228,8 @@ class CreateGameActivity : Activity() {
         val totalTurnsTitle = TextView(this)
         totalTurnsTitle.text = "Total Turns"
         totalTurnsTitle.textSize = 20f
-        totalTurnsTitle.setPadding(0, 30, 0, 10)
-        layout.addView(totalTurnsTitle)
+        totalTurnsTitle.setPadding(0, 20, 0, 10)
+        advancedLayout.addView(totalTurnsTitle)
 
         val totalTurnsSpinner = Spinner(this)
 
@@ -220,7 +250,7 @@ class CreateGameActivity : Activity() {
 
         totalTurnsSpinner.setSelection(0)
 
-        layout.addView(totalTurnsSpinner)
+        advancedLayout.addView(totalTurnsSpinner)
 
         /*
          * NEXT WORD MASTER
@@ -228,8 +258,8 @@ class CreateGameActivity : Activity() {
         val nextMasterTitle = TextView(this)
         nextMasterTitle.text = "Next Word Master"
         nextMasterTitle.textSize = 20f
-        nextMasterTitle.setPadding(0, 30, 0, 10)
-        layout.addView(nextMasterTitle)
+        nextMasterTitle.setPadding(0, 20, 0, 10)
+        advancedLayout.addView(nextMasterTitle)
 
         val nextMasterSpinner = Spinner(this)
 
@@ -248,7 +278,7 @@ class CreateGameActivity : Activity() {
 
         nextMasterSpinner.setSelection(1)
 
-        layout.addView(nextMasterSpinner)
+        advancedLayout.addView(nextMasterSpinner)
 
         /*
          * PASSWORD
@@ -256,14 +286,60 @@ class CreateGameActivity : Activity() {
         val passwordTitle = TextView(this)
         passwordTitle.text = "Game Password (Optional)"
         passwordTitle.textSize = 20f
-        passwordTitle.setPadding(0, 30, 0, 10)
-        layout.addView(passwordTitle)
+        passwordTitle.setPadding(0, 20, 0, 10)
+        advancedLayout.addView(passwordTitle)
 
         val passwordInput = EditText(this)
         passwordInput.hint = "Enter password or leave blank"
         passwordInput.textSize = 18f
         passwordInput.setSingleLine(true)
-        layout.addView(passwordInput)
+
+        advancedLayout.addView(passwordInput)
+
+        /*
+         * USE DEFAULT SETTINGS BUTTON
+         */
+        val defaultButton = Button(this)
+        defaultButton.text = "Use Default Settings"
+        defaultButton.textSize = 17f
+
+        defaultButton.setOnClickListener {
+
+            timeSpinner.setSelection(0)
+            totalTurnsSpinner.setSelection(0)
+            nextMasterSpinner.setSelection(1)
+            passwordInput.text.clear()
+
+            Toast.makeText(
+                this,
+                "Default settings restored.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        advancedLayout.addView(defaultButton)
+
+        /*
+         * Add advanced settings container
+         */
+        layout.addView(advancedLayout)
+
+        /*
+         * Advanced Settings expand/collapse
+         */
+        advancedButton.setOnClickListener {
+
+            if (advancedLayout.visibility == View.GONE) {
+
+                advancedLayout.visibility = View.VISIBLE
+                advancedButton.text = "Advanced Settings ▲"
+
+            } else {
+
+                advancedLayout.visibility = View.GONE
+                advancedButton.text = "Advanced Settings ▼"
+            }
+        }
 
         /*
          * Put all settings inside the scroll area.
