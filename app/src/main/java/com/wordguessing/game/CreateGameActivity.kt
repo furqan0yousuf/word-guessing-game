@@ -34,7 +34,7 @@ class CreateGameActivity : Activity() {
 
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(24, 24, 24, 24)
+        layout.setPadding(24, 24, 24, 40)
 
         /*
          * TITLE
@@ -175,7 +175,6 @@ class CreateGameActivity : Activity() {
         /*
          * ADVANCED SETTINGS
          */
-
         val advancedButton = Button(this)
         advancedButton.text = "Advanced Settings ▼"
         advancedButton.textSize = 18f
@@ -297,7 +296,7 @@ class CreateGameActivity : Activity() {
         advancedLayout.addView(passwordInput)
 
         /*
-         * USE DEFAULT SETTINGS BUTTON
+         * USE DEFAULT SETTINGS
          */
         val defaultButton = Button(this)
         defaultButton.text = "Use Default Settings"
@@ -325,7 +324,7 @@ class CreateGameActivity : Activity() {
         layout.addView(advancedLayout)
 
         /*
-         * Advanced Settings expand/collapse
+         * ADVANCED SETTINGS EXPAND / COLLAPSE
          */
         advancedButton.setOnClickListener {
 
@@ -342,15 +341,11 @@ class CreateGameActivity : Activity() {
         }
 
         /*
-         * Put all settings inside the scroll area.
-         */
-        scrollView.addView(layout)
-
-        /*
          * CREATE & JOIN BUTTON
          *
-         * This stays outside the ScrollView.
-         * Therefore it remains visible and easy to tap.
+         * This is now INSIDE the ScrollView.
+         * It will appear directly below the settings
+         * instead of being stuck at the bottom of the screen.
          */
         val createButton = Button(this)
 
@@ -359,11 +354,32 @@ class CreateGameActivity : Activity() {
 
         createButton.setPadding(
             10,
-            12,
+            14,
             10,
-            12
+            14
         )
 
+        val createButtonParams =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        createButtonParams.setMargins(
+            0,
+            30,
+            0,
+            20
+        )
+
+        layout.addView(
+            createButton,
+            createButtonParams
+        )
+
+        /*
+         * CREATE GAME
+         */
         createButton.setOnClickListener {
 
             val hostName =
@@ -548,25 +564,18 @@ class CreateGameActivity : Activity() {
         }
 
         /*
-         * Add button below the ScrollView,
-         * keeping it permanently visible.
+         * The ScrollView now fills the screen.
+         * The Create button is part of the scrollable content.
          */
         mainLayout.addView(
             scrollView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                LinearLayout.LayoutParams.MATCH_PARENT
             )
         )
 
-        mainLayout.addView(
-            createButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
+        scrollView.addView(layout)
 
         setContentView(mainLayout)
     }
