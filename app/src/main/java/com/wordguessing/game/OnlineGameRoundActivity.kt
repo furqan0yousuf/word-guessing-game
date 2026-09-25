@@ -5,10 +5,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
-import android.text.style.StyleSpan
 import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
@@ -19,17 +15,13 @@ import kotlin.random.Random
 
 class OnlineGameRoundActivity : android.app.Activity() {
 
-```
+
 private lateinit var timerText: TextView
 private lateinit var turnText: TextView
 private lateinit var playersText: TextView
 private lateinit var wordText: TextView
 private lateinit var statusText: TextView
 private lateinit var wholeWordButton: Button
-
-private lateinit var categoryText: TextView
-private lateinit var wordMasterText: TextView
-private lateinit var infoText: TextView
 
 private var timer: CountDownTimer? = null
 private var wholeWordTimer: CountDownTimer? = null
@@ -41,7 +33,6 @@ private val letters =
 
 private var currentPlayer = 1
 private var playerCount = 2
-private var maxPlayers = 2
 
 private var secondsPerTurn = 20
 
@@ -83,9 +74,10 @@ private var previousWord = ""
 
 private var actualCategory = "Random"
 
-// Game settings are retained so another round can
-// start without leaving the online game.
+// Keep the original game settings so the next round
+// continues the same game.
 private var gameCode = "------"
+private var maxPlayers = 2
 private var wordSelection = "Random Word"
 private var selectedCategory = "Random"
 private var nextWordMaster = "Winner becomes Word Master"
@@ -167,7 +159,10 @@ override fun onCreate(savedInstanceState: Bundle?) {
         manualWord
     )
 
-    initializePlayers()
+    for (player in 1..playerCount) {
+        scores[player] = 0
+        missedTurns[player] = 0
+    }
 
     if (
         wordSelection !=
@@ -191,21 +186,8 @@ override fun onCreate(savedInstanceState: Bundle?) {
     createGameScreen()
 
     startTurnTimer(
-        secondsPerTurn,
-        wordSelection
+        secondsPerTurn
     )
-}
-
-private fun initializePlayers() {
-
-    for (player in 1..playerCount) {
-
-        if (!scores.containsKey(player)) {
-            scores[player] = 0
-        }
-
-        missedTurns[player] = 0
-    }
 }
 
 private fun createGameScreen() {
@@ -288,23 +270,26 @@ private fun createGameScreen() {
 
     layout.addView(codeText)
 
-    categoryText =
+    val categoryBox =
         TextView(this)
 
-    updateCategoryDisplay()
+    categoryBox.text =
+        "CATEGORY: ${
+            getCategoryDisplay()
+        }"
 
-    categoryText.textSize =
+    categoryBox.textSize =
         20f
 
-    categoryText.gravity =
+    categoryBox.gravity =
         Gravity.CENTER
 
-    categoryText.setTypeface(
+    categoryBox.setTypeface(
         null,
         Typeface.BOLD
     )
 
-    categoryText.setTextColor(
+    categoryBox.setTextColor(
         Color.rgb(
             0,
             70,
@@ -312,7 +297,7 @@ private fun createGameScreen() {
         )
     )
 
-    categoryText.setPadding(
+    categoryBox.setPadding(
         8,
         8,
         8,
@@ -320,30 +305,34 @@ private fun createGameScreen() {
     )
 
     layout.addView(
-        categoryText
+        categoryBox
     )
 
-    infoText =
+    val info =
         TextView(this)
 
-    updateInfoDisplay()
+    info.text =
+        """
+        Players: $playerCount of $maxPlayers
+        Turn Time: ${getTurnTimeDisplay()}
+        Total Turns: ${getTotalTurnsDisplay()}
+        Next Word Master: $nextWordMaster
+        """.trimIndent()
 
-    infoText.textSize =
+    info.textSize =
         14f
 
-    infoText.gravity =
+    info.gravity =
         Gravity.CENTER
 
-    infoText.setPadding(
+    info.setPadding(
         0,
         5,
         0,
         5
     )
 
-    layout.addView(
-        infoText
-    )
+    layout.addView(info)
 
     val playersTitle =
         TextView(this)
@@ -388,10 +377,22 @@ private fun createGameScreen() {
 
     layout.addView(playersText)
 
-    wordMasterText =
+    val wordMasterText =
         TextView(this)
 
-    updateWordMasterDisplay()
+    if (
+        wordSelection ==
+        "Random Word"
+    ) {
+
+        wordMasterText.text =
+            "Word Master: None\nEveryone plays."
+
+    } else {
+
+        wordMasterText.text =
+            "Word Master: Player 1\nWord Master does not play."
+    }
 
     wordMasterText.textSize =
         15f
@@ -724,8 +725,7 @@ private fun createGameScreen() {
                     )
 
                     startTurnTimer(
-                        secondsPerTurn,
-                        wordSelection
+                        secondsPerTurn
                     )
                 }
 
@@ -790,42 +790,6 @@ private fun createGameScreen() {
     )
 
     setContentView(scrollView)
-}
-
-private fun updateCategoryDisplay() {
-
-    categoryText.text =
-        "CATEGORY: ${
-            getCategoryDisplay()
-        }"
-}
-
-private fun updateInfoDisplay() {
-
-    infoText.text =
-        """
-        Players: $playerCount of $maxPlayers
-        Turn Time: ${getTurnTimeDisplay()}
-        Total Turns: ${getTotalTurnsDisplay()}
-        Next Word Master: $nextWordMaster
-        """.trimIndent()
-}
-
-private fun updateWordMasterDisplay() {
-
-    if (
-        wordSelection ==
-        "Random Word"
-    ) {
-
-        wordMasterText.text =
-            "Word Master: None\nEveryone plays."
-
-    } else {
-
-        wordMasterText.text =
-            "Word Master: Player 1\nWord Master does not play."
-    }
 }
 
 private fun setWholeWordButtonEnabled(
@@ -917,22 +881,22 @@ private fun getTotalTurnsDisplay(): String {
 }
 
 private fun chooseWord(
-    selection: String,
-    category: String,
-    manual: String?
+    wordSelection: String,
+    selectedCategory: String,
+    manualWord: String?
 ) {
 
     if (
-        selection !=
+        wordSelection !=
         "Random Word"
     ) {
 
         if (
-            !manual.isNullOrEmpty()
+            !manualWord.isNullOrEmpty()
         ) {
 
             secretWord =
-                manual
+                manualWord
 
         } else {
 
@@ -942,11 +906,11 @@ private fun chooseWord(
 
         actualCategory =
             if (
-                category == "Random"
+                selectedCategory == "Random"
             ) {
                 "Random"
             } else {
-                category
+                selectedCategory
             }
 
         guessedLetters.clear()
@@ -959,7 +923,7 @@ private fun chooseWord(
         mutableListOf<String>()
 
     if (
-        category == "Random"
+        selectedCategory == "Random"
     ) {
 
         val categoryNames =
@@ -981,11 +945,11 @@ private fun chooseWord(
     } else {
 
         actualCategory =
-            category
+            selectedCategory
 
         availableWords.addAll(
             WordBank.categories[
-                category
+                selectedCategory
             ] ?: WordBank.categories[
                 "Things"
             ]!!
@@ -1112,24 +1076,10 @@ private fun isWordComplete(): Boolean {
 
 private fun updatePlayerList() {
 
-    playersText.text =
-        buildPlayerList()
-
-    playersText.setTypeface(
-        null,
-        Typeface.NORMAL
-    )
-}
-
-private fun buildPlayerList(): SpannableStringBuilder {
-
     val builder =
-        SpannableStringBuilder()
+        StringBuilder()
 
     for (player in 1..playerCount) {
-
-        val start =
-            builder.length
 
         builder.append(
             "$player. Player $player"
@@ -1147,27 +1097,6 @@ private fun buildPlayerList(): SpannableStringBuilder {
 
             builder.append(
                 " — ELIMINATED"
-            )
-
-            val end =
-                builder.length
-
-            builder.setSpan(
-                ForegroundColorSpan(
-                    Color.RED
-                ),
-                start,
-                end,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-
-            builder.setSpan(
-                StyleSpan(
-                    Typeface.BOLD
-                ),
-                start,
-                end,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
 
         } else if (
@@ -1206,14 +1135,30 @@ private fun buildPlayerList(): SpannableStringBuilder {
         )
     }
 
-    return builder
-        .trimEnd()
-        as SpannableStringBuilder
+    playersText.text =
+        builder
+            .toString()
+            .trim()
+
+    playersText.setTypeface(
+        null,
+        Typeface.BOLD
+    )
+
+    // Make eliminated players red.
+    // The text remains otherwise unchanged.
+    if (
+        eliminatedPlayers.isNotEmpty()
+    ) {
+
+        playersText.setTextColor(
+            Color.DKGRAY
+        )
+    }
 }
 
 private fun startTurnTimer(
-    seconds: Int,
-    selection: String
+    seconds: Int
 ) {
 
     timer?.cancel()
@@ -1453,8 +1398,7 @@ private fun moveToNextPlayer() {
     updatePlayerList()
 
     startTurnTimer(
-        secondsPerTurn,
-        wordSelection
+        secondsPerTurn
     )
 }
 
@@ -1906,8 +1850,7 @@ private fun resumeNormalTurnAfterWholeWordCancel() {
         )
 
         startTurnTimer(
-            0,
-            wordSelection
+            0
         )
 
         return
@@ -1943,8 +1886,7 @@ private fun resumeNormalTurnAfterWholeWordCancel() {
     )
 
     startTurnTimer(
-        remainingTurnSeconds,
-        wordSelection
+        remainingTurnSeconds
     )
 }
 
@@ -2224,47 +2166,13 @@ private fun finishRound(
         15
     )
 
-    val messageText =
-        TextView(this)
-
-    messageText.text =
-        message
-
-    messageText.textSize =
-        18f
-
-    messageText.gravity =
-        Gravity.CENTER
-
-    messageText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    messageText.setPadding(
-        20,
-        5,
-        20,
-        15
-    )
-
-    val dialogLayout =
-        LinearLayout(this)
-
-    dialogLayout.orientation =
-        LinearLayout.VERTICAL
-
-    dialogLayout.addView(
-        messageText
-    )
-
     val dialog =
         AlertDialog.Builder(this)
             .setCustomTitle(
                 title
             )
-            .setView(
-                dialogLayout
+            .setMessage(
+                message
             )
             .setPositiveButton(
                 "Continue Playing",
@@ -2301,7 +2209,17 @@ private fun finishRound(
 
             dialog.dismiss()
 
-            startNewRound()
+            if (
+                wordSelection ==
+                "Random Word"
+            ) {
+
+                startNewRandomRound()
+
+            } else {
+
+                showNewManualWordDialog()
+            }
         }
 
         val leaveButton =
@@ -2329,7 +2247,7 @@ private fun finishRound(
     dialog.show()
 }
 
-private fun startNewRound() {
+private fun startNewRandomRound() {
 
     timer?.cancel()
     wholeWordTimer?.cancel()
@@ -2351,76 +2269,141 @@ private fun startNewRound() {
     wholeWordAttemptUsed =
         false
 
-    currentPlayer =
-        if (
-            wordSelection != "Random Word" &&
-            playerCount >= 2
-        ) {
-            2
-        } else {
-            1
-        }
-
     eliminatedPlayers.clear()
 
     for (player in 1..playerCount) {
         missedTurns[player] = 0
     }
 
-    /*
-     * Random Word mode gets a fresh random word.
-     *
-     * For a manual/Word Master round, the next round
-     * uses a new word from the selected category so
-     * the same game can continue without requiring
-     * the activity to be recreated.
-     */
-    val nextSelection =
-        if (
-            wordSelection == "Random Word"
-        ) {
-            "Random Word"
-        } else {
-            "Random Word"
-        }
+    currentPlayer = 1
 
     chooseWord(
-        nextSelection,
+        "Random Word",
         selectedCategory,
         null
     )
 
-    wordText.text =
-        buildWordDisplay()
+    rebuildRoundScreen()
+}
 
-    updateCategoryDisplay()
-    updateInfoDisplay()
-    updateWordMasterDisplay()
-    updatePlayerList()
+private fun showNewManualWordDialog() {
 
-    turnText.text =
-        "PLAYER $currentPlayer'S TURN"
+    val input =
+        EditText(this)
 
-    turnText.setTextColor(
-        Color.rgb(
-            0,
-            100,
-            0
-        )
+    input.hint =
+        "Enter the new word"
+
+    input.setSingleLine(true)
+
+    input.textSize =
+        18f
+
+    input.setPadding(
+        20,
+        10,
+        20,
+        10
     )
 
-    showStatus(
-        "New round started! Choose a letter.",
-        Color.rgb(
-            0,
-            100,
-            0
-        )
-    )
+    val dialog =
+        AlertDialog.Builder(this)
+            .setTitle(
+                "New Word"
+            )
+            .setMessage(
+                "Player 1 (Word Master), enter the word for the next round."
+            )
+            .setView(
+                input
+            )
+            .setNegativeButton(
+                "Cancel"
+            ) { _, _ ->
 
-    setWholeWordButtonEnabled(
-        true
-    )
+                finish()
+            }
+            .setPositiveButton(
+                "Start Round",
+                null
+            )
+            .setCancelable(false)
+            .create()
+
+    dialog.setOnShowListener {
+
+        dialog.getButton(
+            AlertDialog.BUTTON_POSITIVE
+        ).setOnClickListener {
+
+            val newWord =
+                input.text
+                    .toString()
+                    .trim()
+                    .uppercase()
+
+            if (
+                newWord.isEmpty()
+            ) {
+
+                input.error =
+                    "Please enter a word."
+
+                return@setOnClickListener
+            }
+
+            manualWord =
+                newWord
+
+            timer?.cancel()
+            wholeWordTimer?.cancel()
+
+            roundFinished =
+                false
+
+            finalChallengeActive =
+                false
+
+            finalChallengePlayers.clear()
+
+            finalChallengeIndex =
+                0
+
+            completedTurns =
+                0
+
+            wholeWordAttemptUsed =
+                false
+
+            eliminatedPlayers.clear()
+
+            for (player in 1..playerCount) {
+                missedTurns[player] = 0
+            }
+
+            currentPlayer =
+                if (playerCount >= 2) {
+                    2
+                } else {
+                    1
+                }
+
+            chooseWord(
+                wordSelection,
+                selectedCategory,
+                manualWord
+            )
+
+            dialog.dismiss()
+
+            rebuildRoundScreen()
+        }
+    }
+
+    dialog.show()
+}
+
+private fun rebuildRoundScreen() {
 
     remainingTurnSeconds =
         if (isUnlimited()) {
@@ -2429,9 +2412,10 @@ private fun startNewRound() {
             secondsPerTurn
         }
 
+    createGameScreen()
+
     startTurnTimer(
-        secondsPerTurn,
-        wordSelection
+        secondsPerTurn
     )
 }
 
@@ -2442,5 +2426,4 @@ override fun onDestroy() {
 
     super.onDestroy()
 }
-
 }
