@@ -3,72 +3,46 @@ package com.wordguessing.game
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 
 class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        val root = findViewById<ViewGroup>(android.R.id.content)
+        val layout = android.widget.LinearLayout(this)
+        layout.orientation = android.widget.LinearLayout.VERTICAL
+        layout.gravity = android.view.Gravity.CENTER
+        layout.setPadding(24, 24, 24, 24)
 
-        val singlePlayerButton =
-            findButtonByText(root, "Single Player")
+        val title = android.widget.TextView(this)
+        title.text = "Word Guessing Game"
+        title.textSize = 28f
+        title.gravity = android.view.Gravity.CENTER
 
-        val localGameButton =
-            findButtonByText(root, "Local Multiplayer")
+        layout.addView(title)
 
-        val onlineGameButton =
-            findButtonByText(root, "Online Multiplayer")
-
-        singlePlayerButton?.setOnClickListener {
-            startActivity(
-                Intent(this, SinglePlayerActivity::class.java)
-            )
+        val singleButton = Button(this)
+        singleButton.text = "Single Player"
+        singleButton.setOnClickListener {
+            startActivity(Intent(this, SinglePlayerActivity::class.java))
         }
+        layout.addView(singleButton)
 
-        localGameButton?.setOnClickListener {
-            startActivity(
-                Intent(this, PlayerSetupActivity::class.java)
-            )
+        val localButton = Button(this)
+        localButton.text = "Local Multiplayer"
+        localButton.setOnClickListener {
+            startActivity(Intent(this, PlayerSetupActivity::class.java))
         }
+        layout.addView(localButton)
 
-        onlineGameButton?.setOnClickListener {
-            startActivity(
-                Intent(this, OnlineGameActivity::class.java)
-            )
+        val onlineButton = Button(this)
+        onlineButton.text = "Online Multiplayer"
+        onlineButton.setOnClickListener {
+            startActivity(Intent(this, OnlineGameActivity::class.java))
         }
-    }
+        layout.addView(onlineButton)
 
-    private fun findButtonByText(
-        parent: ViewGroup,
-        text: String
-    ): Button? {
-
-        for (i in 0 until parent.childCount) {
-
-            val child = parent.getChildAt(i)
-
-            if (child is Button &&
-                child.text.toString() == text
-            ) {
-                return child
-            }
-
-            if (child is ViewGroup) {
-
-                val result =
-                    findButtonByText(child, text)
-
-                if (result != null) {
-                    return result
-                }
-            }
-        }
-
-        return null
+        setContentView(layout)
     }
 }
