@@ -25,7 +25,7 @@ class MainActivity : Activity() {
         val singleButton = Button(this)
         singleButton.text = "Single Player"
         singleButton.setOnClickListener {
-            startActivity(Intent(this, SinglePlayerActivity::class.java))
+            startActivity(Intent(this, SinglePlayerSetupActivity::class.java))
         }
         layout.addView(singleButton)
 
