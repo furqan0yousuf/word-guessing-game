@@ -11,19 +11,40 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        findViewById<Button>(R.id.singlePlayerButton).setOnClickListener {
+        val singlePlayerButton =
+            findViewById<Button>(resources.getIdentifier(
+                "singlePlayerButton",
+                "id",
+                packageName
+            ))
+
+        val localGameButton =
+            findViewById<Button>(resources.getIdentifier(
+                "localGameButton",
+                "id",
+                packageName
+            ))
+
+        val onlineGameButton =
+            findViewById<Button>(resources.getIdentifier(
+                "onlineGameButton",
+                "id",
+                packageName
+            ))
+
+        singlePlayerButton.setOnClickListener {
             startActivity(
                 Intent(this, SinglePlayerActivity::class.java)
             )
         }
 
-        findViewById<Button>(R.id.localGameButton).setOnClickListener {
+        localGameButton.setOnClickListener {
             startActivity(
                 Intent(this, PlayerSetupActivity::class.java)
             )
         }
 
-        findViewById<Button>(R.id.onlineGameButton).setOnClickListener {
+        onlineGameButton.setOnClickListener {
             startActivity(
                 Intent(this, OnlineGameActivity::class.java)
             )
