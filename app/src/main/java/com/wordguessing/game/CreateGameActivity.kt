@@ -1,5 +1,7 @@
 package com.wordguessing.game
 
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.DatabaseReference
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
@@ -17,6 +19,9 @@ import android.widget.TextView
 import android.widget.Toast
 
 class CreateGameActivity : Activity() {
+
+    private val database =
+    FirebaseDatabase.getInstance().reference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -498,6 +503,11 @@ class CreateGameActivity : Activity() {
                 (100000..999999)
                     .random()
                     .toString()
+
+                    database
+    .child("test")
+    .setValue("Firebase connection works")
+    
 
             val intent =
                 Intent(
