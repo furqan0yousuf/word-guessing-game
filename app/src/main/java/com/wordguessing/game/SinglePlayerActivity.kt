@@ -25,7 +25,7 @@ class SinglePlayerActivity : Activity() {
     private var secretWord = ""
     private var actualCategory = ""
 
-    private val selectedCategories = WordBank.categories
+    private val selectedCategories = WordBank.categories.keys.toList()
     private val selectedDifficulties = listOf(
         "Easy",
         "Intermediate"
