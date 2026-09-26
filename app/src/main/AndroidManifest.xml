@@ -30,8 +30,12 @@
             android:name=".GameActivity"
             android:exported="false" />
 
-        <activity
+<activity
     android:name=".SinglePlayerActivity"
+    android:exported="false" />
+
+<activity
+    android:name=".SinglePlayerSetupActivity"
     android:exported="false" />
 
         <!-- Online Game screens -->
