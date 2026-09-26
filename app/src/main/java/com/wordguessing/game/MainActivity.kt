@@ -8,32 +8,43 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
+
+        findViewById<android.widget.Button>(
+            R.id.singlePlayerButton
+        ).setOnClickListener {
+
+            startActivity(
+                Intent(
+                    this,
+                    SinglePlayerActivity::class.java
+                )
+            )
+        }
 
         findViewById<android.widget.Button>(
             R.id.localGameButton
         ).setOnClickListener {
 
-            val intent =
+            startActivity(
                 Intent(
                     this,
                     PlayerSetupActivity::class.java
                 )
-
-            startActivity(intent)
+            )
         }
 
         findViewById<android.widget.Button>(
             R.id.onlineGameButton
         ).setOnClickListener {
 
-            val intent =
+            startActivity(
                 Intent(
                     this,
                     OnlineGameActivity::class.java
                 )
-
-            startActivity(intent)
+            )
         }
     }
 }
