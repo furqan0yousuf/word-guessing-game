@@ -3,47 +3,29 @@ package com.wordguessing.game
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
 
 class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_main)
 
-        findViewById<android.widget.Button>(
-            R.id.singlePlayerButton
-        ).setOnClickListener {
-
+        findViewById<Button>(R.id.singlePlayerButton).setOnClickListener {
             startActivity(
-                Intent(
-                    this,
-                    SinglePlayerActivity::class.java
-                )
+                Intent(this, SinglePlayerActivity::class.java)
             )
         }
 
-        findViewById<android.widget.Button>(
-            R.id.localGameButton
-        ).setOnClickListener {
-
+        findViewById<Button>(R.id.localGameButton).setOnClickListener {
             startActivity(
-                Intent(
-                    this,
-                    PlayerSetupActivity::class.java
-                )
+                Intent(this, PlayerSetupActivity::class.java)
             )
         }
 
-        findViewById<android.widget.Button>(
-            R.id.onlineGameButton
-        ).setOnClickListener {
-
+        findViewById<Button>(R.id.onlineGameButton).setOnClickListener {
             startActivity(
-                Intent(
-                    this,
-                    OnlineGameActivity::class.java
-                )
+                Intent(this, OnlineGameActivity::class.java)
             )
         }
     }
