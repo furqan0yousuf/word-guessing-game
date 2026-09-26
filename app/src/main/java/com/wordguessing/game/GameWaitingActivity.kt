@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import com.google.firebase.auth.FirebaseAuth
 
 class GameWaitingActivity : Activity() {
 
@@ -97,6 +98,30 @@ class GameWaitingActivity : Activity() {
 
         createScreen()
     }
+
+    FirebaseAuth.getInstance()
+    .signInAnonymously()
+    .addOnCompleteListener { task ->
+
+        if (task.isSuccessful) {
+
+            Toast.makeText(
+                this,
+                "Firebase login works",
+                Toast.LENGTH_SHORT
+            ).show()
+
+        } else {
+
+            Toast.makeText(
+                this,
+                "Firebase login failed",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+createScreen()
 
     private fun createScreen() {
 
