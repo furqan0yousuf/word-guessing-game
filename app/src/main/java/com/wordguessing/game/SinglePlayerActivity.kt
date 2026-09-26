@@ -25,11 +25,8 @@ class SinglePlayerActivity : Activity() {
     private var secretWord = ""
     private var actualCategory = ""
 
-    private val selectedCategories = WordBank.categories.keys.toList()
-    private val selectedDifficulties = listOf(
-        "Easy",
-        "Intermediate"
-    )
+    private var selectedCategories = emptyList<String>()
+    private var selectedDifficulties = emptyList<String>()
 
     private val guessedLetters = mutableSetOf<Char>()
 
@@ -43,6 +40,17 @@ class SinglePlayerActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        selectedCategories =
+            intent.getStringArrayListExtra("selectedCategories")?.toList()
+                ?: WordBank.categories.keys.toList()
+
+        selectedDifficulties =
+            intent.getStringArrayListExtra("selectedDifficulties")?.toList()
+                ?: listOf(
+                    "Easy",
+                    "Intermediate"
+                )
 
         startNewRound()
     }
@@ -93,7 +101,8 @@ class SinglePlayerActivity : Activity() {
         layout.addView(categoryText)
 
         difficultyText = TextView(this)
-        difficultyText.text = "Difficulty: Easy + Intermediate"
+        difficultyText.text =
+            "Difficulty: ${selectedDifficulties.joinToString(" + ")}"
         difficultyText.textSize = 17f
         difficultyText.gravity = Gravity.CENTER
 
@@ -312,7 +321,7 @@ class SinglePlayerActivity : Activity() {
             .setMessage("You have 20 seconds.")
             .setView(input)
             .setNegativeButton(
-                if (finalGuessMode) "Cancel" else "Cancel",
+                "Cancel",
                 null
             )
             .setPositiveButton("Guess", null)
