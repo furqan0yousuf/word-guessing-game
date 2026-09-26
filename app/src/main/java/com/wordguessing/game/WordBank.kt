@@ -2,320 +2,246 @@ package com.wordguessing.game
 
 object WordBank {
 
-    val categories = mapOf(
+    private val words = mapOf(
 
-        "Animals" to listOf(
-            "ELEPHANT",
-            "TIGER",
-            "LION",
-            "GIRAFFE",
-            "KANGAROO",
-            "PENGUIN",
-            "DOLPHIN",
-            "CROCODILE",
-            "ALLIGATOR",
-            "MONKEY",
-            "GORILLA",
-            "CHEETAH",
-            "LEOPARD",
-            "WOLF",
-            "FOX",
-            "BEAR",
-            "RABBIT",
-            "SQUIRREL",
-            "DEER",
-            "CAMEL",
-            "HORSE",
-            "DONKEY",
-            "ZEBRA",
-            "GOAT",
-            "SHEEP",
-            "COW",
-            "BUFFALO",
-            "CHICKEN",
-            "ROOSTER",
-            "EAGLE",
-            "HAWK",
-            "PARROT",
-            "OWL",
-            "FLAMINGO",
-            "PEACOCK",
-            "OSTRICH",
-            "OCTOPUS",
-            "SQUID",
-            "SHARK",
-            "WHALE",
-            "SEAL",
-            "WALRUS",
-            "TURTLE",
-            "SNAKE",
-            "LIZARD",
-            "FROG",
-            "BUTTERFLY",
-            "SPIDER"
+        "Animals" to mapOf(
+            "Easy" to listOf(
+                "CAT", "DOG", "COW", "PIG", "GOAT",
+                "SHEEP", "HORSE", "LION", "TIGER", "BEAR",
+                "FOX", "WOLF", "DEER", "FROG", "FISH",
+                "BIRD", "DUCK", "CHICKEN", "MOUSE", "RABBIT"
+            ),
+            "Intermediate" to listOf(
+                "ELEPHANT", "GIRAFFE", "ZEBRA", "MONKEY",
+                "KANGAROO", "PENGUIN", "DOLPHIN", "CAMEL",
+                "GORILLA", "CHEETAH", "LEOPARD", "SQUIRREL",
+                "PARROT", "PEACOCK", "FLAMINGO", "OCTOPUS",
+                "TURTLE", "CROCODILE", "ALLIGATOR", "OSTRICH"
+            ),
+            "Advanced" to listOf(
+                "CHIMPANZEE", "HIPPOPOTAMUS", "RHINOCEROS",
+                "ORANGUTAN", "PORCUPINE", "RATTLESNAKE",
+                "CHAMELEON", "SALAMANDER", "WOODPECKER",
+                "PLATYPUS", "ARMADILLO", "ANTEATER",
+                "WOLVERINE", "HEDGEHOG", "MEERKAT"
+            ),
+            "Expert" to listOf(
+                "AXOLOTL", "NARWHAL", "QUOKKA", "CAPYBARA",
+                "WOMBAT", "PANGOLIN", "OKAPI", "TAPIR",
+                "AARDVARK", "KOMODO DRAGON", "MANTIS SHRIMP",
+                "BLUE RINGED OCTOPUS", "SAIGA ANTELOPE",
+                "FENNEC FOX", "PLATYPUS"
+            )
         ),
 
-        "Food" to listOf(
-            "PIZZA",
-            "BURGER",
-            "SANDWICH",
-            "PANCAKES",
-            "WAFFLES",
-            "SPAGHETTI",
-            "LASAGNA",
-            "TACOS",
-            "BURRITO",
-            "NACHOS",
-            "HOT DOG",
-            "FRENCH FRIES",
-            "CHICKEN NUGGETS",
-            "FRIED CHICKEN",
-            "GRILLED CHEESE",
-            "MACARONI",
-            "CHEESECAKE",
-            "ICE CREAM",
-            "CHOCOLATE",
-            "DONUT",
-            "CUPCAKE",
-            "BROWNIE",
-            "COOKIE",
-            "APPLE PIE",
-            "PUMPKIN PIE",
-            "WATERMELON",
-            "STRAWBERRY",
-            "BLUEBERRY",
-            "PINEAPPLE",
-            "MANGO",
-            "BANANA",
-            "ORANGE",
-            "GRAPES",
-            "POTATO",
-            "CARROT",
-            "BROCCOLI",
-            "SPINACH",
-            "CORN",
-            "TOMATO",
-            "CUCUMBER",
-            "POPCORN",
-            "PRETZEL",
-            "PEANUT BUTTER",
-            "HONEY",
-            "YOGURT",
-            "CHEESE",
-            "RICE",
-            "NOODLES",
-            "CHOCOLATE CAKE",
-            "FRUIT SALAD"
+        "Food" to mapOf(
+            "Easy" to listOf(
+                "PIZZA", "BURGER", "APPLE", "BANANA",
+                "ORANGE", "RICE", "BREAD", "CHEESE",
+                "EGG", "MILK", "CAKE", "COOKIE",
+                "CANDY", "SOUP", "SALAD", "POTATO",
+                "CARROT", "CORN", "CHICKEN", "PASTA"
+            ),
+            "Intermediate" to listOf(
+                "PANCAKES", "WAFFLES", "SPAGHETTI", "LASAGNA",
+                "TACOS", "BURRITO", "NACHOS", "SANDWICH",
+                "FRENCH FRIES", "FRIED CHICKEN", "CHEESECAKE",
+                "CHOCOLATE CAKE", "PUMPKIN PIE", "STRAWBERRY",
+                "PINEAPPLE", "PEANUT BUTTER", "POPCORN",
+                "PRETZEL", "YOGURT", "FRUIT SALAD"
+            ),
+            "Advanced" to listOf(
+                "CHICKEN PARMESAN", "EGGPLANT PARMESAN",
+                "BEEF WELLINGTON", "CHICKEN TIKKA",
+                "FISH AND CHIPS", "STUFFED PEPPERS",
+                "FRENCH TOAST", "CLAM CHOWDER",
+                "CHICKEN NOODLE SOUP", "SHEPHERDS PIE",
+                "BLUEBERRY CHEESECAKE", "CHOCOLATE MOUSSE",
+                "BANANA BREAD", "GARLIC BREAD", "APPLE CRUMBLE"
+            ),
+            "Expert" to listOf(
+                "RATATOUILLE", "BEEF BOURGUIGNON",
+                "CHICKEN CORDON BLEU", "EGGS BENEDICT",
+                "CRÈME BRÛLÉE", "PROFITEROLE",
+                "TIRAMISU", "GOULASH", "PAELLA",
+                "BOUILLABAISSE", "GNOCCHI", "BRUSCHETTA",
+                "CARPACCIO", "MOUSSAKA", "SHAKSHUKA"
+            )
         ),
 
-        "Places" to listOf(
-            "NEW YORK",
-            "LOS ANGELES",
-            "CHICAGO",
-            "MIAMI",
-            "BOSTON",
-            "SEATTLE",
-            "DALLAS",
-            "HOUSTON",
-            "LAS VEGAS",
-            "SAN FRANCISCO",
-            "WASHINGTON DC",
-            "NEW ORLEANS",
-            "ORLANDO",
-            "DENVER",
-            "PHOENIX",
-            "ATLANTA",
-            "LONDON",
-            "PARIS",
-            "ROME",
-            "MADRID",
-            "BERLIN",
-            "DUBAI",
-            "ISTANBUL",
-            "CAIRO",
-            "TOKYO",
-            "SEOUL",
-            "BEIJING",
-            "MUMBAI",
-            "DELHI",
-            "SYDNEY",
-            "TORONTO",
-            "VANCOUVER",
-            "MEXICO CITY",
-            "NIAGARA FALLS",
-            "GRAND CANYON",
-            "YELLOWSTONE",
-            "DISNEY WORLD",
-            "TIMES SQUARE",
-            "CENTRAL PARK",
-            "GOLDEN GATE BRIDGE",
-            "STATUE OF LIBERTY",
-            "WHITE HOUSE",
-            "EIFFEL TOWER",
-            "BIG BEN",
-            "TAJ MAHAL",
-            "GREAT WALL",
-            "MOUNT EVEREST",
-            "NILE RIVER",
-            "ATLANTIC OCEAN",
-            "PACIFIC OCEAN"
+        "Places" to mapOf(
+            "Easy" to listOf(
+                "CHICAGO", "MIAMI", "BOSTON", "DALLAS",
+                "DENVER", "LONDON", "PARIS", "ROME",
+                "TOKYO", "DELHI", "MUMBAI", "SYDNEY",
+                "TORONTO", "DUBAI", "CAIRO"
+            ),
+            "Intermediate" to listOf(
+                "NEW YORK", "LOS ANGELES", "SAN FRANCISCO",
+                "LAS VEGAS", "NEW ORLEANS", "WASHINGTON DC",
+                "MEXICO CITY", "NIAGARA FALLS", "CENTRAL PARK",
+                "TIMES SQUARE", "TAJ MAHAL", "DISNEY WORLD",
+                "YELLOWSTONE", "GRAND CANYON", "BIG BEN"
+            ),
+            "Advanced" to listOf(
+                "GOLDEN GATE BRIDGE", "STATUE OF LIBERTY",
+                "GREAT WALL OF CHINA", "MOUNT RUSHMORE",
+                "MOUNT EVEREST", "VICTORIA FALLS",
+                "BUCKINGHAM PALACE", "HOLLYWOOD SIGN",
+                "EMPIRE STATE BUILDING", "SPACE NEEDLE",
+                "NIAGARA FALLS", "SAHARA DESERT",
+                "ARCTIC OCEAN", "MEDITERRANEAN SEA"
+            ),
+            "Expert" to listOf(
+                "ANGKOR WAT", "MACHU PICCHU",
+                "PETRA JORDAN", "BOROBUDUR TEMPLE",
+                "GALAPAGOS ISLANDS", "TRANS SIBERIAN RAILWAY",
+                "AMALFI COAST", "MOUNT KILIMANJARO",
+                "ULURU", "SERENGETI NATIONAL PARK",
+                "ANTARCTICA", "PATAGONIA",
+                "FIORDLAND NATIONAL PARK", "EASTER ISLAND"
+            )
         ),
 
-        "Sports" to listOf(
-            "SOCCER",
-            "FOOTBALL",
-            "BASKETBALL",
-            "BASEBALL",
-            "CRICKET",
-            "TENNIS",
-            "GOLF",
-            "HOCKEY",
-            "VOLLEYBALL",
-            "SWIMMING",
-            "BOXING",
-            "WRESTLING",
-            "WRESTLING MATCH",
-            "TABLE TENNIS",
-            "BADMINTON",
-            "BOWLING",
-            "SKIING",
-            "SNOWBOARDING",
-            "SURFING",
-            "CYCLING",
-            "RUNNING",
-            "MARATHON",
-            "FORMULA ONE",
-            "CAR RACING",
-            "HORSE RACING",
-            "ARCHERY",
-            "GYMNASTICS",
-            "FIGURE SKATING",
-            "ICE SKATING",
-            "WATER POLO",
-            "BEACH VOLLEYBALL",
-            "AMERICAN FOOTBALL",
-            "TOUCHDOWN",
-            "HOME RUN",
-            "FREE THROW",
-            "THREE POINTER",
-            "PENALTY KICK",
-            "RED CARD",
-            "YELLOW CARD",
-            "WORLD CUP",
-            "SUPER BOWL",
-            "OLYMPIC GAMES",
-            "CHAMPIONSHIP",
-            "REFEREE",
-            "GOALKEEPER",
-            "QUARTERBACK",
-            "PITCHER",
-            "BATSMAN",
-            "TEAM CAPTAIN"
+        "Sports" to mapOf(
+            "Easy" to listOf(
+                "SOCCER", "FOOTBALL", "BASKETBALL",
+                "BASEBALL", "TENNIS", "GOLF",
+                "HOCKEY", "BOXING", "RUNNING",
+                "SWIMMING", "CRICKET", "WRESTLING",
+                "SKIING", "CYCLING", "BOWLING"
+            ),
+            "Intermediate" to listOf(
+                "VOLLEYBALL", "BADMINTON", "TABLE TENNIS",
+                "SNOWBOARDING", "SURFING", "MARATHON",
+                "ARCHERY", "GYMNASTICS", "WATER POLO",
+                "HORSE RACING", "CAR RACING", "FIGURE SKATING",
+                "BEACH VOLLEYBALL", "AMERICAN FOOTBALL"
+            ),
+            "Advanced" to listOf(
+                "FORMULA ONE", "PENALTY KICK", "FREE THROW",
+                "THREE POINTER", "TOUCHDOWN", "HOME RUN",
+                "GOALKEEPER", "QUARTERBACK", "CHAMPIONSHIP",
+                "REFEREE", "PITCHER", "TEAM CAPTAIN",
+                "OLYMPIC GAMES", "WORLD CUP"
+            ),
+            "Expert" to listOf(
+                "DECATHLON", "HEPTATHLON", "POLE VAULT",
+                "HAMMER THROW", "TRIPLE JUMP", "DISCUS THROW",
+                "GRECO ROMAN WRESTLING", "SYNCHRONIZED SWIMMING",
+                "CURLING", "BIATHLON", "LUGE",
+                "SKELETON RACING", "FENCING", "WATER POLO"
+            )
         ),
 
-        "Movies" to listOf(
-            "THE LION KING",
-            "TOY STORY",
-            "FINDING NEMO",
-            "FINDING DORY",
-            "SHREK",
-            "FROZEN",
-            "MOANA",
-            "ALADDIN",
-            "MULAN",
-            "CINDERELLA",
-            "THE JUNGLE BOOK",
-            "BEAUTY AND THE BEAST",
-            "THE INCREDIBLES",
-            "MONSTERS INC",
-            "CARS",
-            "RATATOUILLE",
-            "UP",
-            "WALL E",
-            "COCO",
-            "ENCANTO",
-            "HOME ALONE",
-            "THE MATRIX",
-            "JURASSIC PARK",
-            "STAR WARS",
-            "STAR TREK",
-            "SPIDER MAN",
-            "BATMAN",
-            "SUPERMAN",
-            "IRON MAN",
-            "BLACK PANTHER",
-            "THE AVENGERS",
-            "GUARDIANS OF THE GALAXY",
-            "HARRY POTTER",
-            "THE HOBBIT",
-            "LORD OF THE RINGS",
-            "PIRATES OF THE CARIBBEAN",
-            "MISSION IMPOSSIBLE",
-            "TOP GUN",
-            "ROCKY",
-            "KARATE KID",
-            "BACK TO THE FUTURE",
-            "JUMANJI",
-            "MEN IN BLACK",
-            "GHOSTBUSTERS",
-            "GODZILLA",
-            "KING KONG",
-            "SPACE JAM",
-            "HOME ALONE 2",
-            "THE MASK",
-            "THE TERMINATOR"
+        "Movies" to mapOf(
+            "Easy" to listOf(
+                "SHREK", "FROZEN", "MOANA", "ALADDIN",
+                "MULAN", "CARS", "COCO", "UP",
+                "TOY STORY", "BATMAN", "SUPERMAN",
+                "IRON MAN", "SPIDER MAN", "JUMANJI",
+                "ROCKY"
+            ),
+            "Intermediate" to listOf(
+                "THE LION KING", "FINDING NEMO", "FINDING DORY",
+                "THE JUNGLE BOOK", "BEAUTY AND THE BEAST",
+                "THE INCREDIBLES", "MONSTERS INC",
+                "RATATOUILLE", "ENCANTO", "HOME ALONE",
+                "JURASSIC PARK", "STAR WARS", "BLACK PANTHER",
+                "THE AVENGERS", "TOP GUN"
+            ),
+            "Advanced" to listOf(
+                "GUARDIANS OF THE GALAXY", "PIRATES OF THE CARIBBEAN",
+                "MISSION IMPOSSIBLE", "BACK TO THE FUTURE",
+                "MEN IN BLACK", "GHOSTBUSTERS",
+                "THE TERMINATOR", "THE MATRIX",
+                "THE HOBBIT", "LORD OF THE RINGS",
+                "KARATE KID", "SPACE JAM"
+            ),
+            "Expert" to listOf(
+                "THE SHAWSHANK REDEMPTION",
+                "ETERNAL SUNSHINE OF THE SPOTLESS MIND",
+                "THE GRAND BUDAPEST HOTEL",
+                "ONE FLEW OVER THE CUCKOO'S NEST",
+                "THE SILENCE OF THE LAMBS",
+                "NO COUNTRY FOR OLD MEN",
+                "THE GOOD THE BAD AND THE UGLY",
+                "THE USUAL SUSPECTS",
+                "MEMENTO", "INCEPTION"
+            )
         ),
 
-        "Things" to listOf(
-            "TELEPHONE",
-            "COMPUTER",
-            "LAPTOP",
-            "KEYBOARD",
-            "TELEVISION",
-            "CAMERA",
-            "HEADPHONES",
-            "MICROWAVE",
-            "REFRIGERATOR",
-            "TOASTER",
-            "VACUUM CLEANER",
-            "WASHING MACHINE",
-            "DISHWASHER",
-            "UMBRELLA",
-            "BACKPACK",
-            "SUITCASE",
-            "WALLET",
-            "WATCH",
-            "SUNGLASSES",
-            "BICYCLE",
-            "SKATEBOARD",
-            "BALL",
-            "GUITAR",
-            "PIANO",
-            "DRUM",
-            "BOOK",
-            "PENCIL",
-            "NOTEBOOK",
-            "SCISSORS",
-            "HAMMER",
-            "SCREWDRIVER",
-            "LADDER",
-            "FLASHLIGHT",
-            "CANDLE",
-            "PILLOW",
-            "BLANKET",
-            "CHAIR",
-            "TABLE",
-            "SOFA",
-            "BED",
-            "MIRROR",
-            "TOOTHBRUSH",
-            "WATER BOTTLE",
-            "COFFEE CUP",
-            "KEYCHAIN",
-            "DOOR",
-            "WINDOW",
-            "CLOCK",
-            "TELESCOPE"
+        "Things" to mapOf(
+            "Easy" to listOf(
+                "BOOK", "PENCIL", "CHAIR", "TABLE",
+                "BED", "DOOR", "WINDOW", "CLOCK",
+                "BALL", "BAG", "PHONE", "WATCH",
+                "KEY", "CUP", "PLATE", "SPOON",
+                "SHOE", "HAT", "COAT", "BIKE"
+            ),
+            "Intermediate" to listOf(
+                "TELEPHONE", "COMPUTER", "LAPTOP",
+                "KEYBOARD", "TELEVISION", "CAMERA",
+                "HEADPHONES", "MICROWAVE", "TOASTER",
+                "UMBRELLA", "BACKPACK", "SUITCASE",
+                "WALLET", "SUNGLASSES", "GUITAR",
+                "PILLOW", "BLANKET", "MIRROR", "TOOTHBRUSH"
+            ),
+            "Advanced" to listOf(
+                "REFRIGERATOR", "WASHING MACHINE",
+                "DISHWASHER", "VACUUM CLEANER",
+                "SCREWDRIVER", "FLASHLIGHT", "TELESCOPE",
+                "KEYCHAIN", "WATER BOTTLE", "COFFEE CUP",
+                "SKATEBOARD", "LADDER", "HAMMER",
+                "MICROSCOPE", "PROJECTOR"
+            ),
+            "Expert" to listOf(
+                "THERMOMETER", "BAROMETER", "KALEIDOSCOPE",
+                "SEISMOGRAPH", "TELESCOPIC CAMERA",
+                "COMPASS", "METRONOME", "GYROSCOPE",
+                "PERISCOPE", "CALCULATOR",
+                "TYPEWRITER", "PHONOGRAPH",
+                "TELEGRAPH", "BINOCULARS"
+            )
         )
     )
+
+    val categories: List<String>
+        get() = words.keys.toList()
+
+    val difficulties: List<String> = listOf(
+        "Easy",
+        "Intermediate",
+        "Advanced",
+        "Expert"
+    )
+
+    fun getRandomWord(
+        selectedCategories: List<String>,
+        selectedDifficulties: List<String>
+    ): Pair<String, String> {
+
+        val pool = mutableListOf<Pair<String, String>>()
+
+        for (category in selectedCategories) {
+
+            val categoryWords = words[category] ?: continue
+
+            for (difficulty in selectedDifficulties) {
+
+                val difficultyWords =
+                    categoryWords[difficulty] ?: emptyList()
+
+                for (word in difficultyWords) {
+                    pool.add(Pair(word, category))
+                }
+            }
+        }
+
+        if (pool.isEmpty()) {
+            return Pair("APPLE", "Food")
+        }
+
+        return pool.random()
+    }
 }
