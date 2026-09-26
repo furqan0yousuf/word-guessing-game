@@ -32,107 +32,63 @@ class GameWaitingActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        gameCode =
-            intent.getStringExtra("gameCode")
-                ?: "------"
+        gameCode = intent.getStringExtra("gameCode") ?: "------"
 
-        playerCount =
-            intent.getIntExtra(
-                "playerCount",
-                2
-            )
+        playerCount = intent.getIntExtra("playerCount", 2)
 
-        wordSelection =
-            intent.getStringExtra(
-                "wordSelection"
-            )
-                ?: "Random Word"
+        wordSelection = intent.getStringExtra("wordSelection")
+            ?: "Random Word"
 
-        manualWord =
-            intent.getStringExtra(
-                "manualWord"
-            )
-                ?: ""
+        manualWord = intent.getStringExtra("manualWord") ?: ""
 
-        category =
-            intent.getStringExtra(
-                "category"
-            )
-                ?: "Random"
+        category = intent.getStringExtra("category") ?: "Random"
 
-        secondsPerTurn =
-            intent.getIntExtra(
-                "secondsPerTurn",
-                20
-            )
+        secondsPerTurn = intent.getIntExtra("secondsPerTurn", 20)
 
-        totalTurns =
-            intent.getIntExtra(
-                "totalTurns",
-                0
-            )
+        totalTurns = intent.getIntExtra("totalTurns", 0)
 
-        nextWordMaster =
-            intent.getStringExtra(
-                "nextWordMaster"
-            )
-                ?: "Winner becomes Word Master"
+        nextWordMaster = intent.getStringExtra("nextWordMaster")
+            ?: "Winner becomes Word Master"
 
-        playerName =
-            intent.getStringExtra(
-                "playerName"
-            )
-                ?: "Player 1"
+        playerName = intent.getStringExtra("playerName")
+            ?: "Player 1"
 
-        password =
-            intent.getStringExtra(
-                "password"
-            )
-                ?: ""
+        password = intent.getStringExtra("password") ?: ""
 
-        isHost =
-            intent.getBooleanExtra(
-                "isHost",
-                true
-            )
+        isHost = intent.getBooleanExtra("isHost", true)
+
+        FirebaseAuth.getInstance()
+            .signInAnonymously()
+            .addOnCompleteListener { task ->
+
+                if (task.isSuccessful) {
+
+                    Toast.makeText(
+                        this,
+                        "Firebase login works",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+
+                    Toast.makeText(
+                        this,
+                        "Firebase login failed",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
 
         createScreen()
     }
 
-    FirebaseAuth.getInstance()
-    .signInAnonymously()
-    .addOnCompleteListener { task ->
-
-        if (task.isSuccessful) {
-
-            Toast.makeText(
-                this,
-                "Firebase login works",
-                Toast.LENGTH_SHORT
-            ).show()
-
-        } else {
-
-            Toast.makeText(
-                this,
-                "Firebase login failed",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-createScreen()
-
     private fun createScreen() {
 
-        val scrollView =
-            ScrollView(this)
+        val scrollView = ScrollView(this)
 
-        val layout =
-            LinearLayout(this)
+        val layout = LinearLayout(this)
 
-        layout.orientation =
-            LinearLayout.VERTICAL
+        layout.orientation = LinearLayout.VERTICAL
 
         layout.setPadding(
             24,
@@ -141,17 +97,13 @@ createScreen()
             24
         )
 
-        val title =
-            TextView(this)
+        val title = TextView(this)
 
-        title.text =
-            "Game Waiting Room"
+        title.text = "Game Waiting Room"
 
-        title.textSize =
-            28f
+        title.textSize = 28f
 
-        title.gravity =
-            Gravity.CENTER
+        title.gravity = Gravity.CENTER
 
         title.setTypeface(
             null,
@@ -160,17 +112,13 @@ createScreen()
 
         layout.addView(title)
 
-        val codeText =
-            TextView(this)
+        val codeText = TextView(this)
 
-        codeText.text =
-            "Game Code\n$gameCode"
+        codeText.text = "Game Code\n$gameCode"
 
-        codeText.textSize =
-            22f
+        codeText.textSize = 22f
 
-        codeText.gravity =
-            Gravity.CENTER
+        codeText.gravity = Gravity.CENTER
 
         codeText.setPadding(
             0,
@@ -186,11 +134,9 @@ createScreen()
 
         layout.addView(codeText)
 
-        val copyButton =
-            Button(this)
+        val copyButton = Button(this)
 
-        copyButton.text =
-            "Copy Game Code"
+        copyButton.text = "Copy Game Code"
 
         copyButton.setOnClickListener {
 
@@ -205,9 +151,7 @@ createScreen()
                     gameCode
                 )
 
-            clipboard.setPrimaryClip(
-                clip
-            )
+            clipboard.setPrimaryClip(clip)
 
             Toast.makeText(
                 this,
@@ -216,18 +160,14 @@ createScreen()
             ).show()
         }
 
-        layout.addView(
-            copyButton
-        )
+        layout.addView(copyButton)
 
-        val joinedTitle =
-            TextView(this)
+        val joinedTitle = TextView(this)
 
         joinedTitle.text =
             "Players Joined: 1 / $playerCount"
 
-        joinedTitle.textSize =
-            21f
+        joinedTitle.textSize = 21f
 
         joinedTitle.setTypeface(
             null,
@@ -241,18 +181,13 @@ createScreen()
             8
         )
 
-        layout.addView(
-            joinedTitle
-        )
+        layout.addView(joinedTitle)
 
-        val playersText =
-            TextView(this)
+        val playersText = TextView(this)
 
-        playersText.text =
-            buildPlayerList()
+        playersText.text = buildPlayerList()
 
-        playersText.textSize =
-            18f
+        playersText.textSize = 18f
 
         playersText.setPadding(
             0,
@@ -261,18 +196,13 @@ createScreen()
             8
         )
 
-        layout.addView(
-            playersText
-        )
+        layout.addView(playersText)
 
-        val settingsTitle =
-            TextView(this)
+        val settingsTitle = TextView(this)
 
-        settingsTitle.text =
-            "Game Settings"
+        settingsTitle.text = "Game Settings"
 
-        settingsTitle.textSize =
-            21f
+        settingsTitle.textSize = 21f
 
         settingsTitle.setTypeface(
             null,
@@ -286,12 +216,9 @@ createScreen()
             8
         )
 
-        layout.addView(
-            settingsTitle
-        )
+        layout.addView(settingsTitle)
 
-        val settingsText =
-            TextView(this)
+        val settingsText = TextView(this)
 
         settingsText.text =
             """
@@ -303,42 +230,31 @@ createScreen()
             Next Word Master: $nextWordMaster
             """.trimIndent()
 
-        settingsText.textSize =
-            17f
+        settingsText.textSize = 17f
 
-        layout.addView(
-            settingsText
-        )
+        layout.addView(settingsText)
 
-        val ruleText =
-            TextView(this)
+        val ruleText = TextView(this)
 
         ruleText.text =
-            if (
-                wordSelection == "Random Word"
-            ) {
+            if (wordSelection == "Random Word") {
                 "\nWord Master: None\nEveryone plays."
             } else {
                 "\nWord Master: Not assigned yet\nThe Word Master does not play that round."
             }
 
-        ruleText.textSize =
-            17f
+        ruleText.textSize = 17f
 
-        ruleText.gravity =
-            Gravity.CENTER
+        ruleText.gravity = Gravity.CENTER
 
         ruleText.setTypeface(
             null,
             Typeface.BOLD
         )
 
-        layout.addView(
-            ruleText
-        )
+        layout.addView(ruleText)
 
-        val statusText =
-            TextView(this)
+        val statusText = TextView(this)
 
         statusText.text =
             if (isHost) {
@@ -347,11 +263,9 @@ createScreen()
                 "\nWaiting for the host to start the game..."
             }
 
-        statusText.textSize =
-            18f
+        statusText.textSize = 18f
 
-        statusText.gravity =
-            Gravity.CENTER
+        statusText.gravity = Gravity.CENTER
 
         statusText.setPadding(
             0,
@@ -360,27 +274,15 @@ createScreen()
             5
         )
 
-        layout.addView(
-            statusText
-        )
-
-        /*
-         * IMPORTANT:
-         * Keep the main action buttons close to the
-         * waiting/status information so they are easy
-         * to see and tap on a phone.
-         */
+        layout.addView(statusText)
 
         if (isHost) {
 
-            val startButton =
-                Button(this)
+            val startButton = Button(this)
 
-            startButton.text =
-                "START GAME"
+            startButton.text = "START GAME"
 
-            startButton.textSize =
-                20f
+            startButton.textSize = 20f
 
             startButton.setTypeface(
                 null,
@@ -397,9 +299,7 @@ createScreen()
             startButton.setOnClickListener {
 
                 AlertDialog.Builder(this)
-                    .setTitle(
-                        "Start Game?"
-                    )
+                    .setTitle("Start Game?")
                     .setMessage(
                         "Start the game with the current players?"
                     )
@@ -410,25 +310,19 @@ createScreen()
                     .setPositiveButton(
                         "Start"
                     ) { _, _ ->
-
                         startGame()
                     }
                     .show()
             }
 
-            layout.addView(
-                startButton
-            )
+            layout.addView(startButton)
         }
 
-        val leaveButton =
-            Button(this)
+        val leaveButton = Button(this)
 
-        leaveButton.text =
-            "Leave Game"
+        leaveButton.text = "Leave Game"
 
-        leaveButton.textSize =
-            18f
+        leaveButton.textSize = 18f
 
         leaveButton.setPadding(
             10,
@@ -438,21 +332,14 @@ createScreen()
         )
 
         leaveButton.setOnClickListener {
-
             finish()
         }
 
-        layout.addView(
-            leaveButton
-        )
+        layout.addView(leaveButton)
 
-        scrollView.addView(
-            layout
-        )
+        scrollView.addView(layout)
 
-        setContentView(
-            scrollView
-        )
+        setContentView(scrollView)
     }
 
     private fun formatSecondsPerTurn(): String {
@@ -475,8 +362,7 @@ createScreen()
 
     private fun buildPlayerList(): String {
 
-        val builder =
-            StringBuilder()
+        val builder = StringBuilder()
 
         builder.append(
             "1. $playerName — HOST"
@@ -553,8 +439,6 @@ createScreen()
             isHost
         )
 
-        startActivity(
-            gameIntent
-        )
+        startActivity(gameIntent)
     }
 }
