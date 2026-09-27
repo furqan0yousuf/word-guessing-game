@@ -488,6 +488,14 @@ class GameActivity : Activity() {
             Typeface.BOLD
         )
 
+        categoryText.setTextColor(
+            Color.rgb(
+                0,
+                102,
+                204
+            )
+        )
+
         categoryText.setPadding(
             0,
             5,
@@ -790,7 +798,7 @@ class GameActivity : Activity() {
                     )
 
                     letterButton.text =
-    letter.toString()
+                        letter.toString()
 
                     letterButton.isEnabled =
                         false
@@ -895,12 +903,6 @@ class GameActivity : Activity() {
                         ] +=
                             pointsEarned
 
-                        Toast.makeText(
-                            this,
-                            "${playerNames[currentPlayer]} gets $pointsEarned point(s)!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
                         updateWordDisplay()
 
                         updateTurnAndScores()
@@ -918,6 +920,9 @@ class GameActivity : Activity() {
                             return@setOnClickListener
                         }
 
+                        turnText.text =
+                            "${playerNames[currentPlayer]} gets $pointsEarned point(s)!"
+
                         restartTimer()
 
                     } else {
@@ -926,7 +931,8 @@ class GameActivity : Activity() {
                             letter
                         )
 
-                        letterButton.text = letter.toString()
+                        letterButton.text =
+                            letter.toString()
 
                         Toast.makeText(
                             this,
@@ -1821,101 +1827,101 @@ class GameActivity : Activity() {
                 .toString()
                 .trim()
     }
-    
-private fun updateTurnAndScores() {
 
-    if (
-        eliminatedPlayers.contains(
-            currentPlayer
-        )
-    ) {
-        return
-    }
-
-    turnText.text =
-        "Turn: ${playerNames[currentPlayer]}"
-
-    val scoreDisplay =
-        android.text.SpannableStringBuilder()
-
-    for (
-        i in playerNames.indices
-    ) {
-
-        val lineStart =
-            scoreDisplay.length
-
-        scoreDisplay.append(
-            "${playerNames[i]}: ${scores[i]} points"
-        )
-
-        if (
-            wordSelection ==
-            "Host Chooses Word" &&
-            i == 0
-        ) {
-
-            scoreDisplay.append(
-                " (Word Master)"
-            )
-
-        } else if (
-            eliminatedPlayers.contains(
-                i
-            )
-        ) {
-
-            scoreDisplay.append(
-                " (Eliminated)"
-            )
-        }
-
-        scoreDisplay.append(
-            " | Missed: ${missedTurns[i]}"
-        )
-
-        val lineEnd =
-            scoreDisplay.length
+    private fun updateTurnAndScores() {
 
         if (
             eliminatedPlayers.contains(
-                i
+                currentPlayer
             )
         ) {
-
-            scoreDisplay.setSpan(
-                android.text.style.ForegroundColorSpan(
-                    Color.RED
-                ),
-                lineStart,
-                lineEnd,
-                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-
-            scoreDisplay.setSpan(
-                android.text.style.StyleSpan(
-                    Typeface.BOLD
-                ),
-                lineStart,
-                lineEnd,
-                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
+            return
         }
 
-        if (
-            i <
-            playerNames.size - 1
+        turnText.text =
+            "Turn: ${playerNames[currentPlayer]}"
+
+        val scoreDisplay =
+            android.text.SpannableStringBuilder()
+
+        for (
+            i in playerNames.indices
         ) {
+
+            val lineStart =
+                scoreDisplay.length
 
             scoreDisplay.append(
-                "\n"
+                "${playerNames[i]}: ${scores[i]} points"
             )
-        }
-    }
 
-    scoresText.text =
-        scoreDisplay
-}
+            if (
+                wordSelection ==
+                "Host Chooses Word" &&
+                i == 0
+            ) {
+
+                scoreDisplay.append(
+                    " (Word Master)"
+                )
+
+            } else if (
+                eliminatedPlayers.contains(
+                    i
+                )
+            ) {
+
+                scoreDisplay.append(
+                    " (Eliminated)"
+                )
+            }
+
+            scoreDisplay.append(
+                " | Missed: ${missedTurns[i]}"
+            )
+
+            val lineEnd =
+                scoreDisplay.length
+
+            if (
+                eliminatedPlayers.contains(
+                    i
+                )
+            ) {
+
+                scoreDisplay.setSpan(
+                    android.text.style.ForegroundColorSpan(
+                        Color.RED
+                    ),
+                    lineStart,
+                    lineEnd,
+                    android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+
+                scoreDisplay.setSpan(
+                    android.text.style.StyleSpan(
+                        Typeface.BOLD
+                    ),
+                    lineStart,
+                    lineEnd,
+                    android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+
+            if (
+                i <
+                playerNames.size - 1
+            ) {
+
+                scoreDisplay.append(
+                    "\n"
+                )
+            }
+        }
+
+        scoresText.text =
+            scoreDisplay
+    }
 
     override fun onBackPressed() {
 
