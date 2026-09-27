@@ -789,20 +789,8 @@ class GameActivity : Activity() {
                         Typeface.BOLD
                     )
 
-                    if (
-                        wrongLetters.contains(
-                            letter
-                        )
-                    ) {
-
-                        letterButton.text =
-                            "$letter ❌"
-
-                    } else {
-
-                        letterButton.text =
-                            letter.toString()
-                    }
+                    letterButton.text =
+    letter.toString()
 
                     letterButton.isEnabled =
                         false
