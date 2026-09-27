@@ -233,6 +233,10 @@ class SinglePlayerActivity : Activity() {
             button.text = letter.toString()
             button.textSize = 16f
 
+            // Unselected letters = green
+            button.setTextColor(Color.WHITE)
+            button.setBackgroundColor(Color.rgb(46, 125, 50))
+
             row?.addView(
                 button,
                 LinearLayout.LayoutParams(
@@ -261,8 +265,10 @@ class SinglePlayerActivity : Activity() {
 
                 guessedLetters.add(letter)
 
+                // Selected letters = red
                 button.isEnabled = false
-                button.setTextColor(Color.RED)
+                button.setTextColor(Color.WHITE)
+                button.setBackgroundColor(Color.RED)
 
                 if (secretWord.contains(letter)) {
 
