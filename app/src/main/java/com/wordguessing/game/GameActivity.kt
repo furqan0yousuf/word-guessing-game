@@ -1822,8 +1822,7 @@ class GameActivity : Activity() {
                 .toString()
                 .trim()
     }
-
-    private fun updateTurnAndScores() {
+    
 private fun updateTurnAndScores() {
 
     if (
