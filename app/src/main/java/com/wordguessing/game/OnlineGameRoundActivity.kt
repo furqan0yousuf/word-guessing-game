@@ -1671,6 +1671,7 @@ class OnlineGameRoundActivity : Activity() {
                             100,
                             0
                         )
+                        )
 
                     button.isEnabled =
                         !roundFinished &&
@@ -1839,7 +1840,7 @@ class OnlineGameRoundActivity : Activity() {
                                 c != ' ' &&
                                 !guessed.child(
                                     c.toString()
-                                ).exists()
+                                ).value != null
                             ) {
 
                                 complete =
