@@ -11,7 +11,20 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
+
 class JoinGameActivity : Activity() {
+
+    private val auth =
+        FirebaseAuth.getInstance()
+
+    private val database =
+        FirebaseDatabase.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +41,7 @@ class JoinGameActivity : Activity() {
             24
         )
 
+        // TITLE
         val title = TextView(this)
 
         title.text =
@@ -169,6 +183,11 @@ class JoinGameActivity : Activity() {
                     .toString()
                     .trim()
 
+            val enteredPassword =
+                passwordInput.text
+                    .toString()
+                    .trim()
+
             val playerName =
                 nameInput.text
                     .toString()
@@ -185,7 +204,10 @@ class JoinGameActivity : Activity() {
                 return@setOnClickListener
             }
 
-            if (gameCode.length != 6) {
+            if (
+                gameCode.length != 6 ||
+                !gameCode.all { it.isDigit() }
+            ) {
 
                 Toast.makeText(
                     this,
@@ -207,66 +229,408 @@ class JoinGameActivity : Activity() {
                 return@setOnClickListener
             }
 
-            /*
-             * Temporary local waiting-room test.
-             *
-             * Firebase will later verify:
-             * - game code
-             * - password
-             * - available player slots
-             * - game settings
-             */
+            joinButton.isEnabled = false
 
-            val intent =
-                Intent(
-                    this,
-                    GameWaitingActivity::class.java
+            val currentUser =
+                auth.currentUser
+
+            if (currentUser != null) {
+
+                joinFirebaseGame(
+                    gameCode = gameCode,
+                    playerName = playerName,
+                    enteredPassword = enteredPassword,
+                    uid = currentUser.uid,
+                    joinButton = joinButton
                 )
 
-            intent.putExtra(
-                "gameCode",
-                gameCode
-            )
+            } else {
 
-            intent.putExtra(
-                "playerCount",
-                4
-            )
+                auth.signInAnonymously()
+                    .addOnSuccessListener { result ->
 
-            intent.putExtra(
-                "wordSelection",
-                "Random Word"
-            )
+                        val uid =
+                            result.user?.uid
 
-            intent.putExtra(
-                "category",
-                "Random"
-            )
+                        if (uid == null) {
 
-            intent.putExtra(
-                "secondsPerTurn",
-                10
-            )
+                            joinButton.isEnabled = true
 
-            intent.putExtra(
-                "nextWordMaster",
-                "Winner becomes Word Master"
-            )
+                            Toast.makeText(
+                                this,
+                                "Firebase login failed.",
+                                Toast.LENGTH_LONG
+                            ).show()
 
-            intent.putExtra(
-                "playerName",
-                playerName
-            )
+                            return@addOnSuccessListener
+                        }
 
-            // This player is joining an existing game.
-            intent.putExtra(
-                "isHost",
-                false
-            )
+                        joinFirebaseGame(
+                            gameCode = gameCode,
+                            playerName = playerName,
+                            enteredPassword = enteredPassword,
+                            uid = uid,
+                            joinButton = joinButton
+                        )
+                    }
+                    .addOnFailureListener {
 
-            startActivity(intent)
+                        joinButton.isEnabled = true
+
+                        Toast.makeText(
+                            this,
+                            "Firebase login failed.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+            }
         }
 
         setContentView(layout)
+    }
+
+    private fun joinFirebaseGame(
+        gameCode: String,
+        playerName: String,
+        enteredPassword: String,
+        uid: String,
+        joinButton: Button
+    ) {
+
+        val gameReference =
+            database
+                .getReference("games")
+                .child(gameCode)
+
+        /*
+         * First load the game room.
+         */
+        gameReference.get()
+            .addOnSuccessListener { snapshot ->
+
+                if (!snapshot.exists()) {
+
+                    joinButton.isEnabled = true
+
+                    Toast.makeText(
+                        this,
+                        "Game not found.",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    return@addOnSuccessListener
+                }
+
+                val status =
+                    snapshot
+                        .child("status")
+                        .getValue(
+                            String::class.java
+                        )
+                        ?: "waiting"
+
+                if (status != "waiting") {
+
+                    joinButton.isEnabled = true
+
+                    Toast.makeText(
+                        this,
+                        "This game has already started.",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    return@addOnSuccessListener
+                }
+
+                /*
+                 * Check password.
+                 */
+                val gamePassword =
+                    snapshot
+                        .child("password")
+                        .getValue(
+                            String::class.java
+                        )
+                        ?: ""
+
+                if (
+                    gamePassword.isNotEmpty() &&
+                    enteredPassword != gamePassword
+                ) {
+
+                    joinButton.isEnabled = true
+
+                    Toast.makeText(
+                        this,
+                        "Incorrect game password.",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    return@addOnSuccessListener
+                }
+
+                /*
+                 * Maximum players.
+                 */
+                val maxPlayers =
+                    snapshot
+                        .child("maxPlayers")
+                        .getValue(
+                            Int::class.java
+                        )
+                        ?: 2
+
+                /*
+                 * Use a Firebase transaction so two
+                 * phones cannot easily take the same
+                 * final player slot at the same time.
+                 */
+                gameReference.runTransaction(
+                    object : Transaction.Handler {
+
+                        override fun doTransaction(
+                            currentData: MutableData
+                        ): Transaction.Result {
+
+                            val playersData =
+                                currentData
+                                    .child("players")
+
+                            val existingPlayer =
+                                playersData
+                                    .child(uid)
+
+                            /*
+                             * If this device is already
+                             * in the game, don't add it again.
+                             */
+                            if (existingPlayer.value != null) {
+
+                                return Transaction.success(
+                                    currentData
+                                )
+                            }
+
+                            var playerCount = 0
+
+                            for (
+                                player in playersData.children
+                            ) {
+                                playerCount++
+                            }
+
+                            if (playerCount >= maxPlayers) {
+
+                                return Transaction.abort()
+                            }
+
+                            val playerData =
+                                hashMapOf<String, Any>(
+                                    "uid" to uid,
+                                    "name" to playerName,
+                                    "isHost" to false,
+                                    "joinedAt" to System.currentTimeMillis()
+                                )
+
+                            playersData
+                                .child(uid)
+                                .value = playerData
+
+                            return Transaction.success(
+                                currentData
+                            )
+                        }
+
+                        override fun onComplete(
+                            error: DatabaseError?,
+                            committed: Boolean,
+                            currentData: DataSnapshot?
+                        ) {
+
+                            if (error != null) {
+
+                                joinButton.isEnabled =
+                                    true
+
+                                Toast.makeText(
+                                    this@JoinGameActivity,
+                                    "Could not join the game.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+
+                                return
+                            }
+
+                            if (!committed) {
+
+                                joinButton.isEnabled =
+                                    true
+
+                                Toast.makeText(
+                                    this@JoinGameActivity,
+                                    "The game is full.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+
+                                return
+                            }
+
+                            /*
+                             * Successfully joined.
+                             *
+                             * Use the actual settings
+                             * stored in Firebase.
+                             */
+                            val gameSnapshot =
+                                currentData
+                                    ?: snapshot
+
+                            openWaitingRoom(
+                                gameSnapshot = gameSnapshot,
+                                gameCode = gameCode,
+                                playerName = playerName,
+                                enteredPassword = enteredPassword
+                            )
+                        }
+                    }
+                )
+            }
+            .addOnFailureListener {
+
+                joinButton.isEnabled = true
+
+                Toast.makeText(
+                    this,
+                    "Could not connect to Firebase.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun openWaitingRoom(
+        gameSnapshot: DataSnapshot,
+        gameCode: String,
+        playerName: String,
+        enteredPassword: String
+    ) {
+
+        val playerCount =
+            gameSnapshot
+                .child("maxPlayers")
+                .getValue(
+                    Int::class.java
+                )
+                ?: 2
+
+        val wordSelection =
+            gameSnapshot
+                .child("wordSelection")
+                .getValue(
+                    String::class.java
+                )
+                ?: "Random Word"
+
+        val manualWord =
+            gameSnapshot
+                .child("manualWord")
+                .getValue(
+                    String::class.java
+                )
+                ?: ""
+
+        val category =
+            gameSnapshot
+                .child("category")
+                .getValue(
+                    String::class.java
+                )
+                ?: "Random"
+
+        val secondsPerTurn =
+            gameSnapshot
+                .child("secondsPerTurn")
+                .getValue(
+                    Int::class.java
+                )
+                ?: 20
+
+        val totalTurns =
+            gameSnapshot
+                .child("totalTurns")
+                .getValue(
+                    Int::class.java
+                )
+                ?: 0
+
+        val nextWordMaster =
+            gameSnapshot
+                .child("nextWordMaster")
+                .getValue(
+                    String::class.java
+                )
+                ?: "Winner becomes Word Master"
+
+        val intent =
+            Intent(
+                this,
+                GameWaitingActivity::class.java
+            )
+
+        intent.putExtra(
+            "gameCode",
+            gameCode
+        )
+
+        intent.putExtra(
+            "playerCount",
+            playerCount
+        )
+
+        intent.putExtra(
+            "wordSelection",
+            wordSelection
+        )
+
+        intent.putExtra(
+            "manualWord",
+            manualWord
+        )
+
+        intent.putExtra(
+            "category",
+            category
+        )
+
+        intent.putExtra(
+            "secondsPerTurn",
+            secondsPerTurn
+        )
+
+        intent.putExtra(
+            "totalTurns",
+            totalTurns
+        )
+
+        intent.putExtra(
+            "nextWordMaster",
+            nextWordMaster
+        )
+
+        intent.putExtra(
+            "playerName",
+            playerName
+        )
+
+        intent.putExtra(
+            "password",
+            enteredPassword
+        )
+
+        intent.putExtra(
+            "isHost",
+            false
+        )
+
+        startActivity(intent)
     }
 }
