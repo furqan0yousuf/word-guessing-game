@@ -1,3 +1,4 @@
+
 package com.wordguessing.game
 
 import android.app.Activity
@@ -16,7 +17,16 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
+
 class CreateGameActivity : Activity() {
+
+    private val auth =
+        FirebaseAuth.getInstance()
+
+    private val database =
+        FirebaseDatabase.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -342,10 +352,6 @@ class CreateGameActivity : Activity() {
 
         /*
          * CREATE & JOIN BUTTON
-         *
-         * This is now INSIDE the ScrollView.
-         * It will appear directly below the settings
-         * instead of being stuck at the bottom of the screen.
          */
         val createButton = Button(this)
 
@@ -395,10 +401,6 @@ class CreateGameActivity : Activity() {
                     Toast.LENGTH_SHORT
                 ).show()
 
-                /*
-                 * Scroll to the top so the name field
-                 * is visible.
-                 */
                 scrollView.post {
                     scrollView.fullScroll(
                         ScrollView.FOCUS_UP
@@ -452,9 +454,7 @@ class CreateGameActivity : Activity() {
 
             val selectedTime =
                 when {
-
-                    selectedTimeText ==
-                        "Unlimited" -> 0
+                    selectedTimeText == "Unlimited" -> 0
 
                     else ->
                         selectedTimeText
@@ -474,9 +474,7 @@ class CreateGameActivity : Activity() {
 
             val selectedTotalTurns =
                 when {
-
-                    selectedTotalTurnsText ==
-                        "Unlimited" -> 0
+                    selectedTotalTurnsText == "Unlimited" -> 0
 
                     else ->
                         selectedTotalTurnsText
@@ -494,80 +492,76 @@ class CreateGameActivity : Activity() {
                     .toString()
                     .trim()
 
-            val gameCode =
-                (100000..999999)
-                    .random()
-                    .toString()
+            createButton.isEnabled = false
 
-    
+            /*
+             * Make sure the host has a Firebase account.
+             */
+            val currentUser = auth.currentUser
 
-            val intent =
-                Intent(
-                    this,
-                    GameWaitingActivity::class.java
+            if (currentUser != null) {
+
+                createFirebaseGame(
+                    uid = currentUser.uid,
+                    hostName = hostName,
+                    playerCount = playerCount,
+                    selectedWordSelection = selectedWordSelection,
+                    manualWord = manualWord,
+                    selectedCategory = selectedCategory,
+                    selectedTime = selectedTime,
+                    selectedTotalTurns = selectedTotalTurns,
+                    selectedNextMaster = selectedNextMaster,
+                    password = password,
+                    createButton = createButton
                 )
 
-            intent.putExtra(
-                "gameCode",
-                gameCode
-            )
+            } else {
 
-            intent.putExtra(
-                "playerCount",
-                playerCount
-            )
+                auth.signInAnonymously()
+                    .addOnSuccessListener { result ->
 
-            intent.putExtra(
-                "wordSelection",
-                selectedWordSelection
-            )
+                        createFirebaseGame(
+                            uid = result.user!!.uid,
+                            hostName = hostName,
+                            playerCount = playerCount,
+                            selectedWordSelection = selectedWordSelection,
+                            manualWord = manualWord,
+                            selectedCategory = selectedCategory,
+                            selectedTime = selectedTime,
+                            selectedTotalTurns = selectedTotalTurns,
+                            selectedNextMaster = selectedNextMaster,
+                            password = password,
+                            createButton = createButton
+                        )
+                    }
+                    .addOnFailureListener {
 
-            intent.putExtra(
-                "manualWord",
-                manualWord
-            )
+                        createButton.isEnabled = true
 
-            intent.putExtra(
-                "category",
-                selectedCategory
-            )
-
-            intent.putExtra(
-                "secondsPerTurn",
-                selectedTime
-            )
-
-            intent.putExtra(
-                "totalTurns",
-                selectedTotalTurns
-            )
-
-            intent.putExtra(
-                "nextWordMaster",
-                selectedNextMaster
-            )
-
-            intent.putExtra(
-                "password",
-                password
-            )
-
-            intent.putExtra(
-                "playerName",
-                hostName
-            )
-
-            intent.putExtra(
-                "isHost",
-                true
-            )
-
-            startActivity(intent)
+                        Toast.makeText(
+                            this,
+                            "Firebase login failed. Please try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+            }
         }
 
         /*
-         * The ScrollView now fills the screen.
-         * The Create button is part of the scrollable content.
+         * BACK
+         */
+        val backButton = Button(this)
+        backButton.text = "Back"
+        backButton.textSize = 18f
+
+        layout.addView(backButton)
+
+        backButton.setOnClickListener {
+            finish()
+        }
+
+        /*
+         * SCREEN
          */
         mainLayout.addView(
             scrollView,
@@ -581,4 +575,187 @@ class CreateGameActivity : Activity() {
 
         setContentView(mainLayout)
     }
+
+    /*
+     * CREATE THE GAME ROOM IN FIREBASE
+     */
+    private fun createFirebaseGame(
+        uid: String,
+        hostName: String,
+        playerCount: Int,
+        selectedWordSelection: String,
+        manualWord: String,
+        selectedCategory: String,
+        selectedTime: Int,
+        selectedTotalTurns: Int,
+        selectedNextMaster: String,
+        password: String,
+        createButton: Button
+    ) {
+
+        val gameCode =
+            (100000..999999)
+                .random()
+                .toString()
+
+        val gameReference =
+            database
+                .getReference("games")
+                .child(gameCode)
+
+        gameReference.get()
+            .addOnSuccessListener { snapshot ->
+
+                /*
+                 * Extremely unlikely, but if the code already
+                 * exists, generate another code.
+                 */
+                if (snapshot.exists()) {
+
+                    createFirebaseGame(
+                        uid = uid,
+                        hostName = hostName,
+                        playerCount = playerCount,
+                        selectedWordSelection = selectedWordSelection,
+                        manualWord = manualWord,
+                        selectedCategory = selectedCategory,
+                        selectedTime = selectedTime,
+                        selectedTotalTurns = selectedTotalTurns,
+                        selectedNextMaster = selectedNextMaster,
+                        password = password,
+                        createButton = createButton
+                    )
+
+                    return@addOnSuccessListener
+                }
+
+                /*
+                 * Host player information.
+                 */
+                val hostPlayer =
+                    hashMapOf<String, Any>(
+                        "uid" to uid,
+                        "name" to hostName,
+                        "isHost" to true,
+                        "joinedAt" to System.currentTimeMillis()
+                    )
+
+                /*
+                 * Game room information.
+                 */
+                val gameData =
+                    hashMapOf<String, Any>(
+                        "gameCode" to gameCode,
+                        "hostUid" to uid,
+                        "hostName" to hostName,
+                        "maxPlayers" to playerCount,
+                        "wordSelection" to selectedWordSelection,
+                        "manualWord" to manualWord,
+                        "category" to selectedCategory,
+                        "secondsPerTurn" to selectedTime,
+                        "totalTurns" to selectedTotalTurns,
+                        "nextWordMaster" to selectedNextMaster,
+                        "password" to password,
+                        "status" to "waiting",
+                        "createdAt" to System.currentTimeMillis(),
+                        "players" to mapOf(
+                            uid to hostPlayer
+                        )
+                    )
+
+                gameReference.setValue(gameData)
+                    .addOnSuccessListener {
+
+                        Toast.makeText(
+                            this,
+                            "Game created!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        val intent =
+                            Intent(
+                                this,
+                                GameWaitingActivity::class.java
+                            )
+
+                        intent.putExtra(
+                            "gameCode",
+                            gameCode
+                        )
+
+                        intent.putExtra(
+                            "playerCount",
+                            playerCount
+                        )
+
+                        intent.putExtra(
+                            "wordSelection",
+                            selectedWordSelection
+                        )
+
+                        intent.putExtra(
+                            "manualWord",
+                            manualWord
+                        )
+
+                        intent.putExtra(
+                            "category",
+                            selectedCategory
+                        )
+
+                        intent.putExtra(
+                            "secondsPerTurn",
+                            selectedTime
+                        )
+
+                        intent.putExtra(
+                            "totalTurns",
+                            selectedTotalTurns
+                        )
+
+                        intent.putExtra(
+                            "nextWordMaster",
+                            selectedNextMaster
+                        )
+
+                        intent.putExtra(
+                            "password",
+                            password
+                        )
+
+                        intent.putExtra(
+                            "playerName",
+                            hostName
+                        )
+
+                        intent.putExtra(
+                            "isHost",
+                            true
+                        )
+
+                        startActivity(intent)
+                    }
+                    .addOnFailureListener {
+
+                        createButton.isEnabled = true
+
+                        Toast.makeText(
+                            this,
+                            "Could not create game in Firebase.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+            }
+            .addOnFailureListener {
+
+                createButton.isEnabled = true
+
+                Toast.makeText(
+                    this,
+                    "Could not connect to Firebase.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
 }
+
