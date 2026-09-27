@@ -8,12 +8,18 @@ import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class GameWaitingActivity : Activity() {
 
@@ -29,57 +35,71 @@ class GameWaitingActivity : Activity() {
     private var password = ""
     private var isHost = true
 
+    private lateinit var joinedTitle: TextView
+    private lateinit var playersText: TextView
+    private lateinit var statusText: TextView
+    private lateinit var startButton: Button
+
+    private var playersListener: ValueEventListener? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        gameCode = intent.getStringExtra("gameCode") ?: "------"
+        gameCode =
+            intent.getStringExtra("gameCode")
+                ?: "------"
 
-        playerCount = intent.getIntExtra("playerCount", 2)
+        playerCount =
+            intent.getIntExtra(
+                "playerCount",
+                2
+            )
 
-        wordSelection = intent.getStringExtra("wordSelection")
-            ?: "Random Word"
+        wordSelection =
+            intent.getStringExtra("wordSelection")
+                ?: "Random Word"
 
-        manualWord = intent.getStringExtra("manualWord") ?: ""
+        manualWord =
+            intent.getStringExtra("manualWord")
+                ?: ""
 
-        category = intent.getStringExtra("category") ?: "Random"
+        category =
+            intent.getStringExtra("category")
+                ?: "Random"
 
-        secondsPerTurn = intent.getIntExtra("secondsPerTurn", 20)
+        secondsPerTurn =
+            intent.getIntExtra(
+                "secondsPerTurn",
+                20
+            )
 
-        totalTurns = intent.getIntExtra("totalTurns", 0)
+        totalTurns =
+            intent.getIntExtra(
+                "totalTurns",
+                0
+            )
 
-        nextWordMaster = intent.getStringExtra("nextWordMaster")
-            ?: "Winner becomes Word Master"
+        nextWordMaster =
+            intent.getStringExtra("nextWordMaster")
+                ?: "Winner becomes Word Master"
 
-        playerName = intent.getStringExtra("playerName")
-            ?: "Player 1"
+        playerName =
+            intent.getStringExtra("playerName")
+                ?: "Player 1"
 
-        password = intent.getStringExtra("password") ?: ""
+        password =
+            intent.getStringExtra("password")
+                ?: ""
 
-        isHost = intent.getBooleanExtra("isHost", true)
-
-        FirebaseAuth.getInstance()
-            .signInAnonymously()
-            .addOnCompleteListener { task ->
-
-                if (task.isSuccessful) {
-
-                    Toast.makeText(
-                        this,
-                        "Firebase login works",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                } else {
-
-                    Toast.makeText(
-                        this,
-                        "Firebase login failed",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
+        isHost =
+            intent.getBooleanExtra(
+                "isHost",
+                true
+            )
 
         createScreen()
+
+        startFirebaseListener()
     }
 
     private fun createScreen() {
@@ -88,7 +108,8 @@ class GameWaitingActivity : Activity() {
 
         val layout = LinearLayout(this)
 
-        layout.orientation = LinearLayout.VERTICAL
+        layout.orientation =
+            LinearLayout.VERTICAL
 
         layout.setPadding(
             24,
@@ -99,11 +120,13 @@ class GameWaitingActivity : Activity() {
 
         val title = TextView(this)
 
-        title.text = "Game Waiting Room"
+        title.text =
+            "Game Waiting Room"
 
         title.textSize = 28f
 
-        title.gravity = Gravity.CENTER
+        title.gravity =
+            Gravity.CENTER
 
         title.setTypeface(
             null,
@@ -114,11 +137,13 @@ class GameWaitingActivity : Activity() {
 
         val codeText = TextView(this)
 
-        codeText.text = "Game Code\n$gameCode"
+        codeText.text =
+            "Game Code\n$gameCode"
 
         codeText.textSize = 22f
 
-        codeText.gravity = Gravity.CENTER
+        codeText.gravity =
+            Gravity.CENTER
 
         codeText.setPadding(
             0,
@@ -136,7 +161,8 @@ class GameWaitingActivity : Activity() {
 
         val copyButton = Button(this)
 
-        copyButton.text = "Copy Game Code"
+        copyButton.text =
+            "Copy Game Code"
 
         copyButton.setOnClickListener {
 
@@ -151,7 +177,9 @@ class GameWaitingActivity : Activity() {
                     gameCode
                 )
 
-            clipboard.setPrimaryClip(clip)
+            clipboard.setPrimaryClip(
+                clip
+            )
 
             Toast.makeText(
                 this,
@@ -162,12 +190,14 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(copyButton)
 
-        val joinedTitle = TextView(this)
+        joinedTitle =
+            TextView(this)
 
         joinedTitle.text =
             "Players Joined: 1 / $playerCount"
 
-        joinedTitle.textSize = 21f
+        joinedTitle.textSize =
+            21f
 
         joinedTitle.setTypeface(
             null,
@@ -181,13 +211,18 @@ class GameWaitingActivity : Activity() {
             8
         )
 
-        layout.addView(joinedTitle)
+        layout.addView(
+            joinedTitle
+        )
 
-        val playersText = TextView(this)
+        playersText =
+            TextView(this)
 
-        playersText.text = buildPlayerList()
+        playersText.text =
+            "Loading players..."
 
-        playersText.textSize = 18f
+        playersText.textSize =
+            18f
 
         playersText.setPadding(
             0,
@@ -196,13 +231,18 @@ class GameWaitingActivity : Activity() {
             8
         )
 
-        layout.addView(playersText)
+        layout.addView(
+            playersText
+        )
 
-        val settingsTitle = TextView(this)
+        val settingsTitle =
+            TextView(this)
 
-        settingsTitle.text = "Game Settings"
+        settingsTitle.text =
+            "Game Settings"
 
-        settingsTitle.textSize = 21f
+        settingsTitle.textSize =
+            21f
 
         settingsTitle.setTypeface(
             null,
@@ -216,9 +256,12 @@ class GameWaitingActivity : Activity() {
             8
         )
 
-        layout.addView(settingsTitle)
+        layout.addView(
+            settingsTitle
+        )
 
-        val settingsText = TextView(this)
+        val settingsText =
+            TextView(this)
 
         settingsText.text =
             """
@@ -230,11 +273,15 @@ class GameWaitingActivity : Activity() {
             Next Word Master: $nextWordMaster
             """.trimIndent()
 
-        settingsText.textSize = 17f
+        settingsText.textSize =
+            17f
 
-        layout.addView(settingsText)
+        layout.addView(
+            settingsText
+        )
 
-        val ruleText = TextView(this)
+        val ruleText =
+            TextView(this)
 
         ruleText.text =
             if (wordSelection == "Random Word") {
@@ -243,18 +290,23 @@ class GameWaitingActivity : Activity() {
                 "\nWord Master: Not assigned yet\nThe Word Master does not play that round."
             }
 
-        ruleText.textSize = 17f
+        ruleText.textSize =
+            17f
 
-        ruleText.gravity = Gravity.CENTER
+        ruleText.gravity =
+            Gravity.CENTER
 
         ruleText.setTypeface(
             null,
             Typeface.BOLD
         )
 
-        layout.addView(ruleText)
+        layout.addView(
+            ruleText
+        )
 
-        val statusText = TextView(this)
+        statusText =
+            TextView(this)
 
         statusText.text =
             if (isHost) {
@@ -263,9 +315,11 @@ class GameWaitingActivity : Activity() {
                 "\nWaiting for the host to start the game..."
             }
 
-        statusText.textSize = 18f
+        statusText.textSize =
+            18f
 
-        statusText.gravity = Gravity.CENTER
+        statusText.gravity =
+            Gravity.CENTER
 
         statusText.setPadding(
             0,
@@ -274,15 +328,20 @@ class GameWaitingActivity : Activity() {
             5
         )
 
-        layout.addView(statusText)
+        layout.addView(
+            statusText
+        )
 
         if (isHost) {
 
-            val startButton = Button(this)
+            startButton =
+                Button(this)
 
-            startButton.text = "START GAME"
+            startButton.text =
+                "START GAME"
 
-            startButton.textSize = 20f
+            startButton.textSize =
+                20f
 
             startButton.setTypeface(
                 null,
@@ -296,10 +355,15 @@ class GameWaitingActivity : Activity() {
                 12
             )
 
+            startButton.isEnabled =
+                false
+
             startButton.setOnClickListener {
 
                 AlertDialog.Builder(this)
-                    .setTitle("Start Game?")
+                    .setTitle(
+                        "Start Game?"
+                    )
                     .setMessage(
                         "Start the game with the current players?"
                     )
@@ -310,19 +374,25 @@ class GameWaitingActivity : Activity() {
                     .setPositiveButton(
                         "Start"
                     ) { _, _ ->
+
                         startGame()
                     }
                     .show()
             }
 
-            layout.addView(startButton)
+            layout.addView(
+                startButton
+            )
         }
 
-        val leaveButton = Button(this)
+        val leaveButton =
+            Button(this)
 
-        leaveButton.text = "Leave Game"
+        leaveButton.text =
+            "Leave Game"
 
-        leaveButton.textSize = 18f
+        leaveButton.textSize =
+            18f
 
         leaveButton.setPadding(
             10,
@@ -332,19 +402,169 @@ class GameWaitingActivity : Activity() {
         )
 
         leaveButton.setOnClickListener {
+
+            removeListener()
+
             finish()
         }
 
-        layout.addView(leaveButton)
+        layout.addView(
+            leaveButton
+        )
 
-        scrollView.addView(layout)
+        scrollView.addView(
+            layout
+        )
 
-        setContentView(scrollView)
+        setContentView(
+            scrollView
+        )
+    }
+
+    private fun startFirebaseListener() {
+
+        val database =
+            FirebaseDatabase.getInstance()
+
+        val gameReference =
+            database
+                .getReference("games")
+                .child(gameCode)
+
+        playersListener =
+            object : ValueEventListener {
+
+                override fun onDataChange(
+                    snapshot: DataSnapshot
+                ) {
+
+                    val playersSnapshot =
+                        snapshot.child("players")
+
+                    val playerSnapshots =
+                        playersSnapshot.children.toList()
+
+                    val joinedPlayers =
+                        playerSnapshots.size
+
+                    joinedTitle.text =
+                        "Players Joined: $joinedPlayers / $playerCount"
+
+                    val builder =
+                        StringBuilder()
+
+                    if (playerSnapshots.isEmpty()) {
+
+                        builder.append(
+                            "No players have joined yet."
+                        )
+
+                    } else {
+
+                        playerSnapshots.forEachIndexed {
+                                index,
+                                playerSnapshot ->
+
+                            val name =
+                                playerSnapshot
+                                    .child("name")
+                                    .getValue(
+                                        String::class.java
+                                    )
+                                    ?: "Player"
+
+                            val host =
+                                playerSnapshot
+                                    .child("isHost")
+                                    .getValue(
+                                        Boolean::class.java
+                                    )
+                                    ?: false
+
+                            builder.append(
+                                "${index + 1}. $name"
+                            )
+
+                            if (host) {
+                                builder.append(
+                                    " — HOST"
+                                )
+                            }
+
+                            builder.append(
+                                "\n"
+                            )
+                        }
+                    }
+
+                    playersText.text =
+                        builder.toString()
+                            .trimEnd()
+
+                    if (isHost) {
+
+                        if (joinedPlayers >= 2) {
+
+                            startButton.isEnabled =
+                                true
+
+                            statusText.text =
+                                "\nYou are the HOST.\nReady to start the game."
+
+                        } else {
+
+                            startButton.isEnabled =
+                                false
+
+                            statusText.text =
+                                "\nYou are the HOST.\nWaiting for at least 1 more player..."
+                        }
+                    } else {
+
+                        statusText.text =
+                            "\nWaiting for the host to start the game..."
+                    }
+                }
+
+                override fun onCancelled(
+                    error: DatabaseError
+                ) {
+
+                    Toast.makeText(
+                        this@GameWaitingActivity,
+                        "Could not load players from Firebase.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+        gameReference.addValueEventListener(
+            playersListener!!
+        )
+    }
+
+    private fun removeListener() {
+
+        if (playersListener == null) {
+            return
+        }
+
+        FirebaseDatabase
+            .getInstance()
+            .getReference("games")
+            .child(gameCode)
+            .removeEventListener(
+                playersListener!!
+            )
+
+        playersListener = null
     }
 
     private fun formatSecondsPerTurn(): String {
 
-        return if (secondsPerTurn <= 0) {
+        return if (
+            secondsPerTurn <= 0
+        ) {
             "Unlimited"
         } else {
             "$secondsPerTurn seconds"
@@ -353,22 +573,13 @@ class GameWaitingActivity : Activity() {
 
     private fun formatTotalTurns(): String {
 
-        return if (totalTurns <= 0) {
+        return if (
+            totalTurns <= 0
+        ) {
             "Unlimited"
         } else {
             "$totalTurns Turns"
         }
-    }
-
-    private fun buildPlayerList(): String {
-
-        val builder = StringBuilder()
-
-        builder.append(
-            "1. $playerName — HOST"
-        )
-
-        return builder.toString()
     }
 
     private fun startGame() {
@@ -439,6 +650,17 @@ class GameWaitingActivity : Activity() {
             isHost
         )
 
-        startActivity(gameIntent)
+        removeListener()
+
+        startActivity(
+            gameIntent
+        )
+    }
+
+    override fun onDestroy() {
+
+        removeListener()
+
+        super.onDestroy()
     }
 }
