@@ -1,6 +1,7 @@
 package com.wordguessing.game
 
 import android.app.AlertDialog
+import android.app.Activity
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -11,795 +12,481 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
+import com.google.firebase.database.ValueEventListener
 import kotlin.random.Random
 
-class OnlineGameRoundActivity : android.app.Activity() {
+class OnlineGameRoundActivity : Activity() {
 
+    private lateinit var timerText: TextView
+    private lateinit var turnText: TextView
+    private lateinit var playersText: TextView
+    private lateinit var wordText: TextView
+    private lateinit var statusText: TextView
+    private lateinit var wholeWordButton: Button
+    private lateinit var categoryText: TextView
+    private lateinit var letterBoard: LinearLayout
 
-private lateinit var timerText: TextView
-private lateinit var turnText: TextView
-private lateinit var playersText: TextView
-private lateinit var wordText: TextView
-private lateinit var statusText: TextView
-private lateinit var wholeWordButton: Button
+    private var timer: CountDownTimer? = null
+    private var wholeWordTimer: CountDownTimer? = null
 
-private var timer: CountDownTimer? = null
-private var wholeWordTimer: CountDownTimer? = null
+    private val database =
+        FirebaseDatabase.getInstance()
 
-private var secretWord = ""
+    private val auth =
+        FirebaseAuth.getInstance()
 
-private val letters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private var gameListener: ValueEventListener? = null
 
-private var currentPlayer = 1
-private var playerCount = 2
+    private var gameCode = "------"
 
-private var secondsPerTurn = 20
+    private var myUid = ""
 
-// 0 = Unlimited
-private var totalTurns = 0
+    private var maxPlayers = 2
 
-// Number of completed normal player turns
-private var completedTurns = 0
+    private var wordSelection = "Random Word"
 
-private var finalChallengeActive = false
+    private var selectedCategory = "Random"
 
-private val finalChallengePlayers =
-    mutableListOf<Int>()
+    private var secondsPerTurn = 20
 
-private var finalChallengeIndex = 0
+    private var totalTurns = 0
 
-private var roundFinished = false
+    private var nextWordMaster =
+        "Winner becomes Word Master"
 
-private var remainingTurnSeconds = 20
+    private var manualWord: String? = null
 
-private var wholeWordAttemptUsed = false
+    private var status = "waiting"
 
-private val missedTurns =
-    mutableMapOf<Int, Int>()
+    private var roundNumber = 0
 
-private val eliminatedPlayers =
-    mutableSetOf<Int>()
+    private var roundFinished = false
 
-private val scores =
-    mutableMapOf<Int, Int>()
+    private var phase = "normal"
 
-private val guessedLetters =
-    mutableSetOf<Char>()
+    private var secretWord = ""
 
-private val revealedLetters =
-    mutableSetOf<Char>()
+    private var actualCategory = "Random"
 
-private var previousWord = ""
+    private var currentPlayerUid = ""
 
-private var actualCategory = "Random"
+    private var wordMasterUid = ""
 
-// Keep the original game settings so the next round
-// continues the same game.
-private var gameCode = "------"
-private var maxPlayers = 2
-private var wordSelection = "Random Word"
-private var selectedCategory = "Random"
-private var nextWordMaster = "Winner becomes Word Master"
-private var manualWord: String? = null
+    private var turnEndsAt = 0L
 
-override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    private var completedTurns = 0
 
-    gameCode =
-        intent.getStringExtra("gameCode")
-            ?: "------"
+    private var roundWinnerUid = ""
 
-    playerCount =
-        intent.getIntExtra(
-            "playerCount",
-            2
-        )
+    private var roundWinnerName = ""
 
-    maxPlayers =
-        intent.getIntExtra(
-            "maxPlayers",
-            playerCount
-        )
+    private var finalChallengeIndex = 0
 
-    wordSelection =
-        intent.getStringExtra(
-            "wordSelection"
-        )
-            ?: "Random Word"
+    private val finalChallengePlayers =
+        mutableListOf<String>()
 
-    selectedCategory =
-        intent.getStringExtra(
-            "category"
-        )
-            ?: "Random"
+    private val playerNames =
+        mutableMapOf<String, String>()
 
-    val requestedSeconds =
-        intent.getIntExtra(
-            "secondsPerTurn",
+    private val playerOrder =
+        mutableListOf<String>()
+
+    private val scores =
+        mutableMapOf<String, Int>()
+
+    private val missedTurns =
+        mutableMapOf<String, Int>()
+
+    private val eliminatedPlayers =
+        mutableSetOf<String>()
+
+    private val guessedLetters =
+        mutableSetOf<Char>()
+
+    private val letters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    private var wholeWordAttemptUsed = false
+
+    private var lastShownRoundFinished = 0
+
+    private var lastShownFinalIndex = -1
+
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
+        super.onCreate(savedInstanceState)
+
+        gameCode =
+            intent.getStringExtra(
+                "gameCode"
+            ) ?: "------"
+
+        maxPlayers =
+            intent.getIntExtra(
+                "maxPlayers",
+                intent.getIntExtra(
+                    "playerCount",
+                    2
+                )
+            )
+
+        wordSelection =
+            intent.getStringExtra(
+                "wordSelection"
+            ) ?: "Random Word"
+
+        selectedCategory =
+            intent.getStringExtra(
+                "category"
+            ) ?: "Random"
+
+        secondsPerTurn =
+            intent.getIntExtra(
+                "secondsPerTurn",
+                20
+            )
+
+        totalTurns =
+            intent.getIntExtra(
+                "totalTurns",
+                0
+            )
+
+        nextWordMaster =
+            intent.getStringExtra(
+                "nextWordMaster"
+            ) ?: "Winner becomes Word Master"
+
+        manualWord =
+            intent.getStringExtra(
+                "manualWord"
+            )
+                ?.trim()
+                ?.uppercase()
+
+        myUid =
+            auth.currentUser?.uid ?: ""
+
+        createInitialScreen()
+
+        if (myUid.isEmpty()) {
+
+            statusText.text =
+                "Firebase login is not available."
+
+            statusText.setTextColor(
+                Color.RED
+            )
+
+            return
+        }
+
+        startFirebaseListener()
+    }
+
+    private fun gameReference() =
+        database
+            .reference
+            .child("games")
+            .child(gameCode)
+
+    private fun createInitialScreen() {
+
+        val scrollView =
+            ScrollView(this)
+
+        val layout =
+            LinearLayout(this)
+
+        layout.orientation =
+            LinearLayout.VERTICAL
+
+        layout.setPadding(
+            16,
+            10,
+            16,
             20
         )
 
-    secondsPerTurn =
-        when {
-            requestedSeconds <= 0 -> 0
-            requestedSeconds == 20 -> 20
-            requestedSeconds == 30 -> 30
-            requestedSeconds == 45 -> 45
-            requestedSeconds == 60 -> 60
-            else -> 20
-        }
+        scrollView.addView(layout)
 
-    totalTurns =
-        intent.getIntExtra(
-            "totalTurns",
-            0
+        val title =
+            TextView(this)
+
+        title.text =
+            "Online Game"
+
+        title.textSize =
+            25f
+
+        title.gravity =
+            Gravity.CENTER
+
+        title.setTypeface(
+            null,
+            Typeface.BOLD
         )
 
-    if (totalTurns < 0) {
-        totalTurns = 0
-    }
+        layout.addView(title)
 
-    nextWordMaster =
-        intent.getStringExtra(
-            "nextWordMaster"
-        )
-            ?: "Winner becomes Word Master"
+        val codeText =
+            TextView(this)
 
-    manualWord =
-        intent.getStringExtra(
-            "manualWord"
-        )
-            ?.trim()
-            ?.uppercase()
+        codeText.text =
+            "Game Code: $gameCode"
 
-    chooseWord(
-        wordSelection,
-        selectedCategory,
-        manualWord
-    )
+        codeText.textSize =
+            17f
 
-    for (player in 1..playerCount) {
-        scores[player] = 0
-        missedTurns[player] = 0
-    }
+        codeText.gravity =
+            Gravity.CENTER
 
-    if (
-        wordSelection !=
-        "Random Word"
-    ) {
-        currentPlayer =
-            if (playerCount >= 2) {
-                2
-            } else {
-                1
-            }
-    }
-
-    remainingTurnSeconds =
-        if (isUnlimited()) {
-            0
-        } else {
-            secondsPerTurn
-        }
-
-    createGameScreen()
-
-    startTurnTimer(
-        secondsPerTurn
-    )
-}
-
-private fun createGameScreen() {
-
-    val scrollView =
-        ScrollView(this)
-
-    val layout =
-        LinearLayout(this)
-
-    layout.orientation =
-        LinearLayout.VERTICAL
-
-    layout.setPadding(
-        16,
-        10,
-        16,
-        20
-    )
-
-    scrollView.addView(layout)
-
-    val title =
-        TextView(this)
-
-    title.text =
-        "Online Game"
-
-    title.textSize =
-        25f
-
-    title.gravity =
-        Gravity.CENTER
-
-    title.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    title.setPadding(
-        0,
-        0,
-        0,
-        5
-    )
-
-    layout.addView(title)
-
-    val codeText =
-        TextView(this)
-
-    codeText.text =
-        "Game Code: $gameCode"
-
-    codeText.textSize =
-        17f
-
-    codeText.gravity =
-        Gravity.CENTER
-
-    codeText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    codeText.setTextColor(
-        Color.rgb(
-            0,
-            70,
-            140
-        )
-    )
-
-    codeText.setPadding(
-        0,
-        2,
-        0,
-        5
-    )
-
-    layout.addView(codeText)
-
-    val categoryBox =
-        TextView(this)
-
-    categoryBox.text =
-        "CATEGORY: ${
-            getCategoryDisplay()
-        }"
-
-    categoryBox.textSize =
-        20f
-
-    categoryBox.gravity =
-        Gravity.CENTER
-
-    categoryBox.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    categoryBox.setTextColor(
-        Color.rgb(
-            0,
-            70,
-            140
-        )
-    )
-
-    categoryBox.setPadding(
-        8,
-        8,
-        8,
-        8
-    )
-
-    layout.addView(
-        categoryBox
-    )
-
-    val info =
-        TextView(this)
-
-    info.text =
-        """
-        Players: $playerCount of $maxPlayers
-        Turn Time: ${getTurnTimeDisplay()}
-        Total Turns: ${getTotalTurnsDisplay()}
-        Next Word Master: $nextWordMaster
-        """.trimIndent()
-
-    info.textSize =
-        14f
-
-    info.gravity =
-        Gravity.CENTER
-
-    info.setPadding(
-        0,
-        5,
-        0,
-        5
-    )
-
-    layout.addView(info)
-
-    val playersTitle =
-        TextView(this)
-
-    playersTitle.text =
-        "PLAYERS"
-
-    playersTitle.textSize =
-        19f
-
-    playersTitle.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    playersTitle.gravity =
-        Gravity.CENTER
-
-    playersTitle.setPadding(
-        0,
-        5,
-        0,
-        2
-    )
-
-    layout.addView(playersTitle)
-
-    playersText =
-        TextView(this)
-
-    playersText.textSize =
-        16f
-
-    playersText.setPadding(
-        0,
-        2,
-        0,
-        5
-    )
-
-    updatePlayerList()
-
-    layout.addView(playersText)
-
-    val wordMasterText =
-        TextView(this)
-
-    if (
-        wordSelection ==
-        "Random Word"
-    ) {
-
-        wordMasterText.text =
-            "Word Master: None\nEveryone plays."
-
-    } else {
-
-        wordMasterText.text =
-            "Word Master: Player 1\nWord Master does not play."
-    }
-
-    wordMasterText.textSize =
-        15f
-
-    wordMasterText.gravity =
-        Gravity.CENTER
-
-    wordMasterText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    wordMasterText.setTextColor(
-        Color.DKGRAY
-    )
-
-    wordMasterText.setPadding(
-        0,
-        3,
-        0,
-        5
-    )
-
-    layout.addView(wordMasterText)
-
-    wordText =
-        TextView(this)
-
-    wordText.text =
-        buildWordDisplay()
-
-    wordText.textSize =
-        30f
-
-    wordText.gravity =
-        Gravity.CENTER
-
-    wordText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    wordText.setPadding(
-        0,
-        8,
-        0,
-        8
-    )
-
-    layout.addView(wordText)
-
-    turnText =
-        TextView(this)
-
-    turnText.text =
-        "PLAYER $currentPlayer'S TURN"
-
-    turnText.textSize =
-        21f
-
-    turnText.gravity =
-        Gravity.CENTER
-
-    turnText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    turnText.setTextColor(
-        Color.rgb(
-            0,
-            100,
-            0
-        )
-    )
-
-    turnText.setPadding(
-        0,
-        4,
-        0,
-        2
-    )
-
-    layout.addView(turnText)
-
-    timerText =
-        TextView(this)
-
-    timerText.text =
-        getTimerDisplay()
-
-    timerText.textSize =
-        23f
-
-    timerText.gravity =
-        Gravity.CENTER
-
-    timerText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    timerText.setPadding(
-        0,
-        2,
-        0,
-        3
-    )
-
-    layout.addView(timerText)
-
-    wholeWordButton =
-        Button(this)
-
-    wholeWordButton.text =
-        "GUESS WHOLE WORD"
-
-    wholeWordButton.textSize =
-        17f
-
-    wholeWordButton.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    wholeWordButton.setTextColor(
-        Color.WHITE
-    )
-
-    wholeWordButton.setBackgroundColor(
-        Color.rgb(
-            0,
-            70,
-            140
-        )
-    )
-
-    wholeWordButton.setOnClickListener {
-
-        if (
-            roundFinished ||
-            finalChallengeActive
-        ) {
-            return@setOnClickListener
-        }
-
-        if (
-            wholeWordAttemptUsed
-        ) {
-
-            showStatus(
-                "You already used your whole-word guess this turn.",
-                Color.RED
-            )
-
-            return@setOnClickListener
-        }
-
-        showWholeWordDialog()
-    }
-
-    layout.addView(
-        wholeWordButton,
-        LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-    )
-
-    statusText =
-        TextView(this)
-
-    statusText.text =
-        "Choose a letter"
-
-    statusText.textSize =
-        15f
-
-    statusText.gravity =
-        Gravity.CENTER
-
-    statusText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    statusText.setTextColor(
-        Color.DKGRAY
-    )
-
-    statusText.setPadding(
-        4,
-        3,
-        4,
-        5
-    )
-
-    layout.addView(statusText)
-
-    val letterBoard =
-        LinearLayout(this)
-
-    letterBoard.orientation =
-        LinearLayout.VERTICAL
-
-    layout.addView(
-        letterBoard
-    )
-
-    var currentRow =
-        LinearLayout(this)
-
-    currentRow.orientation =
-        LinearLayout.HORIZONTAL
-
-    currentRow.gravity =
-        Gravity.CENTER
-
-    letterBoard.addView(
-        currentRow
-    )
-
-    for (i in letters.indices) {
-
-        val letter =
-            letters[i]
-
-        val button =
-            Button(this)
-
-        button.text =
-            letter.toString()
-
-        button.textSize =
-            13f
-
-        button.setTextColor(
-            Color.WHITE
+        codeText.setTypeface(
+            null,
+            Typeface.BOLD
         )
 
-        button.setBackgroundColor(
+        codeText.setTextColor(
             Color.rgb(
                 0,
-                100,
-                0
+                70,
+                140
             )
         )
 
-        button.setOnClickListener {
+        layout.addView(codeText)
 
-            if (
-                roundFinished ||
-                finalChallengeActive
-            ) {
-                return@setOnClickListener
-            }
+        categoryText =
+            TextView(this)
 
-            if (
-                guessedLetters.contains(
-                    letter
-                )
-            ) {
+        categoryText.text =
+            "CATEGORY: Waiting..."
 
-                showStatus(
-                    "Already guessed.",
-                    Color.RED
-                )
+        categoryText.textSize =
+            20f
 
-                return@setOnClickListener
-            }
+        categoryText.gravity =
+            Gravity.CENTER
 
-            guessedLetters.add(
-                letter
-            )
+        categoryText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
 
-            button.setBackgroundColor(
-                Color.RED
-            )
-
-            button.isEnabled =
-                false
-
-            if (
-                secretWord.contains(
-                    letter
-                )
-            ) {
-
-                revealedLetters.add(
-                    letter
-                )
-
-                updateWordDisplay()
-
-                val occurrences =
-                    secretWord.count {
-                        it == letter
-                    }
-
-                scores[currentPlayer] =
-                    (scores[currentPlayer] ?: 0) +
-                        occurrences
-
-                updatePlayerList()
-
-                showStatus(
-                    "Correct! You earned $occurrences point(s).",
-                    Color.rgb(
-                        0,
-                        100,
-                        0
-                    )
-                )
-
-                if (
-                    isWordComplete()
-                ) {
-
-                    finishRound(
-                        "Player $currentPlayer completed the word and wins!"
-                    )
-
-                } else {
-
-                    wholeWordAttemptUsed =
-                        false
-
-                    setWholeWordButtonEnabled(
-                        true
-                    )
-
-                    startTurnTimer(
-                        secondsPerTurn
-                    )
-                }
-
-            } else {
-
-                showStatus(
-                    "Wrong letter.",
-                    Color.RED
-                )
-
-                moveToNextPlayer()
-            }
-        }
-
-        currentRow.addView(
-            button,
-            LinearLayout.LayoutParams(
+        categoryText.setTextColor(
+            Color.rgb(
                 0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
+                70,
+                140
             )
         )
 
-        if (
-            (i + 1) % 6 == 0
-        ) {
+        categoryText.setPadding(
+            8,
+            8,
+            8,
+            8
+        )
 
-            currentRow =
-                LinearLayout(this)
+        layout.addView(
+            categoryText
+        )
 
-            currentRow.orientation =
-                LinearLayout.HORIZONTAL
+        val info =
+            TextView(this)
 
-            currentRow.gravity =
-                Gravity.CENTER
+        info.text =
+            """
+            Turn Time: ${
+                if (secondsPerTurn <= 0)
+                    "Unlimited"
+                else
+                    "$secondsPerTurn seconds"
+            }
+            
+            Total Turns: ${
+                if (totalTurns <= 0)
+                    "Unlimited"
+                else
+                    "$totalTurns turns"
+            }
+            
+            Next Word Master: $nextWordMaster
+            """.trimIndent()
 
-            letterBoard.addView(
-                currentRow
-            )
-        }
-    }
+        info.textSize =
+            14f
 
-    val leaveButton =
-        Button(this)
+        info.gravity =
+            Gravity.CENTER
 
-    leaveButton.text =
-        "Leave Game"
+        layout.addView(info)
 
-    leaveButton.textSize =
-        16f
+        val playersTitle =
+            TextView(this)
 
-    leaveButton.setOnClickListener {
+        playersTitle.text =
+            "PLAYERS"
 
-        timer?.cancel()
-        wholeWordTimer?.cancel()
+        playersTitle.textSize =
+            19f
 
-        finish()
-    }
+        playersTitle.gravity =
+            Gravity.CENTER
 
-    layout.addView(
-        leaveButton
-    )
+        playersTitle.setTypeface(
+            null,
+            Typeface.BOLD
+        )
 
-    setContentView(scrollView)
-}
+        layout.addView(
+            playersTitle
+        )
 
-private fun setWholeWordButtonEnabled(
-    enabled: Boolean
-) {
+        playersText =
+            TextView(this)
 
-    wholeWordButton.isEnabled =
-        enabled
+        playersText.textSize =
+            16f
 
-    if (enabled) {
+        playersText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        playersText.setPadding(
+            0,
+            5,
+            0,
+            8
+        )
+
+        layout.addView(
+            playersText
+        )
+
+        val wordMasterText =
+            TextView(this)
+
+        wordMasterText.text =
+            "Word Master information will appear here."
+
+        wordMasterText.textSize =
+            15f
+
+        wordMasterText.gravity =
+            Gravity.CENTER
+
+        wordMasterText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wordMasterText.setTextColor(
+            Color.DKGRAY
+        )
+
+        layout.addView(
+            wordMasterText
+        )
+
+        wordText =
+            TextView(this)
+
+        wordText.text =
+            "Waiting for game..."
+
+        wordText.textSize =
+            30f
+
+        wordText.gravity =
+            Gravity.CENTER
+
+        wordText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wordText.setPadding(
+            0,
+            10,
+            0,
+            10
+        )
+
+        layout.addView(
+            wordText
+        )
+
+        turnText =
+            TextView(this)
+
+        turnText.text =
+            "Waiting..."
+
+        turnText.textSize =
+            21f
+
+        turnText.gravity =
+            Gravity.CENTER
+
+        turnText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        turnText.setPadding(
+            0,
+            4,
+            0,
+            2
+        )
+
+        layout.addView(
+            turnText
+        )
+
+        timerText =
+            TextView(this)
+
+        timerText.text =
+            "Time: --"
+
+        timerText.textSize =
+            23f
+
+        timerText.gravity =
+            Gravity.CENTER
+
+        timerText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        layout.addView(
+            timerText
+        )
+
+        wholeWordButton =
+            Button(this)
+
+        wholeWordButton.text =
+            "GUESS WHOLE WORD"
+
+        wholeWordButton.textSize =
+            17f
+
+        wholeWordButton.setTypeface(
+            null,
+            Typeface.BOLD
+        )
 
         wholeWordButton.setTextColor(
             Color.WHITE
@@ -813,931 +500,1837 @@ private fun setWholeWordButtonEnabled(
             )
         )
 
-    } else {
+        wholeWordButton.isEnabled =
+            false
 
-        wholeWordButton.setTextColor(
-            Color.DKGRAY
-        )
+        wholeWordButton.setOnClickListener {
 
-        wholeWordButton.setBackgroundColor(
-            Color.LTGRAY
-        )
-    }
-}
+            if (
+                roundFinished ||
+                phase != "normal"
+            ) {
+                return@setOnClickListener
+            }
 
-private fun showStatus(
-    message: String,
-    color: Int
-) {
+            if (
+                currentPlayerUid != myUid
+            ) {
 
-    statusText.text =
-        message
+                showStatus(
+                    "It is not your turn.",
+                    Color.RED
+                )
 
-    statusText.setTextColor(
-        color
-    )
+                return@setOnClickListener
+            }
 
-    statusText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-}
+            if (
+                wholeWordAttemptUsed
+            ) {
 
-private fun isUnlimited(): Boolean {
-    return secondsPerTurn <= 0
-}
+                showStatus(
+                    "You already used your whole-word guess this turn.",
+                    Color.RED
+                )
 
-private fun getTimerDisplay(): String {
+                return@setOnClickListener
+            }
 
-    return if (
-        isUnlimited()
-    ) {
-        "Time: Unlimited"
-    } else {
-        "Time: $remainingTurnSeconds"
-    }
-}
-
-private fun getTurnTimeDisplay(): String {
-
-    return if (
-        isUnlimited()
-    ) {
-        "Unlimited"
-    } else {
-        "$secondsPerTurn seconds"
-    }
-}
-
-private fun getTotalTurnsDisplay(): String {
-
-    return if (
-        totalTurns <= 0
-    ) {
-        "Unlimited"
-    } else {
-        "$totalTurns turns"
-    }
-}
-
-private fun chooseWord(
-    wordSelection: String,
-    selectedCategory: String,
-    manualWord: String?
-) {
-
-    if (
-        wordSelection !=
-        "Random Word"
-    ) {
-
-        if (
-            !manualWord.isNullOrEmpty()
-        ) {
-
-            secretWord =
-                manualWord
-
-        } else {
-
-            secretWord =
-                "APPLE"
+            showWholeWordDialog()
         }
 
+        layout.addView(
+            wholeWordButton
+        )
+
+        statusText =
+            TextView(this)
+
+        statusText.text =
+            "Connecting to Firebase..."
+
+        statusText.textSize =
+            15f
+
+        statusText.gravity =
+            Gravity.CENTER
+
+        statusText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        statusText.setPadding(
+            4,
+            5,
+            4,
+            5
+        )
+
+        layout.addView(
+            statusText
+        )
+
+        letterBoard =
+            LinearLayout(this)
+
+        letterBoard.orientation =
+            LinearLayout.VERTICAL
+
+        layout.addView(
+            letterBoard
+        )
+
+        createLetterButtons()
+
+        val leaveButton =
+            Button(this)
+
+        leaveButton.text =
+            "Leave Game"
+
+        leaveButton.textSize =
+            16f
+
+        leaveButton.setOnClickListener {
+
+            timer?.cancel()
+            wholeWordTimer?.cancel()
+
+            finish()
+        }
+
+        layout.addView(
+            leaveButton
+        )
+
+        setContentView(
+            scrollView
+        )
+    }
+
+    private fun createLetterButtons() {
+
+        letterBoard.removeAllViews()
+
+        var currentRow =
+            LinearLayout(this)
+
+        currentRow.orientation =
+            LinearLayout.HORIZONTAL
+
+        currentRow.gravity =
+            Gravity.CENTER
+
+        letterBoard.addView(
+            currentRow
+        )
+
+        for (i in letters.indices) {
+
+            val letter =
+                letters[i]
+
+            val button =
+                Button(this)
+
+            button.text =
+                letter.toString()
+
+            button.textSize =
+                13f
+
+            button.setTextColor(
+                Color.WHITE
+            )
+
+            button.setBackgroundColor(
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
+            )
+
+            button.tag =
+                letter
+
+            button.setOnClickListener {
+
+                if (
+                    roundFinished
+                ) {
+                    return@setOnClickListener
+                }
+
+                if (
+                    phase != "normal"
+                ) {
+                    return@setOnClickListener
+                }
+
+                if (
+                    currentPlayerUid != myUid
+                ) {
+
+                    showStatus(
+                        "It is not your turn.",
+                        Color.RED
+                    )
+
+                    return@setOnClickListener
+                }
+
+                if (
+                    guessedLetters.contains(
+                        letter
+                    )
+                ) {
+
+                    showStatus(
+                        "Already guessed.",
+                        Color.RED
+                    )
+
+                    return@setOnClickListener
+                }
+
+                processLetterGuess(
+                    letter
+                )
+            }
+
+            currentRow.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+
+            if (
+                (i + 1) % 6 == 0
+            ) {
+
+                currentRow =
+                    LinearLayout(this)
+
+                currentRow.orientation =
+                    LinearLayout.HORIZONTAL
+
+                currentRow.gravity =
+                    Gravity.CENTER
+
+                letterBoard.addView(
+                    currentRow
+                )
+            }
+        }
+    }
+
+    private fun startFirebaseListener() {
+
+        val reference =
+            gameReference()
+
+        gameListener =
+            object :
+                ValueEventListener {
+
+                override fun onDataChange(
+                    snapshot: DataSnapshot
+                ) {
+
+                    if (
+                        !snapshot.exists()
+                    ) {
+
+                        showStatus(
+                            "Game no longer exists.",
+                            Color.RED
+                        )
+
+                        return
+                    }
+
+                    readGameState(
+                        snapshot
+                    )
+                }
+
+                override fun onCancelled(
+                    error: DatabaseError
+                ) {
+
+                    showStatus(
+                        "Firebase error: ${error.message}",
+                        Color.RED
+                    )
+                }
+            }
+
+        reference.addValueEventListener(
+            gameListener!!
+        )
+    }
+
+    private fun readGameState(
+        snapshot: DataSnapshot
+    ) {
+
+        status =
+            snapshot.child(
+                "status"
+            ).getValue(
+                String::class.java
+            ) ?: "waiting"
+
+        wordSelection =
+            snapshot.child(
+                "wordSelection"
+            ).getValue(
+                String::class.java
+            ) ?: wordSelection
+
+        selectedCategory =
+            snapshot.child(
+                "category"
+            ).getValue(
+                String::class.java
+            ) ?: selectedCategory
+
+        secondsPerTurn =
+            snapshot.child(
+                "secondsPerTurn"
+            ).getValue(
+                Int::class.java
+            ) ?: secondsPerTurn
+
+        totalTurns =
+            snapshot.child(
+                "totalTurns"
+            ).getValue(
+                Int::class.java
+            ) ?: totalTurns
+
+        nextWordMaster =
+            snapshot.child(
+                "nextWordMaster"
+            ).getValue(
+                String::class.java
+            ) ?: nextWordMaster
+
+        secretWord =
+            snapshot.child(
+                "secretWord"
+            ).getValue(
+                String::class.java
+            ) ?: ""
+
         actualCategory =
+            snapshot.child(
+                "actualCategory"
+            ).getValue(
+                String::class.java
+            ) ?: selectedCategory
+
+        currentPlayerUid =
+            snapshot.child(
+                "currentPlayerUid"
+            ).getValue(
+                String::class.java
+            ) ?: ""
+
+        wordMasterUid =
+            snapshot.child(
+                "wordMasterUid"
+            ).getValue(
+                String::class.java
+            ) ?: ""
+
+        turnEndsAt =
+            snapshot.child(
+                "turnEndsAt"
+            ).getValue(
+                Long::class.java
+            ) ?: 0L
+
+        completedTurns =
+            snapshot.child(
+                "completedTurns"
+            ).getValue(
+                Int::class.java
+            ) ?: 0
+
+        roundNumber =
+            snapshot.child(
+                "roundNumber"
+            ).getValue(
+                Int::class.java
+            ) ?: 0
+
+        roundWinnerUid =
+            snapshot.child(
+                "roundWinnerUid"
+            ).getValue(
+                String::class.java
+            ) ?: ""
+
+        roundWinnerName =
+            snapshot.child(
+                "roundWinnerName"
+            ).getValue(
+                String::class.java
+            ) ?: ""
+
+        phase =
+            snapshot.child(
+                "phase"
+            ).getValue(
+                String::class.java
+            ) ?: "normal"
+
+        finalChallengeIndex =
+            snapshot.child(
+                "finalChallengeIndex"
+            ).getValue(
+                Int::class.java
+            ) ?: 0
+
+        readPlayers(
+            snapshot
+        )
+
+        readGuessedLetters(
+            snapshot
+        )
+
+        readScores(
+            snapshot
+        )
+
+        readMissedTurns(
+            snapshot
+        )
+
+        readEliminatedPlayers(
+            snapshot
+        )
+
+        updateAllUI()
+
+        if (
+            status == "waiting" &&
+            isHost(snapshot)
+        ) {
+
+            initializeFirstRound(
+                snapshot
+            )
+
+            return
+        }
+
+        if (
+            status == "roundFinished"
+        ) {
+
+            stopTimers()
+
+            setWholeWordButtonEnabled(
+                false
+            )
+
+            showRoundFinishedDialogIfNeeded()
+
+            return
+        }
+
+        if (
+            status == "playing"
+        ) {
+
+            if (
+                phase == "final"
+            ) {
+
+                handleFinalChallenge()
+
+            } else {
+
+                startSynchronizedTimer()
+
+                maybeStartNormalTurnUI()
+            }
+        }
+    }
+
+    private fun readPlayers(
+        snapshot: DataSnapshot
+    ) {
+
+        playerNames.clear()
+        playerOrder.clear()
+
+        val playersSnapshot =
+            snapshot.child(
+                "players"
+            )
+
+        val temp =
+            mutableListOf<
+                Triple<
+                    String,
+                    String,
+                    Long
+                >
+            >()
+
+        for (
+            child in playersSnapshot.children
+        ) {
+
+            val uid =
+                child.key ?: continue
+
+            val name =
+                child.child(
+                    "name"
+                ).getValue(
+                    String::class.java
+                ) ?: "Player"
+
+            val joinedAt =
+                child.child(
+                    "joinedAt"
+                ).getValue(
+                    Long::class.java
+                ) ?: 0L
+
+            playerNames[uid] =
+                name
+
+            temp.add(
+                Triple(
+                    uid,
+                    name,
+                    joinedAt
+                )
+            )
+        }
+
+        temp.sortBy {
+            it.third
+        }
+
+        for (item in temp) {
+
+            playerOrder.add(
+                item.first
+            )
+        }
+
+        maxPlayers =
+            snapshot.child(
+                "maxPlayers"
+            ).getValue(
+                Int::class.java
+            ) ?: maxPlayers
+    }
+
+    private fun readGuessedLetters(
+        snapshot: DataSnapshot
+    ) {
+
+        guessedLetters.clear()
+
+        val guessed =
+            snapshot.child(
+                "guessedLetters"
+            )
+
+        for (
+            child in guessed.children
+        ) {
+
+            val value =
+                child.getValue(
+                    Boolean::class.java
+                ) ?: false
+
+            if (
+                value
+            ) {
+
+                val letter =
+                    child.key
+                        ?.firstOrNull()
+
+                if (
+                    letter != null
+                ) {
+
+                    guessedLetters.add(
+                        letter
+                    )
+                }
+            }
+        }
+    }
+
+    private fun readScores(
+        snapshot: DataSnapshot
+    ) {
+
+        scores.clear()
+
+        val scoreSnapshot =
+            snapshot.child(
+                "scores"
+            )
+
+        for (
+            child in scoreSnapshot.children
+        ) {
+
+            val uid =
+                child.key ?: continue
+
+            scores[uid] =
+                child.getValue(
+                    Int::class.java
+                ) ?: 0
+        }
+    }
+
+    private fun readMissedTurns(
+        snapshot: DataSnapshot
+    ) {
+
+        missedTurns.clear()
+
+        val missSnapshot =
+            snapshot.child(
+                "missedTurns"
+            )
+
+        for (
+            child in missSnapshot.children
+        ) {
+
+            val uid =
+                child.key ?: continue
+
+            missedTurns[uid] =
+                child.getValue(
+                    Int::class.java
+                ) ?: 0
+        }
+    }
+
+    private fun readEliminatedPlayers(
+        snapshot: DataSnapshot
+    ) {
+
+        eliminatedPlayers.clear()
+
+        val eliminated =
+            snapshot.child(
+                "eliminatedPlayers"
+            )
+
+        for (
+            child in eliminated.children
+        ) {
+
+            val value =
+                child.getValue(
+                    Boolean::class.java
+                ) ?: false
+
+            if (
+                value
+            ) {
+
+                child.key?.let {
+                    eliminatedPlayers.add(
+                        it
+                    )
+                }
+            }
+        }
+    }
+
+    private fun isHost(
+        snapshot: DataSnapshot
+    ): Boolean {
+
+        val hostUid =
+            snapshot.child(
+                "hostUid"
+            ).getValue(
+                String::class.java
+            )
+
+        return hostUid == myUid
+    }
+
+    private fun initializeFirstRound(
+        snapshot: DataSnapshot
+    ) {
+
+        val currentStatus =
+            snapshot.child(
+                "status"
+            ).getValue(
+                String::class.java
+            )
+
+        if (
+            currentStatus != "waiting"
+        ) {
+            return
+        }
+
+        val players =
+            snapshot.child(
+                "players"
+            ).children.toList()
+
+        if (
+            players.size < 2
+        ) {
+
+            showStatus(
+                "Waiting for at least 2 players.",
+                Color.DKGRAY
+            )
+
+            return
+        }
+
+        val selected =
+            chooseOnlineWord()
+
+        val firstPlayerUid =
+            chooseFirstPlayer(
+                players
+            )
+
+        val updates =
+            hashMapOf<String, Any>(
+                "status" to "playing",
+                "roundNumber" to 1,
+                "phase" to "normal",
+                "secretWord" to selected.first,
+                "actualCategory" to selected.second,
+                "currentPlayerUid" to firstPlayerUid,
+                "completedTurns" to 0,
+                "roundWinnerUid" to "",
+                "roundWinnerName" to "",
+                "wordMasterUid" to getInitialWordMasterUid(
+                    snapshot
+                ),
+                "turnEndsAt" to getNewTurnEndTime(),
+                "guessedLetters" to emptyMap<String, Any>(),
+                "scores" to createInitialScores(
+                    players
+                ),
+                "missedTurns" to createInitialMisses(
+                    players
+                ),
+                "eliminatedPlayers" to emptyMap<String, Any>(),
+                "finalChallengeIndex" to 0
+            )
+
+        gameReference()
+            .updateChildren(
+                updates
+            )
+    }
+
+    private fun chooseOnlineWord():
+        Pair<String, String> {
+
+        if (
+            wordSelection != "Random Word"
+        ) {
+
+            val word =
+                manualWord
+                    ?.trim()
+                    ?.uppercase()
+                    ?: "APPLE"
+
+            val category =
+                if (
+                    selectedCategory == "Random"
+                ) {
+                    "Random"
+                } else {
+                    selectedCategory
+                }
+
+            return Pair(
+                word,
+                category
+            )
+        }
+
+        val categoryNames =
             if (
                 selectedCategory == "Random"
             ) {
-                "Random"
+
+                WordBank.categories.keys.toList()
+
             } else {
-                selectedCategory
+
+                listOf(
+                    selectedCategory
+                )
             }
 
-        guessedLetters.clear()
-        revealedLetters.clear()
-
-        return
-    }
-
-    val availableWords =
-        mutableListOf<String>()
-
-    if (
-        selectedCategory == "Random"
-    ) {
-
-        val categoryNames =
-            WordBank.categories.keys.toList()
-
-        actualCategory =
+        val category =
             categoryNames[
                 Random.nextInt(
                     categoryNames.size
                 )
             ]
 
-        availableWords.addAll(
+        val words =
             WordBank.categories[
-                actualCategory
-            ] ?: emptyList()
-        )
-
-    } else {
-
-        actualCategory =
-            selectedCategory
-
-        availableWords.addAll(
-            WordBank.categories[
-                selectedCategory
-            ] ?: WordBank.categories[
-                "Things"
-            ]!!
-        )
-    }
-
-    if (
-        availableWords.size > 1 &&
-        previousWord.isNotEmpty()
-    ) {
-
-        availableWords.remove(
-            previousWord
-        )
-    }
-
-    if (
-        availableWords.isEmpty()
-    ) {
-
-        availableWords.add(
-            "APPLE"
-        )
-    }
-
-    secretWord =
-        availableWords[
-            Random.nextInt(
-                availableWords.size
+                category
+            ] ?: listOf(
+                "APPLE"
             )
-        ]
 
-    previousWord =
-        secretWord
+        val word =
+            words[
+                Random.nextInt(
+                    words.size
+                )
+            ]
 
-    guessedLetters.clear()
-    revealedLetters.clear()
-}
+        return Pair(
+            word,
+            category
+        )
+    }
 
-private fun getCategoryDisplay(): String {
+    private fun chooseFirstPlayer(
+        players: List<DataSnapshot>
+    ): String {
 
-    return if (
-        selectedCategory == "Random"
-    ) {
+        if (
+            wordSelection !=
+            "Random Word"
+        ) {
+
+            val master =
+                players.firstOrNull {
+                    it.child(
+                        "isHost"
+                    ).getValue(
+                        Boolean::class.java
+                    ) == true
+                }
+
+            val masterUid =
+                master?.key
+
+            if (
+                masterUid != null
+            ) {
+
+                val nonMaster =
+                    players.firstOrNull {
+                        it.key != masterUid
+                    }
+
+                if (
+                    nonMaster?.key != null
+                ) {
+
+                    return nonMaster.key!!
+                }
+            }
+        }
+
+        return players.first().key
+            ?: ""
+    }
+
+    private fun getInitialWordMasterUid(
+        snapshot: DataSnapshot
+    ): String {
 
         if (
             wordSelection ==
             "Random Word"
         ) {
-            "Random: $actualCategory"
-        } else {
-            "Random"
+            return ""
         }
 
-    } else {
-
-        actualCategory
+        return snapshot.child(
+            "hostUid"
+        ).getValue(
+            String::class.java
+        ) ?: ""
     }
-}
 
-private fun buildWordDisplay(): String {
+    private fun createInitialScores(
+        players: List<DataSnapshot>
+    ): Map<String, Any> {
 
-    val builder =
-        StringBuilder()
+        val map =
+            mutableMapOf<String, Any>()
 
-    for (letter in secretWord) {
+        for (
+            player in players
+        ) {
+
+            player.key?.let {
+                map[it] = 0
+            }
+        }
+
+        return map
+    }
+
+    private fun createInitialMisses(
+        players: List<DataSnapshot>
+    ): Map<String, Any> {
+
+        val map =
+            mutableMapOf<String, Any>()
+
+        for (
+            player in players
+        ) {
+
+            player.key?.let {
+                map[it] = 0
+            }
+        }
+
+        return map
+    }
+
+    private fun getNewTurnEndTime(): Long {
 
         if (
-            letter == ' '
+            secondsPerTurn <= 0
         ) {
-
-            builder.append(
-                "   "
-            )
-
-        } else if (
-            revealedLetters.contains(
-                letter
-            )
-        ) {
-
-            builder.append(
-                letter
-            )
-
-            builder.append(
-                " "
-            )
-
-        } else {
-
-            builder.append(
-                "_ "
-            )
+            return 0L
         }
+
+        return System.currentTimeMillis() +
+            secondsPerTurn * 1000L
     }
 
-    return builder
-        .toString()
-        .trim()
-}
+    private fun updateAllUI() {
 
-private fun updateWordDisplay() {
-    wordText.text =
-        buildWordDisplay()
-}
+        val categoryDisplay =
+            if (
+                selectedCategory ==
+                "Random" &&
+                wordSelection ==
+                "Random Word"
+            ) {
+                "Random: $actualCategory"
+            } else {
+                actualCategory
+            }
 
-private fun isWordComplete(): Boolean {
+        categoryText.text =
+            "CATEGORY: $categoryDisplay"
 
-    for (letter in secretWord) {
+        updatePlayerList()
+
+        updateWordDisplay()
+
+        updateLetterButtons()
+
+        updateTurnDisplay()
 
         if (
-            letter != ' ' &&
-            !revealedLetters.contains(
-                letter
-            )
+            phase == "final"
         ) {
-            return false
+
+            wholeWordButton.isEnabled =
+                false
         }
     }
 
-    return true
-}
+    private fun updatePlayerList() {
 
-private fun updatePlayerList() {
+        val builder =
+            StringBuilder()
 
-    val builder =
-        StringBuilder()
+        for (
+            uid in playerOrder
+        ) {
 
-    for (player in 1..playerCount) {
+            val name =
+                playerNames[uid]
+                    ?: "Player"
 
-        builder.append(
-            "$player. Player $player"
+            builder.append(
+                name
+            )
+
+            builder.append(
+                " — Score: "
+            )
+
+            builder.append(
+                scores[uid] ?: 0
+            )
+
+            if (
+                eliminatedPlayers.contains(
+                    uid
+                )
+            ) {
+
+                builder.append(
+                    " — ELIMINATED"
+                )
+
+            } else if (
+                uid == currentPlayerUid
+            ) {
+
+                builder.append(
+                    " — CURRENT TURN"
+                )
+
+            }
+
+            if (
+                uid == wordMasterUid
+            ) {
+
+                builder.append(
+                    " — WORD MASTER"
+                )
+            }
+
+            if (
+                playerOrder.size >= 3
+            ) {
+
+                builder.append(
+                    " — Misses: "
+                )
+
+                builder.append(
+                    missedTurns[uid] ?: 0
+                )
+
+                builder.append(
+                    "/3"
+                )
+            }
+
+            builder.append(
+                "\n"
+            )
+        }
+
+        playersText.text =
+            builder
+                .toString()
+                .trim()
+
+        playersText.setTypeface(
+            null,
+            Typeface.BOLD
         )
-
-        builder.append(
-            " — Score: ${scores[player] ?: 0}"
-        )
-
-        if (
-            eliminatedPlayers.contains(
-                player
-            )
-        ) {
-
-            builder.append(
-                " — ELIMINATED"
-            )
-
-        } else if (
-            wordSelection !=
-            "Random Word" &&
-            player == 1
-        ) {
-
-            builder.append(
-                " — WORD MASTER"
-            )
-
-        } else if (
-            player == currentPlayer
-        ) {
-
-            builder.append(
-                " — CURRENT TURN"
-            )
-        }
-
-        if (
-            playerCount >= 3 &&
-            !eliminatedPlayers.contains(
-                player
-            )
-        ) {
-
-            builder.append(
-                " — Misses: ${missedTurns[player] ?: 0}/3"
-            )
-        }
-
-        builder.append(
-            "\n"
-        )
-    }
-
-    playersText.text =
-        builder
-            .toString()
-            .trim()
-
-    playersText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    // Make eliminated players red.
-    // The text remains otherwise unchanged.
-    if (
-        eliminatedPlayers.isNotEmpty()
-    ) {
 
         playersText.setTextColor(
             Color.DKGRAY
         )
-    }
-}
-
-private fun startTurnTimer(
-    seconds: Int
-) {
-
-    timer?.cancel()
-    wholeWordTimer?.cancel()
-
-    if (
-        roundFinished ||
-        finalChallengeActive
-    ) {
-        return
-    }
-
-    if (
-        seconds <= 0
-    ) {
-
-        remainingTurnSeconds =
-            0
-
-        timerText.text =
-            "Time: Unlimited"
-
-        timerText.setTextColor(
-            Color.rgb(
-                0,
-                100,
-                0
-            )
-        )
-
-        return
-    }
-
-    remainingTurnSeconds =
-        seconds
-
-    timerText.text =
-        "Time: $remainingTurnSeconds"
-
-    timerText.setTextColor(
-        Color.BLACK
-    )
-
-    timer =
-        object :
-            CountDownTimer(
-                seconds * 1000L,
-                250L
-            ) {
-
-                override fun onTick(
-                    millisUntilFinished: Long
-                ) {
-
-                    remainingTurnSeconds =
-                        (
-                            (millisUntilFinished + 999L) /
-                                1000L
-                            ).toInt()
-
-                    timerText.text =
-                        "Time: $remainingTurnSeconds"
-
-                    if (
-                        remainingTurnSeconds <= 3
-                    ) {
-
-                        timerText.setTextColor(
-                            Color.RED
-                        )
-
-                    } else {
-
-                        timerText.setTextColor(
-                            Color.BLACK
-                        )
-                    }
-                }
-
-                override fun onFinish() {
-
-                    if (
-                        roundFinished ||
-                        finalChallengeActive
-                    ) {
-                        return
-                    }
-
-                    remainingTurnSeconds =
-                        0
-
-                    timerText.text =
-                        "Time: 0"
-
-                    timerText.setTextColor(
-                        Color.RED
-                    )
-
-                    handleMissedTurn()
-                }
-            }
-            .start()
-}
-
-private fun handleMissedTurn() {
-
-    if (
-        playerCount >= 3
-    ) {
-
-        val misses =
-            (missedTurns[currentPlayer] ?: 0) + 1
-
-        missedTurns[currentPlayer] =
-            misses
 
         if (
-            misses >= 3
+            currentPlayerUid == myUid &&
+            !roundFinished
         ) {
 
-            eliminatedPlayers.add(
-                currentPlayer
-            )
-
-            showStatus(
-                "Player $currentPlayer is eliminated after 3 missed turns.",
-                Color.RED
-            )
-
-        } else {
-
-            showStatus(
-                "Player $currentPlayer missed a turn.",
-                Color.RED
+            turnText.setTextColor(
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
             )
         }
-
-    } else {
-
-        showStatus(
-            "Time is up.",
-            Color.RED
-        )
     }
 
-    updatePlayerList()
-
-    if (
-        getActivePlayerCount() <= 1
-    ) {
-
-        finishRound(
-            "Only one player remains. Player $currentPlayer wins!"
-        )
-
-        return
-    }
-
-    moveToNextPlayer()
-}
-
-private fun moveToNextPlayer() {
-
-    timer?.cancel()
-    wholeWordTimer?.cancel()
-
-    if (
-        roundFinished ||
-        finalChallengeActive
-    ) {
-        return
-    }
-
-    completedTurns++
-
-    if (
-        totalTurns > 0 &&
-        completedTurns >= totalTurns
-    ) {
-
-        startFinalWholeWordChallenge()
-
-        return
-    }
-
-    var attempts = 0
-
-    do {
-
-        currentPlayer++
+    private fun updateWordDisplay() {
 
         if (
-            currentPlayer >
-            playerCount
+            secretWord.isEmpty()
         ) {
 
-            currentPlayer = 1
+            wordText.text =
+                "Waiting for word..."
+
+            return
         }
 
-        if (
-            wordSelection !=
-            "Random Word" &&
-            currentPlayer == 1
+        val builder =
+            StringBuilder()
+
+        for (
+            letter in secretWord
         ) {
-
-            currentPlayer = 2
-        }
-
-        attempts++
-
-    } while (
-        eliminatedPlayers.contains(
-            currentPlayer
-        ) &&
-        attempts <=
-        playerCount + 1
-    )
-
-    wholeWordAttemptUsed =
-        false
-
-    setWholeWordButtonEnabled(
-        true
-    )
-
-    turnText.text =
-        "PLAYER $currentPlayer'S TURN"
-
-    turnText.setTextColor(
-        Color.rgb(
-            0,
-            100,
-            0
-        )
-    )
-
-    updatePlayerList()
-
-    startTurnTimer(
-        secondsPerTurn
-    )
-}
-
-private fun getActivePlayerCount(): Int {
-
-    var count = 0
-
-    for (player in 1..playerCount) {
-
-        if (
-            eliminatedPlayers.contains(
-                player
-            )
-        ) {
-            continue
-        }
-
-        if (
-            wordSelection !=
-            "Random Word" &&
-            player == 1
-        ) {
-            continue
-        }
-
-        count++
-    }
-
-    return count
-}
-
-private fun startFinalWholeWordChallenge() {
-
-    if (
-        roundFinished
-    ) {
-        return
-    }
-
-    finalChallengeActive =
-        true
-
-    timer?.cancel()
-    wholeWordTimer?.cancel()
-
-    setWholeWordButtonEnabled(
-        false
-    )
-
-    finalChallengePlayers.clear()
-
-    for (player in 1..playerCount) {
-
-        if (
-            eliminatedPlayers.contains(
-                player
-            )
-        ) {
-            continue
-        }
-
-        if (
-            wordSelection !=
-            "Random Word" &&
-            player == 1
-        ) {
-            continue
-        }
-
-        finalChallengePlayers.add(
-            player
-        )
-    }
-
-    finalChallengeIndex = 0
-
-    if (
-        finalChallengePlayers.isEmpty()
-    ) {
-
-        finishRound(
-            "No eligible player remains for the final whole-word challenge."
-        )
-
-        return
-    }
-
-    showStatus(
-        "Final whole-word challenge!",
-        Color.rgb(
-            0,
-            70,
-            140
-        )
-    )
-
-    showNextFinalChallengePlayer()
-}
-
-private fun showNextFinalChallengePlayer() {
-
-    if (
-        roundFinished
-    ) {
-        return
-    }
-
-    if (
-        finalChallengeIndex >=
-        finalChallengePlayers.size
-    ) {
-
-        finalChallengeActive =
-            false
-
-        finishRound(
-            "Nobody guessed the whole word.\n\nThe word was:\n$secretWord"
-        )
-
-        return
-    }
-
-    val player =
-        finalChallengePlayers[
-            finalChallengeIndex
-        ]
-
-    currentPlayer =
-        player
-
-    turnText.text =
-        "FINAL CHALLENGE: PLAYER $player"
-
-    turnText.setTextColor(
-        Color.rgb(
-            0,
-            70,
-            140
-        )
-    )
-
-    timerText.text =
-        "Whole-word time: 20"
-
-    timerText.setTextColor(
-        Color.BLACK
-    )
-
-    updatePlayerList()
-
-    showFinalWholeWordDialog(
-        player
-    )
-}
-
-private fun showFinalWholeWordDialog(
-    player: Int
-) {
-
-    val input =
-        EditText(this)
-
-    input.hint =
-        "Type the entire word"
-
-    input.setSingleLine(true)
-
-    input.textSize =
-        18f
-
-    input.setPadding(
-        10,
-        10,
-        10,
-        10
-    )
-
-    val dialogLayout =
-        LinearLayout(this)
-
-    dialogLayout.orientation =
-        LinearLayout.VERTICAL
-
-    dialogLayout.setPadding(
-        30,
-        10,
-        30,
-        5
-    )
-
-    dialogLayout.addView(
-        input,
-        LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-    )
-
-    val finalTimerText =
-        TextView(this)
-
-    finalTimerText.text =
-        "Time: 20"
-
-    finalTimerText.textSize =
-        22f
-
-    finalTimerText.gravity =
-        Gravity.CENTER
-
-    finalTimerText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    finalTimerText.setPadding(
-        0,
-        15,
-        0,
-        5
-    )
-
-    dialogLayout.addView(
-        finalTimerText
-    )
-
-    val dialog =
-        AlertDialog.Builder(this)
-            .setTitle(
-                "PLAYER $player — FINAL WHOLE-WORD GUESS"
-            )
-            .setMessage(
-                "Type the entire word and press Guess."
-            )
-            .setView(
-                dialogLayout
-            )
-            .setNegativeButton(
-                "Skip",
-                null
-            )
-            .setPositiveButton(
-                "Guess",
-                null
-            )
-            .setCancelable(false)
-            .create()
-
-    dialog.setOnShowListener {
-
-        dialog.window?.apply {
-
-            setGravity(
-                Gravity.BOTTOM
-            )
-
-            attributes =
-                attributes.apply {
-                    y = 40
-                }
-        }
-
-        val guessButton =
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            )
-
-        val skipButton =
-            dialog.getButton(
-                AlertDialog.BUTTON_NEGATIVE
-            )
-
-        guessButton.setOnClickListener {
-
-            val guess =
-                input.text
-                    .toString()
-                    .trim()
-                    .uppercase()
-
-            if (guess.isEmpty()) {
-
-                input.error =
-                    "Please enter the entire word."
-
-                input.requestFocus()
-
-                return@setOnClickListener
-            }
-
-            wholeWordTimer?.cancel()
-
-            dialog.dismiss()
 
             if (
-                guess ==
-                secretWord
-                    .trim()
-                    .uppercase()
+                letter == ' '
             ) {
 
-                finalChallengeActive =
-                    false
+                builder.append(
+                    "   "
+                )
 
-                finishRound(
-                    "Player $player guessed the whole word and wins!"
+            } else if (
+                guessedLetters.contains(
+                    letter
+                )
+            ) {
+
+                builder.append(
+                    letter
+                )
+
+                builder.append(
+                    " "
                 )
 
             } else {
 
-                showStatus(
-                    "Player $player's whole-word guess was wrong.",
-                    Color.RED
+                builder.append(
+                    "_ "
                 )
-
-                moveToNextFinalChallengePlayer()
             }
         }
 
-        skipButton.setOnClickListener {
+        wordText.text =
+            builder
+                .toString()
+                .trim()
+    }
 
-            wholeWordTimer?.cancel()
+    private fun updateLetterButtons() {
 
-            dialog.dismiss()
+        for (
+            i in 0 until letterBoard.childCount
+        ) {
 
-            showStatus(
-                "Player $player skipped the final guess.",
-                Color.RED
-            )
+            val row =
+                letterBoard.getChildAt(
+                    i
+                ) as? LinearLayout
+                    ?: continue
 
-            moveToNextFinalChallengePlayer()
+            for (
+                j in 0 until row.childCount
+            ) {
+
+                val button =
+                    row.getChildAt(
+                        j
+                    ) as? Button
+                        ?: continue
+
+                val letter =
+                    button.tag as? Char
+                        ?: continue
+
+                if (
+                    guessedLetters.contains(
+                        letter
+                    )
+                ) {
+
+                    button.setBackgroundColor(
+                        Color.RED
+                    )
+
+                    button.isEnabled =
+                        false
+
+                } else {
+
+                    button.setBackgroundColor(
+                        Color.rgb(
+                            0,
+                            100,
+                            0
+                        )
+
+                    button.isEnabled =
+                        !roundFinished &&
+                            phase == "normal" &&
+                            currentPlayerUid == myUid
+                }
+            }
+        }
+    }
+
+    private fun updateTurnDisplay() {
+
+        if (
+            currentPlayerUid.isEmpty()
+        ) {
+
+            turnText.text =
+                "Waiting..."
+
+            return
         }
 
-        input.requestFocus()
+        val currentName =
+            playerNames[
+                currentPlayerUid
+            ] ?: "Player"
 
-        wholeWordTimer =
+        if (
+            phase == "final"
+        ) {
+
+            turnText.text =
+                "FINAL CHALLENGE: $currentName"
+
+            turnText.setTextColor(
+                Color.rgb(
+                    0,
+                    70,
+                    140
+                )
+            )
+
+        } else {
+
+            turnText.text =
+                if (
+                    currentPlayerUid ==
+                    myUid
+                ) {
+                    "YOUR TURN"
+                } else {
+                    "$currentName'S TURN"
+                }
+
+            turnText.setTextColor(
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
+            )
+        }
+    }
+
+    private fun processLetterGuess(
+        letter: Char
+    ) {
+
+        val reference =
+            gameReference()
+
+        reference.runTransaction(
+            object :
+                Transaction.Handler {
+
+                override fun doTransaction(
+                    currentData: MutableData
+                ): Transaction.Result {
+
+                    val currentUid =
+                        currentData.child(
+                            "currentPlayerUid"
+                        ).getValue(
+                            String::class.java
+                        ) ?: ""
+
+                    if (
+                        currentUid != myUid
+                    ) {
+                        return Transaction.abort()
+                    }
+
+                    val currentPhase =
+                        currentData.child(
+                            "phase"
+                        ).getValue(
+                            String::class.java
+                        ) ?: "normal"
+
+                    if (
+                        currentPhase !=
+                        "normal"
+                    ) {
+                        return Transaction.abort()
+                    }
+
+                    val guessed =
+                        currentData.child(
+                            "guessedLetters"
+                        )
+
+                    if (
+                        guessed.child(
+                            letter.toString()
+                        ).exists()
+                    ) {
+                        return Transaction.abort()
+                    }
+
+                    guessed.child(
+                        letter.toString()
+                    ).value = true
+
+                    val word =
+                        currentData.child(
+                            "secretWord"
+                        ).getValue(
+                            String::class.java
+                        ) ?: ""
+
+                    if (
+                        word.contains(
+                            letter
+                        )
+                    ) {
+
+                        val occurrences =
+                            word.count {
+                                it == letter
+                            }
+
+                        val score =
+                            currentData.child(
+                                "scores"
+                            ).child(
+                                myUid
+                            ).getValue(
+                                Int::class.java
+                            ) ?: 0
+
+                        currentData.child(
+                            "scores"
+                        ).child(
+                            myUid
+                        ).value =
+                            score + occurrences
+
+                        var complete =
+                            true
+
+                        for (
+                            c in word
+                        ) {
+
+                            if (
+                                c != ' ' &&
+                                !guessed.child(
+                                    c.toString()
+                                ).exists()
+                            ) {
+
+                                complete =
+                                    false
+
+                                break
+                            }
+                        }
+
+                        if (
+                            complete
+                        ) {
+
+                            currentData.child(
+                                "status"
+                            ).value =
+                                "roundFinished"
+
+                            currentData.child(
+                                "roundWinnerUid"
+                            ).value =
+                                myUid
+
+                            currentData.child(
+                                "roundWinnerName"
+                            ).value =
+                                playerNames[
+                                    myUid
+                                ] ?: "Player"
+
+                            currentData.child(
+                                "turnEndsAt"
+                            ).value =
+                                0L
+
+                            return Transaction.success(
+                                currentData
+                            )
+                        }
+
+                    } else {
+
+                        advanceTurnInsideTransaction(
+                            currentData
+                        )
+                    }
+
+                    return Transaction.success(
+                        currentData
+                    )
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (
+                        error != null
+                    ) {
+
+                        showStatus(
+                            "Could not submit letter.",
+                            Color.RED
+                        )
+
+                        return
+                    }
+
+                    if (
+                        !committed
+                    ) {
+
+                        showStatus(
+                            "That move is no longer available.",
+                            Color.RED
+                        )
+
+                        return
+                    }
+
+                    val word =
+                        secretWord
+
+                    if (
+                        word.contains(
+                            letter
+                        )
+                    ) {
+
+                        val occurrences =
+                            word.count {
+                                it == letter
+                            }
+
+                        showStatus(
+                            "Correct! You earned $occurrences point(s).",
+                            Color.rgb(
+                                0,
+                                100,
+                                0
+                            )
+                        )
+
+                    } else {
+
+                        showStatus(
+                            "Wrong letter. Next player's turn.",
+                            Color.RED
+                        )
+                    }
+                }
+            }
+        )
+    }
+
+    private fun advanceTurnInsideTransaction(
+        data: MutableData
+    ) {
+
+        val players =
+            mutableListOf<String>()
+
+        val playersData =
+            data.child(
+                "players"
+            )
+
+        for (
+            child in playersData.children
+        ) {
+
+            child.key?.let {
+                players.add(it)
+            }
+        }
+
+        if (
+            players.isEmpty()
+        ) {
+            return
+        }
+
+        var currentUid =
+            data.child(
+                "currentPlayerUid"
+            ).getValue(
+                String::class.java
+            ) ?: ""
+
+        val eliminated =
+            data.child(
+                "eliminatedPlayers"
+            )
+
+        var index =
+            players.indexOf(
+                currentUid
+            )
+
+        if (
+            index < 0
+        ) {
+            index = 0
+        }
+
+        var nextUid = ""
+
+        for (
+            step in 1..players.size
+        ) {
+
+            val nextIndex =
+                (index + step) %
+                    players.size
+
+            val candidate =
+                players[
+                    nextIndex
+                ]
+
+            if (
+                eliminated.child(
+                    candidate
+                ).getValue(
+                    Boolean::class.java
+                ) != true &&
+                candidate != wordMasterUid
+            ) {
+
+                nextUid =
+                    candidate
+
+                break
+            }
+        }
+
+        if (
+            nextUid.isEmpty()
+        ) {
+
+            data.child(
+                "status"
+            ).value =
+                "roundFinished"
+
+            return
+        }
+
+        data.child(
+            "currentPlayerUid"
+        ).value =
+            nextUid
+
+        val completed =
+            data.child(
+                "completedTurns"
+            ).getValue(
+                Int::class.java
+            ) ?: 0
+
+        val newCompleted =
+            completed + 1
+
+        data.child(
+            "completedTurns"
+        ).value =
+            newCompleted
+
+        val configuredTotal =
+            data.child(
+                "totalTurns"
+            ).getValue(
+                Int::class.java
+            ) ?: 0
+
+        if (
+            configuredTotal > 0 &&
+            newCompleted >= configuredTotal
+        ) {
+
+            startFinalChallengeInsideTransaction(
+                data,
+                players
+            )
+
+            return
+        }
+
+        data.child(
+            "turnEndsAt"
+        ).value =
+            getNewTurnEndTime()
+    }
+
+    private fun startFinalChallengeInsideTransaction(
+        data: MutableData,
+        players: List<String>
+    ) {
+
+        val order =
+            mutableListOf<String>()
+
+        val eliminated =
+            data.child(
+                "eliminatedPlayers"
+            )
+
+        for (
+            uid in players
+        ) {
+
+            if (
+                eliminated.child(
+                    uid
+                ).getValue(
+                    Boolean::class.java
+                ) == true
+            ) {
+                continue
+            }
+
+            if (
+                uid == wordMasterUid
+            ) {
+                continue
+            }
+
+            order.add(
+                uid
+            )
+        }
+
+        data.child(
+            "phase"
+        ).value =
+            "final"
+
+        data.child(
+            "finalChallengeIndex"
+        ).value =
+            0
+
+        if (
+            order.isEmpty()
+        ) {
+
+            data.child(
+                "status"
+            ).value =
+                "roundFinished"
+
+            return
+        }
+
+        data.child(
+            "finalChallengePlayers"
+        ).value =
+            order
+
+        data.child(
+            "currentPlayerUid"
+        ).value =
+            order.first()
+
+        data.child(
+            "turnEndsAt"
+        ).value =
+            System.currentTimeMillis() +
+                20000L
+    }
+
+    private fun handleMissedTurn() {
+
+        if (
+            roundFinished
+        ) {
+            return
+        }
+
+        if (
+            currentPlayerUid != myUid
+        ) {
+            return
+        }
+
+        gameReference()
+            .runTransaction(
+                object :
+                    Transaction.Handler {
+
+                    override fun doTransaction(
+                        currentData: MutableData
+                    ): Transaction.Result {
+
+                        val currentUid =
+                            currentData.child(
+                                "currentPlayerUid"
+                            ).getValue(
+                                String::class.java
+                            ) ?: ""
+
+                        if (
+                            currentUid != myUid
+                        ) {
+                            return Transaction.abort()
+                        }
+
+                        val misses =
+                            currentData.child(
+                                "missedTurns"
+                            ).child(
+                                myUid
+                            ).getValue(
+                                Int::class.java
+                            ) ?: 0
+
+                        val newMisses =
+                            misses + 1
+
+                        currentData.child(
+                            "missedTurns"
+                        ).child(
+                            myUid
+                        ).value =
+                            newMisses
+
+                        if (
+                            playerOrder.size >= 3 &&
+                            newMisses >= 3
+                        ) {
+
+                            currentData.child(
+                                "eliminatedPlayers"
+                            ).child(
+                                myUid
+                            ).value =
+                                true
+                        }
+
+                        advanceTurnInsideTransaction(
+                            currentData
+                        )
+
+                        return Transaction.success(
+                            currentData
+                        )
+                    }
+
+                    override fun onComplete(
+                        error: DatabaseError?,
+                        committed: Boolean,
+                        currentData: DataSnapshot?
+                    ) {
+
+                        if (
+                            committed
+                        ) {
+
+                            showStatus(
+                                "Time is up.",
+                                Color.RED
+                            )
+                        }
+                    }
+                }
+            )
+    }
+
+    private fun startSynchronizedTimer() {
+
+        timer?.cancel()
+
+        if (
+            roundFinished ||
+            phase != "normal"
+        ) {
+            return
+        }
+
+        if (
+            currentPlayerUid != myUid
+        ) {
+
+            wholeWordButton.isEnabled =
+                false
+
+        } else {
+
+            setWholeWordButtonEnabled(
+                !wholeWordAttemptUsed
+            )
+        }
+
+        if (
+            secondsPerTurn <= 0
+        ) {
+
+            timerText.text =
+                "Time: Unlimited"
+
+            timerText.setTextColor(
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
+            )
+
+            return
+        }
+
+        if (
+            turnEndsAt <= 0
+        ) {
+            return
+        }
+
+        val remaining =
+            (
+                turnEndsAt -
+                    System.currentTimeMillis()
+                ).coerceAtLeast(
+                    0L
+                )
+
+        timer =
             object :
                 CountDownTimer(
-                    20000L,
+                    remaining,
                     250L
                 ) {
 
@@ -1747,683 +2340,1417 @@ private fun showFinalWholeWordDialog(
 
                         val seconds =
                             (
-                                (millisUntilFinished + 999L) /
-                                    1000L
+                                (
+                                    millisUntilFinished +
+                                        999L
+                                    ) / 1000L
                                 ).toInt()
 
-                        finalTimerText.text =
+                        timerText.text =
                             "Time: $seconds"
 
-                        if (
-                            seconds <= 3
-                        ) {
-
-                            finalTimerText.setTextColor(
+                        timerText.setTextColor(
+                            if (
+                                seconds <= 3
+                            ) {
                                 Color.RED
-                            )
-
-                        } else {
-
-                            finalTimerText.setTextColor(
+                            } else {
                                 Color.BLACK
-                            )
-                        }
+                            }
+                        )
                     }
 
                     override fun onFinish() {
 
-                        finalTimerText.text =
+                        timerText.text =
                             "Time: 0"
 
-                        finalTimerText.setTextColor(
+                        timerText.setTextColor(
                             Color.RED
                         )
 
-                        dialog.dismiss()
+                        if (
+                            currentPlayerUid ==
+                            myUid
+                        ) {
 
-                        showStatus(
-                            "Player $player ran out of time.",
-                            Color.RED
-                        )
-
-                        moveToNextFinalChallengePlayer()
+                            handleMissedTurn()
+                        }
                     }
                 }
                 .start()
     }
 
-    dialog.show()
-}
+    private fun maybeStartNormalTurnUI() {
 
-private fun moveToNextFinalChallengePlayer() {
-
-    if (
-        roundFinished
-    ) {
-        return
-    }
-
-    wholeWordTimer?.cancel()
-
-    finalChallengeIndex++
-
-    if (
-        finalChallengeIndex >=
-        finalChallengePlayers.size
-    ) {
-
-        finalChallengeActive =
-            false
-
-        finishRound(
-            "Nobody guessed the whole word.\n\nThe word was:\n$secretWord"
-        )
-
-        return
-    }
-
-    showNextFinalChallengePlayer()
-}
-
-private fun resumeNormalTurnAfterWholeWordCancel() {
-
-    if (
-        roundFinished ||
-        finalChallengeActive
-    ) {
-        return
-    }
-
-    if (
-        isUnlimited()
-    ) {
-
-        timerText.text =
-            "Time: Unlimited"
-
-        timerText.setTextColor(
-            Color.rgb(
-                0,
-                100,
-                0
-            )
-        )
-
-        startTurnTimer(
-            0
-        )
-
-        return
-    }
-
-    if (
-        remainingTurnSeconds <= 0
-    ) {
-
-        timerText.text =
-            "Time: 0"
-
-        timerText.setTextColor(
-            Color.RED
-        )
-
-        moveToNextPlayer()
-
-        return
-    }
-
-    timerText.text =
-        "Time: $remainingTurnSeconds"
-
-    timerText.setTextColor(
         if (
-            remainingTurnSeconds <= 3
+            currentPlayerUid ==
+            myUid
         ) {
-            Color.RED
+
+            statusText.text =
+                "Choose a letter or guess the whole word."
+
+            statusText.setTextColor(
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
+            )
+
         } else {
-            Color.BLACK
+
+            statusText.text =
+                "Waiting for ${
+                    playerNames[
+                        currentPlayerUid
+                    ] ?: "player"
+                }..."
+
+            statusText.setTextColor(
+                Color.DKGRAY
+            )
         }
-    )
 
-    startTurnTimer(
-        remainingTurnSeconds
-    )
-}
-
-private fun showWholeWordDialog() {
-
-    if (
-        wholeWordAttemptUsed
-    ) {
-
-        showStatus(
-            "You already used your whole-word guess this turn.",
-            Color.RED
+        setWholeWordButtonEnabled(
+            currentPlayerUid ==
+                myUid &&
+                !wholeWordAttemptUsed &&
+                phase == "normal" &&
+                !roundFinished
         )
-
-        return
     }
 
-    wholeWordAttemptUsed =
-        true
+    private fun setWholeWordButtonEnabled(
+        enabled: Boolean
+    ) {
 
-    setWholeWordButtonEnabled(
-        false
-    )
+        wholeWordButton.isEnabled =
+            enabled
 
-    timer?.cancel()
+        if (
+            enabled
+        ) {
 
-    val input =
-        EditText(this)
-
-    input.hint =
-        "Enter your word"
-
-    input.setSingleLine(
-        true
-    )
-
-    input.textSize =
-        18f
-
-    val dialogLayout =
-        LinearLayout(this)
-
-    dialogLayout.orientation =
-        LinearLayout.VERTICAL
-
-    dialogLayout.setPadding(
-        30,
-        10,
-        30,
-        5
-    )
-
-    dialogLayout.addView(
-        input
-    )
-
-    val wholeWordTimerText =
-        TextView(this)
-
-    wholeWordTimerText.text =
-        "Time: 20"
-
-    wholeWordTimerText.textSize =
-        22f
-
-    wholeWordTimerText.gravity =
-        Gravity.CENTER
-
-    wholeWordTimerText.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    wholeWordTimerText.setPadding(
-        0,
-        15,
-        0,
-        5
-    )
-
-    dialogLayout.addView(
-        wholeWordTimerText
-    )
-
-    val dialog =
-        AlertDialog.Builder(this)
-            .setTitle(
-                "Guess Whole Word"
+            wholeWordButton.setTextColor(
+                Color.WHITE
             )
-            .setView(
-                dialogLayout
-            )
-            .setNegativeButton(
-                "Cancel",
-                null
-            )
-            .setPositiveButton(
-                "Guess",
-                null
-            )
-            .create()
 
-    wholeWordTimer =
-        object :
-            CountDownTimer(
-                20000L,
-                250L
-            ) {
+            wholeWordButton.setBackgroundColor(
+                Color.rgb(
+                    0,
+                    70,
+                    140
+                )
+            )
 
-                override fun onTick(
-                    millisUntilFinished: Long
+        } else {
+
+            wholeWordButton.setTextColor(
+                Color.DKGRAY
+            )
+
+            wholeWordButton.setBackgroundColor(
+                Color.LTGRAY
+            )
+        }
+    }
+
+    private fun showStatus(
+        message: String,
+        color: Int
+    ) {
+
+        statusText.text =
+            message
+
+        statusText.setTextColor(
+            color
+        )
+
+        statusText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+    }
+
+    private fun showWholeWordDialog() {
+
+        wholeWordAttemptUsed =
+            true
+
+        setWholeWordButtonEnabled(
+            false
+        )
+
+        timer?.cancel()
+
+        val input =
+            EditText(this)
+
+        input.hint =
+            "Enter your word"
+
+        input.setSingleLine(
+            true
+        )
+
+        input.textSize =
+            18f
+
+        val timerDisplay =
+            TextView(this)
+
+        timerDisplay.text =
+            "Time: 20"
+
+        timerDisplay.textSize =
+            22f
+
+        timerDisplay.gravity =
+            Gravity.CENTER
+
+        timerDisplay.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        val dialogLayout =
+            LinearLayout(this)
+
+        dialogLayout.orientation =
+            LinearLayout.VERTICAL
+
+        dialogLayout.setPadding(
+            30,
+            10,
+            30,
+            5
+        )
+
+        dialogLayout.addView(
+            input
+        )
+
+        dialogLayout.addView(
+            timerDisplay
+        )
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "Guess Whole Word"
+                )
+                .setView(
+                    dialogLayout
+                )
+                .setNegativeButton(
+                    "Cancel",
+                    null
+                )
+                .setPositiveButton(
+                    "Guess",
+                    null
+                )
+                .create()
+
+        dialog.setOnShowListener {
+
+            val cancelButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_NEGATIVE
+                )
+
+            cancelButton.setOnClickListener {
+
+                wholeWordTimer?.cancel()
+
+                dialog.dismiss()
+
+                resumeNormalTimer()
+            }
+
+            val guessButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_POSITIVE
+                )
+
+            guessButton.setOnClickListener {
+
+                val guess =
+                    input.text
+                        .toString()
+                        .trim()
+                        .uppercase()
+
+                if (
+                    guess.isEmpty()
                 ) {
 
-                    val seconds =
-                        (
-                            (millisUntilFinished + 999L) /
-                                1000L
-                            ).toInt()
+                    input.error =
+                        "Enter a word."
 
-                    wholeWordTimerText.text =
-                        "Time: $seconds"
+                    return@setOnClickListener
+                }
 
-                    if (
-                        seconds <= 3
+                wholeWordTimer?.cancel()
+
+                dialog.dismiss()
+
+                submitWholeWordGuess(
+                    guess
+                )
+            }
+
+            wholeWordTimer =
+                object :
+                    CountDownTimer(
+                        20000L,
+                        250L
                     ) {
 
-                        wholeWordTimerText.setTextColor(
-                            Color.RED
+                    override fun onTick(
+                        millisUntilFinished: Long
+                    ) {
+
+                        val seconds =
+                            (
+                                (
+                                    millisUntilFinished +
+                                        999L
+                                    ) / 1000L
+                                ).toInt()
+
+                        timerDisplay.text =
+                            "Time: $seconds"
+
+                        timerDisplay.setTextColor(
+                            if (
+                                seconds <= 3
+                            ) {
+                                Color.RED
+                            } else {
+                                Color.BLACK
+                            }
                         )
+                    }
 
-                    } else {
+                    override fun onFinish() {
 
-                        wholeWordTimerText.setTextColor(
-                            Color.BLACK
+                        timerDisplay.text =
+                            "Time: 0"
+
+                        dialog.dismiss()
+
+                        submitWholeWordGuess(
+                            ""
                         )
                     }
                 }
+                    .start()
+        }
 
-                override fun onFinish() {
+        dialog.setOnCancelListener {
 
-                    wholeWordTimerText.text =
-                        "Time: 0"
+            wholeWordTimer?.cancel()
 
-                    wholeWordTimerText.setTextColor(
-                        Color.RED
-                    )
+            resumeNormalTimer()
+        }
+
+        dialog.show()
+    }
+
+    private fun resumeNormalTimer() {
+
+        if (
+            roundFinished
+        ) {
+            return
+        }
+
+        val remaining =
+            if (
+                secondsPerTurn <= 0
+            ) {
+                0
+            } else {
+                (
+                    (
+                        turnEndsAt -
+                            System.currentTimeMillis()
+                        ) / 1000L
+                    ).toInt()
+                        .coerceAtLeast(
+                            0
+                        )
+            }
+
+        if (
+            secondsPerTurn > 0 &&
+            remaining <= 0
+        ) {
+
+            handleMissedTurn()
+
+            return
+        }
+
+        startSynchronizedTimer()
+    }
+
+    private fun submitWholeWordGuess(
+        guess: String
+    ) {
+
+        gameReference()
+            .runTransaction(
+                object :
+                    Transaction.Handler {
+
+                    override fun doTransaction(
+                        currentData: MutableData
+                    ): Transaction.Result {
+
+                        val currentUid =
+                            currentData.child(
+                                "currentPlayerUid"
+                            ).getValue(
+                                String::class.java
+                            ) ?: ""
+
+                        if (
+                            currentUid != myUid
+                        ) {
+                            return Transaction.abort()
+                        }
+
+                        if (
+                            currentData.child(
+                                "phase"
+                            ).getValue(
+                                String::class.java
+                            ) != "normal"
+                        ) {
+                            return Transaction.abort()
+                        }
+
+                        val word =
+                            currentData.child(
+                                "secretWord"
+                            ).getValue(
+                                String::class.java
+                            ) ?: ""
+
+                        if (
+                            guess.isNotEmpty() &&
+                            guess ==
+                            word
+                                .trim()
+                                .uppercase()
+                        ) {
+
+                            currentData.child(
+                                "status"
+                            ).value =
+                                "roundFinished"
+
+                            currentData.child(
+                                "roundWinnerUid"
+                            ).value =
+                                myUid
+
+                            currentData.child(
+                                "roundWinnerName"
+                            ).value =
+                                playerNames[
+                                    myUid
+                                ] ?: "Player"
+
+                            currentData.child(
+                                "turnEndsAt"
+                            ).value =
+                                0L
+
+                        } else {
+
+                            advanceTurnInsideTransaction(
+                                currentData
+                            )
+                        }
+
+                        return Transaction.success(
+                            currentData
+                        )
+                    }
+
+                    override fun onComplete(
+                        error: DatabaseError?,
+                        committed: Boolean,
+                        currentData: DataSnapshot?
+                    ) {
+
+                        if (
+                            !committed
+                        ) {
+
+                            showStatus(
+                                "That guess could not be submitted.",
+                                Color.RED
+                            )
+
+                        } else if (
+                            guess.isEmpty()
+                        ) {
+
+                            showStatus(
+                                "Whole-word time is up.",
+                                Color.RED
+                            )
+
+                        } else {
+
+                            val winner =
+                                currentData
+                                    ?.child(
+                                        "roundWinnerUid"
+                                    )
+                                    ?.getValue(
+                                        String::class.java
+                                    )
+
+                            if (
+                                winner ==
+                                myUid
+                            ) {
+
+                                showStatus(
+                                    "Correct! You win the round!",
+                                    Color.rgb(
+                                        0,
+                                        100,
+                                        0
+                                    )
+                                )
+
+                            } else {
+
+                                showStatus(
+                                    "Wrong whole-word guess.",
+                                    Color.RED
+                                )
+                            }
+                        }
+                    }
+                }
+            )
+    }
+
+    private fun handleFinalChallenge() {
+
+        timer?.cancel()
+
+        setWholeWordButtonEnabled(
+            false
+        )
+
+        val finalPlayersSnapshot =
+            getFinalPlayersFromFirebase()
+
+        if (
+            finalPlayersSnapshot.isEmpty()
+        ) {
+            return
+        }
+
+        if (
+            finalChallengeIndex >=
+            finalPlayersSnapshot.size
+        ) {
+
+            if (
+                isHostFromCurrentData()
+            ) {
+
+                finishWithoutWinner()
+            }
+
+            return
+        }
+
+        val currentFinalUid =
+            finalPlayersSnapshot[
+                finalChallengeIndex
+            ]
+
+        if (
+            currentPlayerUid !=
+            currentFinalUid
+        ) {
+            return
+        }
+
+        if (
+            currentFinalUid !=
+            myUid
+        ) {
+
+            return
+        }
+
+        if (
+            lastShownFinalIndex ==
+            finalChallengeIndex
+        ) {
+            return
+        }
+
+        lastShownFinalIndex =
+            finalChallengeIndex
+
+        showFinalWholeWordDialog(
+            currentFinalUid
+        )
+    }
+
+    private fun getFinalPlayersFromFirebase():
+        List<String> {
+
+        val reference =
+            gameReference()
+                .child(
+                    "finalChallengePlayers"
+                )
+
+        return emptyList()
+    }
+
+    /*
+     * Final challenge players are already represented by
+     * playerOrder minus eliminated players and the word master.
+     *
+     * This local calculation keeps the UI simple while
+     * Firebase remains the source of truth for whose turn
+     * it is.
+     */
+    private fun getFinalPlayers():
+        List<String> {
+
+        return playerOrder.filter {
+
+            !eliminatedPlayers.contains(
+                it
+            ) &&
+                it != wordMasterUid
+        }
+    }
+
+    private fun showFinalWholeWordDialog(
+        uid: String
+    ) {
+
+        val playerName =
+            playerNames[
+                uid
+            ] ?: "Player"
+
+        val input =
+            EditText(this)
+
+        input.hint =
+            "Type the entire word"
+
+        input.setSingleLine(
+            true
+        )
+
+        input.textSize =
+            18f
+
+        val timerDisplay =
+            TextView(this)
+
+        timerDisplay.text =
+            "Time: 20"
+
+        timerDisplay.textSize =
+            22f
+
+        timerDisplay.gravity =
+            Gravity.CENTER
+
+        timerDisplay.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        val layout =
+            LinearLayout(this)
+
+        layout.orientation =
+            LinearLayout.VERTICAL
+
+        layout.setPadding(
+            30,
+            10,
+            30,
+            5
+        )
+
+        layout.addView(
+            input
+        )
+
+        layout.addView(
+            timerDisplay
+        )
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "$playerName — FINAL WHOLE-WORD GUESS"
+                )
+                .setMessage(
+                    "Type the entire word and press Guess."
+                )
+                .setView(
+                    layout
+                )
+                .setNegativeButton(
+                    "Skip",
+                    null
+                )
+                .setPositiveButton(
+                    "Guess",
+                    null
+                )
+                .setCancelable(false)
+                .create()
+
+        dialog.setOnShowListener {
+
+            dialog.getButton(
+                AlertDialog.BUTTON_NEGATIVE
+            ).setOnClickListener {
+
+                wholeWordTimer?.cancel()
+
+                dialog.dismiss()
+
+                submitFinalGuess(
+                    ""
+                )
+            }
+
+            dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE
+            ).setOnClickListener {
+
+                val guess =
+                    input.text
+                        .toString()
+                        .trim()
+                        .uppercase()
+
+                if (
+                    guess.isEmpty()
+                ) {
+
+                    input.error =
+                        "Enter the entire word."
+
+                    return@setOnClickListener
+                }
+
+                wholeWordTimer?.cancel()
+
+                dialog.dismiss()
+
+                submitFinalGuess(
+                    guess
+                )
+            }
+
+            wholeWordTimer =
+                object :
+                    CountDownTimer(
+                        20000L,
+                        250L
+                    ) {
+
+                    override fun onTick(
+                        millisUntilFinished: Long
+                    ) {
+
+                        val seconds =
+                            (
+                                (
+                                    millisUntilFinished +
+                                        999L
+                                    ) / 1000L
+                                ).toInt()
+
+                        timerDisplay.text =
+                            "Time: $seconds"
+                    }
+
+                    override fun onFinish() {
+
+                        dialog.dismiss()
+
+                        submitFinalGuess(
+                            ""
+                        )
+                    }
+                }
+                    .start()
+        }
+
+        dialog.show()
+    }
+
+    private fun submitFinalGuess(
+        guess: String
+    ) {
+
+        gameReference()
+            .runTransaction(
+                object :
+                    Transaction.Handler {
+
+                    override fun doTransaction(
+                        data: MutableData
+                    ): Transaction.Result {
+
+                        val currentUid =
+                            data.child(
+                                "currentPlayerUid"
+                            ).getValue(
+                                String::class.java
+                            ) ?: ""
+
+                        if (
+                            currentUid != myUid
+                        ) {
+                            return Transaction.abort()
+                        }
+
+                        if (
+                            data.child(
+                                "phase"
+                            ).getValue(
+                                String::class.java
+                            ) != "final"
+                        ) {
+                            return Transaction.abort()
+                        }
+
+                        val word =
+                            data.child(
+                                "secretWord"
+                            ).getValue(
+                                String::class.java
+                            ) ?: ""
+
+                        if (
+                            guess.isNotEmpty() &&
+                            guess ==
+                            word
+                                .trim()
+                                .uppercase()
+                        ) {
+
+                            data.child(
+                                "status"
+                            ).value =
+                                "roundFinished"
+
+                            data.child(
+                                "roundWinnerUid"
+                            ).value =
+                                myUid
+
+                            data.child(
+                                "roundWinnerName"
+                            ).value =
+                                playerNames[
+                                    myUid
+                                ] ?: "Player"
+
+                            return Transaction.success(
+                                data
+                            )
+                        }
+
+                        val index =
+                            data.child(
+                                "finalChallengeIndex"
+                            ).getValue(
+                                Int::class.java
+                            ) ?: 0
+
+                        val newIndex =
+                            index + 1
+
+                        val finalPlayers =
+                            mutableListOf<String>()
+
+                        val finalData =
+                            data.child(
+                                "finalChallengePlayers"
+                            )
+
+                        for (
+                            child in finalData.children
+                        ) {
+
+                            child.getValue(
+                                String::class.java
+                            )?.let {
+                                finalPlayers.add(
+                                    it
+                                )
+                            }
+                        }
+
+                        if (
+                            newIndex >=
+                            finalPlayers.size
+                        ) {
+
+                            data.child(
+                                "status"
+                            ).value =
+                                "roundFinished"
+
+                            data.child(
+                                "roundWinnerUid"
+                            ).value =
+                                ""
+
+                            data.child(
+                                "roundWinnerName"
+                            ).value =
+                                ""
+
+                        } else {
+
+                            data.child(
+                                "finalChallengeIndex"
+                            ).value =
+                                newIndex
+
+                            data.child(
+                                "currentPlayerUid"
+                            ).value =
+                                finalPlayers[
+                                    newIndex
+                                ]
+
+                            data.child(
+                                "turnEndsAt"
+                            ).value =
+                                System.currentTimeMillis() +
+                                    20000L
+                        }
+
+                        return Transaction.success(
+                            data
+                        )
+                    }
+
+                    override fun onComplete(
+                        error: DatabaseError?,
+                        committed: Boolean,
+                        currentData: DataSnapshot?
+                    ) {
+
+                        if (
+                            !committed
+                        ) {
+
+                            showStatus(
+                                "Final guess could not be submitted.",
+                                Color.RED
+                            )
+                        }
+                    }
+                }
+            )
+    }
+
+    private fun showRoundFinishedDialogIfNeeded() {
+
+        if (
+            roundNumber <= 0 ||
+            lastShownRoundFinished ==
+            roundNumber
+        ) {
+            return
+        }
+
+        lastShownRoundFinished =
+            roundNumber
+
+        val winnerMessage =
+            if (
+                roundWinnerUid.isNotEmpty()
+            ) {
+
+                "$roundWinnerName wins the round!"
+
+            } else {
+
+                "Nobody guessed the whole word."
+            }
+
+        val fullMessage =
+            "$winnerMessage\n\nThe word was:\n$secretWord"
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "🏆 ROUND OVER"
+                )
+                .setMessage(
+                    fullMessage
+                )
+                .setPositiveButton(
+                    "Continue Playing",
+                    null
+                )
+                .setNegativeButton(
+                    "Leave Game",
+                    null
+                )
+                .setCancelable(false)
+                .create()
+
+        dialog.setOnShowListener {
+
+            val continueButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_POSITIVE
+                )
+
+            val hostUid =
+                playerOrder.firstOrNull {
+                    it == getHostUid()
+                }
+
+            val canContinue =
+                myUid == hostUid
+
+            continueButton.isEnabled =
+                canContinue
+
+            if (
+                canContinue
+            ) {
+
+                continueButton.setOnClickListener {
 
                     dialog.dismiss()
 
-                    showStatus(
-                        "Whole-word time is up.",
-                        Color.RED
-                    )
-
-                    moveToNextPlayer()
+                    startNextRoundAsHost()
                 }
-            }
-            .start()
-
-    dialog.setOnShowListener {
-
-        dialog.getButton(
-            AlertDialog.BUTTON_NEGATIVE
-        ).setOnClickListener {
-
-            wholeWordTimer?.cancel()
-
-            dialog.dismiss()
-
-            resumeNormalTurnAfterWholeWordCancel()
-        }
-
-        dialog.getButton(
-            AlertDialog.BUTTON_POSITIVE
-        ).setOnClickListener {
-
-            val guess =
-                input.text
-                    .toString()
-                    .trim()
-                    .uppercase()
-
-            if (
-                guess.isEmpty()
-            ) {
-
-                input.error =
-                    "Enter a word."
-
-                return@setOnClickListener
-            }
-
-            wholeWordTimer?.cancel()
-
-            dialog.dismiss()
-
-            if (
-                guess ==
-                secretWord.uppercase()
-            ) {
-
-                finishRound(
-                    "Player $currentPlayer guessed the whole word and wins!"
-                )
 
             } else {
 
-                showStatus(
-                    "Wrong whole-word guess!",
-                    Color.RED
-                )
-
-                moveToNextPlayer()
+                continueButton.text =
+                    "Waiting for Host"
             }
-        }
-    }
 
-    dialog.setOnCancelListener {
-
-        wholeWordTimer?.cancel()
-
-        resumeNormalTurnAfterWholeWordCancel()
-    }
-
-    dialog.show()
-}
-
-private fun finishRound(
-    message: String
-) {
-
-    if (
-        roundFinished
-    ) {
-        return
-    }
-
-    roundFinished =
-        true
-
-    timer?.cancel()
-    wholeWordTimer?.cancel()
-
-    setWholeWordButtonEnabled(
-        false
-    )
-
-    val title =
-        TextView(this)
-
-    title.text =
-        "🏆 ROUND OVER"
-
-    title.textSize =
-        26f
-
-    title.gravity =
-        Gravity.CENTER
-
-    title.setTypeface(
-        null,
-        Typeface.BOLD
-    )
-
-    title.setTextColor(
-        Color.rgb(
-            0,
-            100,
-            0
-        )
-    )
-
-    title.setPadding(
-        0,
-        10,
-        0,
-        15
-    )
-
-    val dialog =
-        AlertDialog.Builder(this)
-            .setCustomTitle(
-                title
-            )
-            .setMessage(
-                message
-            )
-            .setPositiveButton(
-                "Continue Playing",
-                null
-            )
-            .setNegativeButton(
-                "Leave Game",
-                null
-            )
-            .setCancelable(false)
-            .create()
-
-    dialog.setOnShowListener {
-
-        val continueButton =
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            )
-
-        continueButton.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        continueButton.setTextColor(
-            Color.rgb(
-                0,
-                100,
-                0
-            )
-        )
-
-        continueButton.setOnClickListener {
-
-            dialog.dismiss()
-
-            if (
-                wordSelection ==
-                "Random Word"
-            ) {
-
-                startNewRandomRound()
-
-            } else {
-
-                showNewManualWordDialog()
-            }
-        }
-
-        val leaveButton =
             dialog.getButton(
                 AlertDialog.BUTTON_NEGATIVE
-            )
+            ).setOnClickListener {
 
-        leaveButton.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        leaveButton.setTextColor(
-            Color.RED
-        )
-
-        leaveButton.setOnClickListener {
-
-            dialog.dismiss()
-
-            finish()
-        }
-    }
-
-    dialog.show()
-}
-
-private fun startNewRandomRound() {
-
-    timer?.cancel()
-    wholeWordTimer?.cancel()
-
-    roundFinished =
-        false
-
-    finalChallengeActive =
-        false
-
-    finalChallengePlayers.clear()
-
-    finalChallengeIndex =
-        0
-
-    completedTurns =
-        0
-
-    wholeWordAttemptUsed =
-        false
-
-    eliminatedPlayers.clear()
-
-    for (player in 1..playerCount) {
-        missedTurns[player] = 0
-    }
-
-    currentPlayer = 1
-
-    chooseWord(
-        "Random Word",
-        selectedCategory,
-        null
-    )
-
-    rebuildRoundScreen()
-}
-
-private fun showNewManualWordDialog() {
-
-    val input =
-        EditText(this)
-
-    input.hint =
-        "Enter the new word"
-
-    input.setSingleLine(true)
-
-    input.textSize =
-        18f
-
-    input.setPadding(
-        20,
-        10,
-        20,
-        10
-    )
-
-    val dialog =
-        AlertDialog.Builder(this)
-            .setTitle(
-                "New Word"
-            )
-            .setMessage(
-                "Player 1 (Word Master), enter the word for the next round."
-            )
-            .setView(
-                input
-            )
-            .setNegativeButton(
-                "Cancel"
-            ) { _, _ ->
+                dialog.dismiss()
 
                 finish()
             }
-            .setPositiveButton(
-                "Start Round",
-                null
+        }
+
+        dialog.show()
+    }
+
+    private fun getHostUid(): String {
+
+        return playerOrder.firstOrNull {
+            false
+        } ?: ""
+    }
+
+    private fun isHostFromCurrentData():
+        Boolean {
+
+        return false
+    }
+
+    private fun finishWithoutWinner() {
+
+        gameReference()
+            .updateChildren(
+                mapOf(
+                    "status" to "roundFinished",
+                    "roundWinnerUid" to "",
+                    "roundWinnerName" to ""
+                )
             )
-            .setCancelable(false)
-            .create()
+    }
 
-    dialog.setOnShowListener {
+    private fun startNextRoundAsHost() {
 
-        dialog.getButton(
-            AlertDialog.BUTTON_POSITIVE
-        ).setOnClickListener {
+        if (
+            !isActuallyHost()
+        ) {
+            return
+        }
 
-            val newWord =
-                input.text
-                    .toString()
-                    .trim()
-                    .uppercase()
+        if (
+            wordSelection ==
+            "Random Word"
+        ) {
 
-            if (
-                newWord.isEmpty()
-            ) {
+            val selected =
+                chooseOnlineWord()
 
-                input.error =
-                    "Please enter a word."
+            val updates =
+                hashMapOf<String, Any>(
+                    "status" to "playing",
+                    "roundNumber" to
+                        roundNumber + 1,
+                    "phase" to "normal",
+                    "secretWord" to
+                        selected.first,
+                    "actualCategory" to
+                        selected.second,
+                    "currentPlayerUid" to
+                        chooseNextStartingPlayer(),
+                    "completedTurns" to 0,
+                    "roundWinnerUid" to "",
+                    "roundWinnerName" to "",
+                    "turnEndsAt" to
+                        getNewTurnEndTime(),
+                    "guessedLetters" to
+                        emptyMap<String, Any>(),
+                    "missedTurns" to
+                        createEmptyPlayerMap(),
+                    "eliminatedPlayers" to
+                        emptyMap<String, Any>(),
+                    "finalChallengePlayers" to
+                        emptyList<String>(),
+                    "finalChallengeIndex" to 0
+                )
 
-                return@setOnClickListener
-            }
+            gameReference()
+                .updateChildren(
+                    updates
+                )
 
-            manualWord =
-                newWord
+        } else {
 
-            timer?.cancel()
-            wholeWordTimer?.cancel()
-
-            roundFinished =
-                false
-
-            finalChallengeActive =
-                false
-
-            finalChallengePlayers.clear()
-
-            finalChallengeIndex =
-                0
-
-            completedTurns =
-                0
-
-            wholeWordAttemptUsed =
-                false
-
-            eliminatedPlayers.clear()
-
-            for (player in 1..playerCount) {
-                missedTurns[player] = 0
-            }
-
-            currentPlayer =
-                if (playerCount >= 2) {
-                    2
-                } else {
-                    1
-                }
-
-            chooseWord(
-                wordSelection,
-                selectedCategory,
-                manualWord
-            )
-
-            dialog.dismiss()
-
-            rebuildRoundScreen()
+            showNextManualWordDialog()
         }
     }
 
-    dialog.show()
-}
+    private fun createEmptyPlayerMap():
+        Map<String, Any> {
 
-private fun rebuildRoundScreen() {
+        val map =
+            mutableMapOf<String, Any>()
 
-    remainingTurnSeconds =
-        if (isUnlimited()) {
-            0
-        } else {
-            secondsPerTurn
+        for (
+            uid in playerOrder
+        ) {
+            map[uid] = 0
         }
 
-    createGameScreen()
+        return map
+    }
 
-    startTurnTimer(
-        secondsPerTurn
-    )
-}
+    private fun chooseNextStartingPlayer():
+        String {
 
-override fun onDestroy() {
+        val active =
+            playerOrder.filter {
+                !eliminatedPlayers.contains(
+                    it
+                ) &&
+                    it != wordMasterUid
+            }
 
-    timer?.cancel()
-    wholeWordTimer?.cancel()
+        return active.firstOrNull()
+            ?: playerOrder.firstOrNull()
+            ?: ""
+    }
 
-    super.onDestroy()
-}
+    private fun showNextManualWordDialog() {
+
+        val newMaster =
+            chooseNextWordMaster()
+
+        if (
+            newMaster.isEmpty()
+        ) {
+
+            showStatus(
+                "Could not determine the next Word Master.",
+                Color.RED
+            )
+
+            return
+        }
+
+        wordMasterUid =
+            newMaster
+
+        val masterName =
+            playerNames[
+                newMaster
+            ] ?: "Player"
+
+        val input =
+            EditText(this)
+
+        input.hint =
+            "Enter the new word"
+
+        input.setSingleLine(
+            true
+        )
+
+        input.textSize =
+            18f
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "$masterName — New Word"
+                )
+                .setMessage(
+                    "The new Word Master must enter the word."
+                )
+                .setView(
+                    input
+                )
+                .setCancelable(false)
+                .setNegativeButton(
+                    "Cancel"
+                ) { _, _ ->
+
+                    finish()
+                }
+                .setPositiveButton(
+                    "Start Round",
+                    null
+                )
+                .create()
+
+        dialog.setOnShowListener {
+
+            val startButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_POSITIVE
+                )
+
+            if (
+                newMaster != myUid
+            ) {
+
+                startButton.isEnabled =
+                    false
+
+                startButton.text =
+                    "Waiting for $masterName"
+
+                return@setOnShowListener
+            }
+
+            startButton.setOnClickListener {
+
+                val word =
+                    input.text
+                        .toString()
+                        .trim()
+                        .uppercase()
+
+                if (
+                    word.isEmpty()
+                ) {
+
+                    input.error =
+                        "Enter a word."
+
+                    return@setOnClickListener
+                }
+
+                dialog.dismiss()
+
+                startManualRound(
+                    word,
+                    newMaster
+                )
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun chooseNextWordMaster():
+        String {
+
+        val winner =
+            roundWinnerUid
+
+        val activePlayers =
+            playerOrder.filter {
+                !eliminatedPlayers.contains(
+                    it
+                )
+            }
+
+        if (
+            activePlayers.isEmpty()
+        ) {
+            return ""
+        }
+
+        return when {
+
+            nextWordMaster ==
+                "Same" -> {
+
+                if (
+                    activePlayers.contains(
+                        wordMasterUid
+                    )
+                ) {
+                    wordMasterUid
+                } else {
+                    activePlayers.first()
+                }
+            }
+
+            nextWordMaster ==
+                "Winner" ||
+            nextWordMaster ==
+                "Winner becomes Word Master" -> {
+
+                if (
+                    activePlayers.contains(
+                        winner
+                    )
+                ) {
+                    winner
+                } else {
+                    activePlayers.first()
+                }
+            }
+
+            else -> {
+
+                if (
+                    activePlayers.contains(
+                        winner
+                    ) &&
+                    nextWordMaster.contains(
+                        "Winner"
+                    )
+                ) {
+                    winner
+                } else {
+
+                    getHostUid()
+                        .ifEmpty {
+                            activePlayers.first()
+                        }
+                }
+            }
+        }
+    }
+
+    private fun startManualRound(
+        word: String,
+        newMasterUid: String
+    ) {
+
+        val startingPlayer =
+            playerOrder.firstOrNull {
+                it != newMasterUid &&
+                    !eliminatedPlayers.contains(
+                        it
+                    )
+            } ?: ""
+
+        val updates =
+            hashMapOf<String, Any>(
+                "status" to "playing",
+                "roundNumber" to
+                    roundNumber + 1,
+                "phase" to "normal",
+                "secretWord" to word,
+                "actualCategory" to selectedCategory,
+                "wordMasterUid" to
+                    newMasterUid,
+                "currentPlayerUid" to
+                    startingPlayer,
+                "completedTurns" to 0,
+                "roundWinnerUid" to "",
+                "roundWinnerName" to "",
+                "turnEndsAt" to
+                    getNewTurnEndTime(),
+                "guessedLetters" to
+                    emptyMap<String, Any>(),
+                "missedTurns" to
+                    createEmptyPlayerMap(),
+                "eliminatedPlayers" to
+                    emptyMap<String, Any>(),
+                "finalChallengePlayers" to
+                    emptyList<String>(),
+                "finalChallengeIndex" to 0
+            )
+
+        gameReference()
+            .updateChildren(
+                updates
+            )
+    }
+
+    private fun isActuallyHost():
+        Boolean {
+
+        return auth.currentUser?.uid ==
+            getKnownHostUid()
+    }
+
+    private var knownHostUid = ""
+
+    private fun getKnownHostUid(): String {
+
+        return knownHostUid
+    }
+
+    private fun stopTimers() {
+
+        timer?.cancel()
+        wholeWordTimer?.cancel()
+
+        timer = null
+        wholeWordTimer = null
+    }
+
+    override fun onDestroy() {
+
+        stopTimers()
+
+        gameListener?.let {
+            gameReference()
+                .removeEventListener(
+                    it
+                )
+        }
+
+        super.onDestroy()
+    }
 }
