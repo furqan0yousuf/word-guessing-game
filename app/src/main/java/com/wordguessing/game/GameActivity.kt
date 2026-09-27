@@ -926,8 +926,7 @@ class GameActivity : Activity() {
                             letter
                         )
 
-                        letterButton.text =
-    letter.toString()"
+                        letterButton.text = letter.toString()
 
                         Toast.makeText(
                             this,
