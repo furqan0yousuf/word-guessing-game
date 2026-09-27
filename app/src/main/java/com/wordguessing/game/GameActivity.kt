@@ -927,7 +927,7 @@ class GameActivity : Activity() {
                         )
 
                         letterButton.text =
-                            "$letter ❌"
+    letter.toString()"
 
                         Toast.makeText(
                             this,
