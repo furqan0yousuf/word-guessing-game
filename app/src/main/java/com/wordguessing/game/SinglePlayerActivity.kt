@@ -31,7 +31,7 @@ class SinglePlayerActivity : Activity() {
     private val guessedLetters = mutableSetOf<Char>()
 
     private var wrongAttempts = 0
-    private val maxWrongAttempts = 10
+    private var maxWrongAttempts = 10
 
     private var roundFinished = false
     private var finalGuessMode = false
@@ -51,6 +51,12 @@ class SinglePlayerActivity : Activity() {
                     "Easy",
                     "Intermediate"
                 )
+
+        maxWrongAttempts =
+            intent.getIntExtra(
+                "maxWrongAttempts",
+                10
+            )
 
         startNewRound()
     }
@@ -281,7 +287,7 @@ class SinglePlayerActivity : Activity() {
                         finalGuessMode = true
 
                         statusText.text =
-                            "10 wrong letters reached. Guess the whole word!"
+                            "$maxWrongAttempts wrong letters reached. Guess the whole word!"
 
                         showWholeWordDialog()
                     }
