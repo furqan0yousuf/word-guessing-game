@@ -1824,68 +1824,100 @@ class GameActivity : Activity() {
     }
 
     private fun updateTurnAndScores() {
+private fun updateTurnAndScores() {
+
+    if (
+        eliminatedPlayers.contains(
+            currentPlayer
+        )
+    ) {
+        return
+    }
+
+    turnText.text =
+        "Turn: ${playerNames[currentPlayer]}"
+
+    val scoreDisplay =
+        android.text.SpannableStringBuilder()
+
+    for (
+        i in playerNames.indices
+    ) {
+
+        val lineStart =
+            scoreDisplay.length
+
+        scoreDisplay.append(
+            "${playerNames[i]}: ${scores[i]} points"
+        )
+
+        if (
+            wordSelection ==
+            "Host Chooses Word" &&
+            i == 0
+        ) {
+
+            scoreDisplay.append(
+                " (Word Master)"
+            )
+
+        } else if (
+            eliminatedPlayers.contains(
+                i
+            )
+        ) {
+
+            scoreDisplay.append(
+                " (Eliminated)"
+            )
+        }
+
+        scoreDisplay.append(
+            " | Missed: ${missedTurns[i]}"
+        )
+
+        val lineEnd =
+            scoreDisplay.length
 
         if (
             eliminatedPlayers.contains(
-                currentPlayer
+                i
             )
         ) {
-            return
+
+            scoreDisplay.setSpan(
+                android.text.style.ForegroundColorSpan(
+                    Color.RED
+                ),
+                lineStart,
+                lineEnd,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+
+            scoreDisplay.setSpan(
+                android.text.style.StyleSpan(
+                    Typeface.BOLD
+                ),
+                lineStart,
+                lineEnd,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
         }
 
-        turnText.text =
-            "Turn: ${playerNames[currentPlayer]}"
-
-        val scoreDisplay =
-            StringBuilder()
-
-        for (
-            i in playerNames.indices
+        if (
+            i <
+            playerNames.size - 1
         ) {
 
             scoreDisplay.append(
-                "${playerNames[i]}: ${scores[i]} points"
+                "\n"
             )
-
-            if (
-                wordSelection ==
-                "Host Chooses Word" &&
-                i == 0
-            ) {
-
-                scoreDisplay.append(
-                    " (Word Master)"
-                )
-
-            } else if (
-                eliminatedPlayers.contains(
-                    i
-                )
-            ) {
-
-                scoreDisplay.append(
-                    " (Eliminated)"
-                )
-            }
-
-            scoreDisplay.append(
-                " | Missed: ${missedTurns[i]}"
-            )
-
-            if (
-                i <
-                playerNames.size - 1
-            ) {
-
-                scoreDisplay.append(
-                    "\n"
-                )
-            }
         }
-
-        scoresText.text =
-            scoreDisplay.toString()
     }
+
+    scoresText.text =
+        scoreDisplay
+}
 
     override fun onBackPressed() {
 
