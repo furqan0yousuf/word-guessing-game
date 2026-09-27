@@ -1,4 +1,3 @@
-
 package com.wordguessing.game
 
 import android.app.Activity
@@ -209,6 +208,7 @@ class CreateGameActivity : Activity() {
         timeTitle.text = "Time per Turn"
         timeTitle.textSize = 20f
         timeTitle.setPadding(0, 20, 0, 10)
+
         advancedLayout.addView(timeTitle)
 
         val timeSpinner = Spinner(this)
@@ -238,6 +238,7 @@ class CreateGameActivity : Activity() {
         totalTurnsTitle.text = "Total Turns"
         totalTurnsTitle.textSize = 20f
         totalTurnsTitle.setPadding(0, 20, 0, 10)
+
         advancedLayout.addView(totalTurnsTitle)
 
         val totalTurnsSpinner = Spinner(this)
@@ -268,6 +269,7 @@ class CreateGameActivity : Activity() {
         nextMasterTitle.text = "Next Word Master"
         nextMasterTitle.textSize = 20f
         nextMasterTitle.setPadding(0, 20, 0, 10)
+
         advancedLayout.addView(nextMasterTitle)
 
         val nextMasterSpinner = Spinner(this)
@@ -296,6 +298,7 @@ class CreateGameActivity : Activity() {
         passwordTitle.text = "Game Password (Optional)"
         passwordTitle.textSize = 20f
         passwordTitle.setPadding(0, 20, 0, 10)
+
         advancedLayout.addView(passwordTitle)
 
         val passwordInput = EditText(this)
@@ -492,12 +495,19 @@ class CreateGameActivity : Activity() {
                     .toString()
                     .trim()
 
+            /*
+             * Prevent multiple taps.
+             */
             createButton.isEnabled = false
 
             /*
-             * Make sure the host has a Firebase account.
+             * Make sure the host is authenticated.
+             *
+             * Anonymous authentication is already enabled
+             * in Firebase.
              */
-            val currentUser = auth.currentUser
+            val currentUser =
+                auth.currentUser
 
             if (currentUser != null) {
 
@@ -593,23 +603,31 @@ class CreateGameActivity : Activity() {
         createButton: Button
     ) {
 
+        /*
+         * Generate a six-digit game code.
+         */
         val gameCode =
             (100000..999999)
                 .random()
                 .toString()
 
+        /*
+         * Firebase location:
+         *
+         * games
+         *   └── 123456
+         */
         val gameReference =
             database
                 .getReference("games")
                 .child(gameCode)
 
+        /*
+         * Make sure this code is not already being used.
+         */
         gameReference.get()
             .addOnSuccessListener { snapshot ->
 
-                /*
-                 * Extremely unlikely, but if the code already
-                 * exists, generate another code.
-                 */
                 if (snapshot.exists()) {
 
                     createFirebaseGame(
@@ -630,7 +648,7 @@ class CreateGameActivity : Activity() {
                 }
 
                 /*
-                 * Host player information.
+                 * Host player.
                  */
                 val hostPlayer =
                     hashMapOf<String, Any>(
@@ -641,7 +659,7 @@ class CreateGameActivity : Activity() {
                     )
 
                 /*
-                 * Game room information.
+                 * Complete game room.
                  */
                 val gameData =
                     hashMapOf<String, Any>(
@@ -663,6 +681,9 @@ class CreateGameActivity : Activity() {
                         )
                     )
 
+                /*
+                 * Save the room.
+                 */
                 gameReference.setValue(gameData)
                     .addOnSuccessListener {
 
@@ -672,6 +693,9 @@ class CreateGameActivity : Activity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
+                        /*
+                         * Open the waiting room.
+                         */
                         val intent =
                             Intent(
                                 this,
@@ -758,4 +782,3 @@ class CreateGameActivity : Activity() {
             }
     }
 }
-
