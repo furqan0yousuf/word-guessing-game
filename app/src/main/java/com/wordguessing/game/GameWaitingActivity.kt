@@ -14,6 +14,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -40,8 +41,9 @@ class GameWaitingActivity : Activity() {
 
     private var playersListener: ValueEventListener? = null
 
-    // Prevent the same phone from opening the game more than once.
     private var gameOpened = false
+
+    private var leavingGame = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -404,9 +406,7 @@ class GameWaitingActivity : Activity() {
 
         leaveButton.setOnClickListener {
 
-            removeListener()
-
-            finish()
+            confirmLeaveGame()
         }
 
         layout.addView(
@@ -438,6 +438,10 @@ class GameWaitingActivity : Activity() {
                 override fun onDataChange(
                     snapshot: DataSnapshot
                 ) {
+
+                    if (leavingGame) {
+                        return
+                    }
 
                     val currentStatus =
                         snapshot
@@ -533,6 +537,31 @@ class GameWaitingActivity : Activity() {
                         builder.toString()
                             .trimEnd()
 
+                    if (joinedPlayers < 2) {
+
+                        if (isHost) {
+
+                            startButton.isEnabled =
+                                false
+
+                            statusText.text =
+                                "\nYou are the HOST.\nWaiting for at least 1 more player..."
+
+                        } else {
+
+                            statusText.text =
+                                "\nThe other player left the game.\nThe game can no longer continue."
+
+                            Toast.makeText(
+                                this@GameWaitingActivity,
+                                "The other player left the game.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+
+                        return
+                    }
+
                     if (isHost) {
 
                         if (joinedPlayers >= 2) {
@@ -574,6 +603,88 @@ class GameWaitingActivity : Activity() {
         gameReference.addValueEventListener(
             playersListener!!
         )
+    }
+
+    private fun confirmLeaveGame() {
+
+        AlertDialog.Builder(this)
+            .setTitle(
+                "Leave Game?"
+            )
+            .setMessage(
+                "Are you sure you want to leave this game?"
+            )
+            .setNegativeButton(
+                "Cancel",
+                null
+            )
+            .setPositiveButton(
+                "Leave"
+            ) { _, _ ->
+
+                leaveGame()
+            }
+            .show()
+    }
+
+    private fun leaveGame() {
+
+        if (leavingGame) {
+            return
+        }
+
+        leavingGame = true
+
+        val uid =
+            FirebaseAuth
+                .getInstance()
+                .currentUser
+                ?.uid
+
+        if (uid == null) {
+
+            removeListener()
+
+            finish()
+
+            return
+        }
+
+        statusText.text =
+            "\nLeaving game..."
+
+        val gameReference =
+            FirebaseDatabase
+                .getInstance()
+                .getReference("games")
+                .child(gameCode)
+
+        gameReference
+            .child("players")
+            .child(uid)
+            .removeValue()
+            .addOnSuccessListener {
+
+                removeListener()
+
+                Toast.makeText(
+                    this,
+                    "You left the game.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                finish()
+            }
+            .addOnFailureListener {
+
+                leavingGame = false
+
+                Toast.makeText(
+                    this,
+                    "Could not leave the game. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
 
     private fun removeListener() {
@@ -625,8 +736,6 @@ class GameWaitingActivity : Activity() {
          * The host must first enter OnlineGameRoundActivity.
          * That screen creates/initializes the first round and then
          * changes the Firebase status to "playing".
-         *
-         * This prevents the "Waiting for word..." problem.
          */
 
         gameOpened = true
