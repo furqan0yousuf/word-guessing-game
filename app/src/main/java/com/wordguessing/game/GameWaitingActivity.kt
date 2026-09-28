@@ -1,3 +1,4 @@
+
 package com.wordguessing.game
 
 import android.app.Activity
@@ -8,14 +9,12 @@ import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
-import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -438,6 +437,26 @@ class GameWaitingActivity : Activity() {
                     snapshot: DataSnapshot
                 ) {
 
+                    val currentStatus =
+                        snapshot
+                            .child("status")
+                            .getValue(
+                                String::class.java
+                            )
+                            ?: "waiting"
+
+                    // If the game has already started,
+                    // do not continue treating this as a waiting room.
+                    if (currentStatus == "playing") {
+
+                        if (!isHost) {
+                            statusText.text =
+                                "\nGame started!\nOpening the game..."
+                        }
+
+                        return
+                    }
+
                     val playersSnapshot =
                         snapshot.child("players")
 
@@ -519,6 +538,7 @@ class GameWaitingActivity : Activity() {
                             statusText.text =
                                 "\nYou are the HOST.\nWaiting for at least 1 more player..."
                         }
+
                     } else {
 
                         statusText.text =
@@ -583,6 +603,35 @@ class GameWaitingActivity : Activity() {
     }
 
     private fun startGame() {
+
+        val gameReference =
+            FirebaseDatabase
+                .getInstance()
+                .getReference("games")
+                .child(gameCode)
+
+        // First change the Firebase room status.
+        // This prevents new players from joining after
+        // the host has officially started the game.
+        gameReference
+            .child("status")
+            .setValue("playing")
+            .addOnSuccessListener {
+
+                openOnlineGame()
+
+            }
+            .addOnFailureListener {
+
+                Toast.makeText(
+                    this,
+                    "Could not start the game. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    private fun openOnlineGame() {
 
         val gameIntent =
             Intent(
