@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -884,25 +885,11 @@ class OnlineGameRoundActivity : Activity() {
                 Int::class.java
             ) ?: 0
 
-        readPlayers(
-            snapshot
-        )
-
-        readGuessedLetters(
-            snapshot
-        )
-
-        readScores(
-            snapshot
-        )
-
-        readMissedTurns(
-            snapshot
-        )
-
-        readEliminatedPlayers(
-            snapshot
-        )
+        readPlayers(snapshot)
+        readGuessedLetters(snapshot)
+        readScores(snapshot)
+        readMissedTurns(snapshot)
+        readEliminatedPlayers(snapshot)
 
         roundFinished =
             status == "roundFinished"
@@ -914,9 +901,7 @@ class OnlineGameRoundActivity : Activity() {
             isHost(snapshot)
         ) {
 
-            initializeFirstRound(
-                snapshot
-            )
+            initializeFirstRound(snapshot)
 
             return
         }
@@ -927,9 +912,7 @@ class OnlineGameRoundActivity : Activity() {
 
             stopTimers()
 
-            setWholeWordButtonEnabled(
-                false
-            )
+            setWholeWordButtonEnabled(false)
 
             showRoundFinishedDialogIfNeeded()
 
@@ -963,18 +946,10 @@ class OnlineGameRoundActivity : Activity() {
         playerOrder.clear()
 
         val playersSnapshot =
-            snapshot.child(
-                "players"
-            )
+            snapshot.child("players")
 
         val temp =
-            mutableListOf<
-                Triple<
-                    String,
-                    String,
-                    Long
-                >
-            >()
+            mutableListOf<Triple<String, String, Long>>()
 
         for (
             child in playersSnapshot.children
@@ -984,21 +959,16 @@ class OnlineGameRoundActivity : Activity() {
                 child.key ?: continue
 
             val name =
-                child.child(
-                    "name"
-                ).getValue(
+                child.child("name").getValue(
                     String::class.java
                 ) ?: "Player"
 
             val joinedAt =
-                child.child(
-                    "joinedAt"
-                ).getValue(
+                child.child("joinedAt").getValue(
                     Long::class.java
                 ) ?: 0L
 
-            playerNames[uid] =
-                name
+            playerNames[uid] = name
 
             temp.add(
                 Triple(
@@ -1023,9 +993,7 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         maxPlayers =
-            snapshot.child(
-                "maxPlayers"
-            ).getValue(
+            snapshot.child("maxPlayers").getValue(
                 Int::class.java
             ) ?: maxPlayers
     }
@@ -1037,9 +1005,7 @@ class OnlineGameRoundActivity : Activity() {
         guessedLetters.clear()
 
         val guessed =
-            snapshot.child(
-                "guessedLetters"
-            )
+            snapshot.child("guessedLetters")
 
         for (
             child in guessed.children
@@ -1050,20 +1016,13 @@ class OnlineGameRoundActivity : Activity() {
                     Boolean::class.java
                 ) ?: false
 
-            if (
-                value
-            ) {
+            if (value) {
 
                 val letter =
                     child.key?.firstOrNull()
 
-                if (
-                    letter != null
-                ) {
-
-                    guessedLetters.add(
-                        letter
-                    )
+                if (letter != null) {
+                    guessedLetters.add(letter)
                 }
             }
         }
@@ -1076,9 +1035,7 @@ class OnlineGameRoundActivity : Activity() {
         scores.clear()
 
         val scoreSnapshot =
-            snapshot.child(
-                "scores"
-            )
+            snapshot.child("scores")
 
         for (
             child in scoreSnapshot.children
@@ -1101,9 +1058,7 @@ class OnlineGameRoundActivity : Activity() {
         missedTurns.clear()
 
         val missSnapshot =
-            snapshot.child(
-                "missedTurns"
-            )
+            snapshot.child("missedTurns")
 
         for (
             child in missSnapshot.children
@@ -1126,9 +1081,7 @@ class OnlineGameRoundActivity : Activity() {
         eliminatedPlayers.clear()
 
         val eliminated =
-            snapshot.child(
-                "eliminatedPlayers"
-            )
+            snapshot.child("eliminatedPlayers")
 
         for (
             child in eliminated.children
@@ -1139,14 +1092,9 @@ class OnlineGameRoundActivity : Activity() {
                     Boolean::class.java
                 ) ?: false
 
-            if (
-                value
-            ) {
-
+            if (value) {
                 child.key?.let {
-                    eliminatedPlayers.add(
-                        it
-                    )
+                    eliminatedPlayers.add(it)
                 }
             }
         }
@@ -1157,9 +1105,7 @@ class OnlineGameRoundActivity : Activity() {
     ): Boolean {
 
         val hostUid =
-            snapshot.child(
-                "hostUid"
-            ).getValue(
+            snapshot.child("hostUid").getValue(
                 String::class.java
             )
 
@@ -1171,9 +1117,7 @@ class OnlineGameRoundActivity : Activity() {
     ) {
 
         val currentStatus =
-            snapshot.child(
-                "status"
-            ).getValue(
+            snapshot.child("status").getValue(
                 String::class.java
             )
 
@@ -1184,9 +1128,7 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         val players =
-            snapshot.child(
-                "players"
-            ).children.toList()
+            snapshot.child("players").children.toList()
 
         if (
             players.size < 2
@@ -1204,9 +1146,7 @@ class OnlineGameRoundActivity : Activity() {
             chooseOnlineWord()
 
         val firstPlayerUid =
-            chooseFirstPlayer(
-                players
-            )
+            chooseFirstPlayer(players)
 
         val updates =
             hashMapOf<String, Any>(
@@ -1220,21 +1160,15 @@ class OnlineGameRoundActivity : Activity() {
                 "roundWinnerUid" to "",
                 "roundWinnerName" to "",
                 "wordMasterUid" to
-                    getInitialWordMasterUid(
-                        snapshot
-                    ),
+                    getInitialWordMasterUid(snapshot),
                 "turnEndsAt" to
                     getNewTurnEndTime(),
                 "guessedLetters" to
                     emptyMap<String, Any>(),
                 "scores" to
-                    createInitialScores(
-                        players
-                    ),
+                    createInitialScores(players),
                 "missedTurns" to
-                    createInitialMisses(
-                        players
-                    ),
+                    createInitialMisses(players),
                 "eliminatedPlayers" to
                     emptyMap<String, Any>(),
                 "finalChallengePlayers" to
@@ -1243,9 +1177,7 @@ class OnlineGameRoundActivity : Activity() {
             )
 
         gameReference()
-            .updateChildren(
-                updates
-            )
+            .updateChildren(updates)
     }
 
     private fun chooseOnlineWord():
@@ -1282,9 +1214,7 @@ class OnlineGameRoundActivity : Activity() {
             ) {
                 WordBank.categories.keys.toList()
             } else {
-                listOf(
-                    selectedCategory
-                )
+                listOf(selectedCategory)
             }
 
         val category =
@@ -1297,15 +1227,11 @@ class OnlineGameRoundActivity : Activity() {
         val words =
             WordBank.categories[
                 category
-            ] ?: listOf(
-                "APPLE"
-            )
+            ] ?: listOf("APPLE")
 
         val word =
             words[
-                Random.nextInt(
-                    words.size
-                )
+                Random.nextInt(words.size)
             ]
 
         return Pair(
@@ -1324,9 +1250,7 @@ class OnlineGameRoundActivity : Activity() {
 
             val master =
                 players.firstOrNull {
-                    it.child(
-                        "isHost"
-                    ).getValue(
+                    it.child("isHost").getValue(
                         Boolean::class.java
                     ) == true
                 }
@@ -1346,7 +1270,6 @@ class OnlineGameRoundActivity : Activity() {
                 if (
                     nonMaster?.key != null
                 ) {
-
                     return nonMaster.key!!
                 }
             }
@@ -1365,9 +1288,7 @@ class OnlineGameRoundActivity : Activity() {
             return ""
         }
 
-        return snapshot.child(
-            "hostUid"
-        ).getValue(
+        return snapshot.child("hostUid").getValue(
             String::class.java
         ) ?: ""
     }
@@ -1382,7 +1303,6 @@ class OnlineGameRoundActivity : Activity() {
         for (
             player in players
         ) {
-
             player.key?.let {
                 map[it] = 0
             }
@@ -1401,7 +1321,6 @@ class OnlineGameRoundActivity : Activity() {
         for (
             player in players
         ) {
-
             player.key?.let {
                 map[it] = 0
             }
@@ -1445,9 +1364,7 @@ class OnlineGameRoundActivity : Activity() {
         if (
             phase == "final"
         ) {
-
-            wholeWordButton.isEnabled =
-                false
+            wholeWordButton.isEnabled = false
         }
     }
 
@@ -1463,9 +1380,7 @@ class OnlineGameRoundActivity : Activity() {
             val name =
                 playerNames[uid] ?: "Player"
 
-            builder.append(
-                name
-            )
+            builder.append(name)
 
             builder.append(
                 " — Score: "
@@ -1518,9 +1433,7 @@ class OnlineGameRoundActivity : Activity() {
                 )
             }
 
-            builder.append(
-                "\n"
-            )
+            builder.append("\n")
         }
 
         playersText.text =
@@ -1575,29 +1488,18 @@ class OnlineGameRoundActivity : Activity() {
                 letter == ' '
             ) {
 
-                builder.append(
-                    "   "
-                )
+                builder.append("   ")
 
             } else if (
-                guessedLetters.contains(
-                    letter
-                )
+                guessedLetters.contains(letter)
             ) {
 
-                builder.append(
-                    letter
-                )
-
-                builder.append(
-                    " "
-                )
+                builder.append(letter)
+                builder.append(" ")
 
             } else {
 
-                builder.append(
-                    "_ "
-                )
+                builder.append("_ ")
             }
         }
 
@@ -1632,9 +1534,7 @@ class OnlineGameRoundActivity : Activity() {
                         ?: continue
 
                 if (
-                    guessedLetters.contains(
-                        letter
-                    )
+                    guessedLetters.contains(letter)
                 ) {
 
                     button.setBackgroundColor(
@@ -1676,9 +1576,8 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         val currentName =
-            playerNames[
-                currentPlayerUid
-            ] ?: "Player"
+            playerNames[currentPlayerUid]
+                ?: "Player"
 
         if (
             phase == "final"
@@ -1765,7 +1664,6 @@ class OnlineGameRoundActivity : Activity() {
                                 letter.toString()
                             ).value != null
                         ) {
-
                             return Transaction.abort()
                         }
 
@@ -1781,9 +1679,7 @@ class OnlineGameRoundActivity : Activity() {
                             ) ?: ""
 
                         if (
-                            word.contains(
-                                letter
-                            )
+                            word.contains(letter)
                         ) {
 
                             val occurrences =
@@ -1821,9 +1717,7 @@ class OnlineGameRoundActivity : Activity() {
                                     ).value == null
                                 ) {
 
-                                    complete =
-                                        false
-
+                                    complete = false
                                     break
                                 }
                             }
@@ -1902,9 +1796,7 @@ class OnlineGameRoundActivity : Activity() {
                         }
 
                         if (
-                            secretWord.contains(
-                                letter
-                            )
+                            secretWord.contains(letter)
                         ) {
 
                             val occurrences =
@@ -1941,9 +1833,7 @@ class OnlineGameRoundActivity : Activity() {
             mutableListOf<String>()
 
         val playersData =
-            data.child(
-                "players"
-            )
+            data.child("players")
 
         for (
             child in playersData.children
@@ -1973,9 +1863,7 @@ class OnlineGameRoundActivity : Activity() {
             )
 
         var index =
-            players.indexOf(
-                currentUid
-            )
+            players.indexOf(currentUid)
 
         if (
             index < 0
@@ -2103,9 +1991,7 @@ class OnlineGameRoundActivity : Activity() {
                 continue
             }
 
-            order.add(
-                uid
-            )
+            order.add(uid)
         }
 
         data.child(
@@ -2297,9 +2183,7 @@ class OnlineGameRoundActivity : Activity() {
             (
                 turnEndsAt -
                     System.currentTimeMillis()
-                ).coerceAtLeast(
-                    0L
-                )
+                ).coerceAtLeast(0L)
 
         timer =
             object :
@@ -2464,9 +2348,7 @@ class OnlineGameRoundActivity : Activity() {
         input.hint =
             "Enter your word"
 
-        input.setSingleLine(
-            true
-        )
+        input.setSingleLine(true)
 
         input.textSize =
             18f
@@ -2501,22 +2383,13 @@ class OnlineGameRoundActivity : Activity() {
             5
         )
 
-        dialogLayout.addView(
-            input
-        )
-
-        dialogLayout.addView(
-            timerDisplay
-        )
+        dialogLayout.addView(input)
+        dialogLayout.addView(timerDisplay)
 
         val dialog =
             AlertDialog.Builder(this)
-                .setTitle(
-                    "Guess Whole Word"
-                )
-                .setView(
-                    dialogLayout
-                )
+                .setTitle("Guess Whole Word")
+                .setView(dialogLayout)
                 .setNegativeButton(
                     "Cancel",
                     null
@@ -2615,9 +2488,7 @@ class OnlineGameRoundActivity : Activity() {
 
                         dialog.dismiss()
 
-                        submitWholeWordGuess(
-                            ""
-                        )
+                        submitWholeWordGuess("")
                     }
                 }
                     .start()
@@ -2652,10 +2523,7 @@ class OnlineGameRoundActivity : Activity() {
                         turnEndsAt -
                             System.currentTimeMillis()
                     ) / 1000L
-                ).toInt()
-                    .coerceAtLeast(
-                        0
-                    )
+                ).toInt().coerceAtLeast(0)
             }
 
         if (
@@ -2717,9 +2585,7 @@ class OnlineGameRoundActivity : Activity() {
                         if (
                             guess.isNotEmpty() &&
                             guess ==
-                            word
-                                .trim()
-                                .uppercase()
+                            word.trim().uppercase()
                         ) {
 
                             currentData.child(
@@ -2821,9 +2687,7 @@ class OnlineGameRoundActivity : Activity() {
 
         timer?.cancel()
 
-        setWholeWordButtonEnabled(
-            false
-        )
+        setWholeWordButtonEnabled(false)
 
         val finalPlayers =
             getFinalPlayers()
@@ -2842,7 +2706,6 @@ class OnlineGameRoundActivity : Activity() {
             if (
                 isHostFromCurrentData()
             ) {
-
                 finishWithoutWinner()
             }
 
@@ -2862,8 +2725,7 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         if (
-            currentFinalUid !=
-            myUid
+            currentFinalUid != myUid
         ) {
             return
         }
@@ -2887,10 +2749,7 @@ class OnlineGameRoundActivity : Activity() {
         List<String> {
 
         return playerOrder.filter {
-
-            !eliminatedPlayers.contains(
-                it
-            ) &&
+            !eliminatedPlayers.contains(it) &&
                 it != wordMasterUid
         }
     }
@@ -2900,9 +2759,7 @@ class OnlineGameRoundActivity : Activity() {
     ) {
 
         val playerName =
-            playerNames[
-                uid
-            ] ?: "Player"
+            playerNames[uid] ?: "Player"
 
         val input =
             EditText(this)
@@ -2910,9 +2767,7 @@ class OnlineGameRoundActivity : Activity() {
         input.hint =
             "Type the entire word"
 
-        input.setSingleLine(
-            true
-        )
+        input.setSingleLine(true)
 
         input.textSize =
             18f
@@ -2947,13 +2802,8 @@ class OnlineGameRoundActivity : Activity() {
             5
         )
 
-        layout.addView(
-            input
-        )
-
-        layout.addView(
-            timerDisplay
-        )
+        layout.addView(input)
+        layout.addView(timerDisplay)
 
         val dialog =
             AlertDialog.Builder(this)
@@ -2963,9 +2813,7 @@ class OnlineGameRoundActivity : Activity() {
                 .setMessage(
                     "Type the entire word and press Guess."
                 )
-                .setView(
-                    layout
-                )
+                .setView(layout)
                 .setNegativeButton(
                     "Skip",
                     null
@@ -2987,9 +2835,7 @@ class OnlineGameRoundActivity : Activity() {
 
                 dialog.dismiss()
 
-                submitFinalGuess(
-                    ""
-                )
+                submitFinalGuess("")
             }
 
             dialog.getButton(
@@ -3016,9 +2862,7 @@ class OnlineGameRoundActivity : Activity() {
 
                 dialog.dismiss()
 
-                submitFinalGuess(
-                    guess
-                )
+                submitFinalGuess(guess)
             }
 
             wholeWordTimer =
@@ -3048,9 +2892,7 @@ class OnlineGameRoundActivity : Activity() {
 
                         dialog.dismiss()
 
-                        submitFinalGuess(
-                            ""
-                        )
+                        submitFinalGuess("")
                     }
                 }
                     .start()
@@ -3105,9 +2947,7 @@ class OnlineGameRoundActivity : Activity() {
                         if (
                             guess.isNotEmpty() &&
                             guess ==
-                            word
-                                .trim()
-                                .uppercase()
+                            word.trim().uppercase()
                         ) {
 
                             data.child(
@@ -3127,9 +2967,7 @@ class OnlineGameRoundActivity : Activity() {
                                     myUid
                                 ] ?: "Player"
 
-                            return Transaction.success(
-                                data
-                            )
+                            return Transaction.success(data)
                         }
 
                         val index =
@@ -3157,9 +2995,7 @@ class OnlineGameRoundActivity : Activity() {
                             child.getValue(
                                 String::class.java
                             )?.let {
-                                finalPlayers.add(
-                                    it
-                                )
+                                finalPlayers.add(it)
                             }
                         }
 
@@ -3193,9 +3029,7 @@ class OnlineGameRoundActivity : Activity() {
                             data.child(
                                 "currentPlayerUid"
                             ).value =
-                                finalPlayers[
-                                    newIndex
-                                ]
+                                finalPlayers[newIndex]
 
                             data.child(
                                 "turnEndsAt"
@@ -3204,9 +3038,7 @@ class OnlineGameRoundActivity : Activity() {
                                     20000L
                         }
 
-                        return Transaction.success(
-                            data
-                        )
+                        return Transaction.success(data)
                     }
 
                     override fun onComplete(
@@ -3215,9 +3047,7 @@ class OnlineGameRoundActivity : Activity() {
                         currentData: DataSnapshot?
                     ) {
 
-                        if (
-                            !committed
-                        ) {
+                        if (!committed) {
 
                             showStatus(
                                 "Final guess could not be submitted.",
@@ -3246,11 +3076,8 @@ class OnlineGameRoundActivity : Activity() {
             if (
                 roundWinnerUid.isNotEmpty()
             ) {
-
                 "$roundWinnerName wins the round!"
-
             } else {
-
                 "Nobody guessed the whole word."
             }
 
@@ -3259,12 +3086,8 @@ class OnlineGameRoundActivity : Activity() {
 
         val dialog =
             AlertDialog.Builder(this)
-                .setTitle(
-                    "🏆 ROUND OVER"
-                )
-                .setMessage(
-                    fullMessage
-                )
+                .setTitle("🏆 ROUND OVER")
+                .setMessage(fullMessage)
                 .setPositiveButton(
                     "Continue Playing",
                     null
@@ -3289,9 +3112,7 @@ class OnlineGameRoundActivity : Activity() {
             continueButton.isEnabled =
                 canContinue
 
-            if (
-                canContinue
-            ) {
+            if (canContinue) {
 
                 continueButton.setOnClickListener {
 
@@ -3320,7 +3141,6 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     private fun getHostUid(): String {
-
         return knownHostUid
     }
 
@@ -3390,9 +3210,7 @@ class OnlineGameRoundActivity : Activity() {
                 )
 
             gameReference()
-                .updateChildren(
-                    updates
-                )
+                .updateChildren(updates)
 
         } else {
 
@@ -3409,7 +3227,6 @@ class OnlineGameRoundActivity : Activity() {
         for (
             uid in playerOrder
         ) {
-
             map[uid] = 0
         }
 
@@ -3421,9 +3238,7 @@ class OnlineGameRoundActivity : Activity() {
 
         val active =
             playerOrder.filter {
-                !eliminatedPlayers.contains(
-                    it
-                ) &&
+                !eliminatedPlayers.contains(it) &&
                     it != wordMasterUid
             }
 
@@ -3433,6 +3248,15 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     private fun showNextManualWordDialog() {
+
+        if (
+            nextWordMaster == "Winner chooses"
+        ) {
+
+            showWinnerChoosesWordMaster()
+
+            return
+        }
 
         val newMaster =
             chooseNextWordMaster()
@@ -3452,6 +3276,149 @@ class OnlineGameRoundActivity : Activity() {
         wordMasterUid =
             newMaster
 
+        showNewWordEntryForMaster(
+            newMaster
+        )
+    }
+
+    private fun showWinnerChoosesWordMaster() {
+
+        val winnerUid =
+            roundWinnerUid
+
+        if (
+            winnerUid.isEmpty()
+        ) {
+
+            showStatus(
+                "There was no winner to choose the next Word Master.",
+                Color.RED
+            )
+
+            return
+        }
+
+        if (
+            winnerUid != myUid
+        ) {
+
+            val winnerName =
+                playerNames[
+                    winnerUid
+                ] ?: "Winner"
+
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "Next Word Master"
+                )
+                .setMessage(
+                    "$winnerName will choose the next Word Master."
+                )
+                .setPositiveButton(
+                    "Waiting",
+                    null
+                )
+                .show()
+
+            return
+        }
+
+        val activePlayers =
+            playerOrder.filter {
+                !eliminatedPlayers.contains(it)
+            }
+
+        if (
+            activePlayers.isEmpty()
+        ) {
+
+            showStatus(
+                "No active players are available.",
+                Color.RED
+            )
+
+            return
+        }
+
+        val names =
+            activePlayers.map {
+                playerNames[it] ?: "Player"
+            }.toTypedArray()
+
+        var selectedIndex =
+            -1
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "Choose the Next Word Master"
+                )
+                .setSingleChoiceItems(
+                    names,
+                    -1
+                ) { _, which ->
+
+                    selectedIndex =
+                        which
+                }
+                .setNegativeButton(
+                    "Cancel"
+                ) { _, _ ->
+
+                    finish()
+                }
+                .setPositiveButton(
+                    "Continue",
+                    null
+                )
+                .setCancelable(false)
+                .create()
+
+        dialog.setOnShowListener {
+
+            val continueButton =
+                dialog.getButton(
+                    AlertDialog.BUTTON_POSITIVE
+                )
+
+            continueButton.setOnClickListener {
+
+                if (
+                    selectedIndex < 0
+                ) {
+
+                    Toast.makeText(
+                        this,
+                        "Choose a Word Master first.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@setOnClickListener
+                }
+
+                val selectedUid =
+                    activePlayers[
+                        selectedIndex
+                    ]
+
+                dialog.dismiss()
+
+                wordMasterUid =
+                    selectedUid
+
+                showNewWordEntryForMaster(
+                    selectedUid
+                )
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun showNewWordEntryForMaster(
+        newMaster: String
+    ) {
+
         val masterName =
             playerNames[
                 newMaster
@@ -3463,9 +3430,7 @@ class OnlineGameRoundActivity : Activity() {
         input.hint =
             "Enter the new word"
 
-        input.setSingleLine(
-            true
-        )
+        input.setSingleLine(true)
 
         input.textSize =
             18f
@@ -3476,11 +3441,9 @@ class OnlineGameRoundActivity : Activity() {
                     "$masterName — New Word"
                 )
                 .setMessage(
-                    "The new Word Master must enter the word."
+                    "The selected Word Master must enter the word."
                 )
-                .setView(
-                    input
-                )
+                .setView(input)
                 .setCancelable(false)
                 .setNegativeButton(
                     "Cancel"
@@ -3552,9 +3515,7 @@ class OnlineGameRoundActivity : Activity() {
 
         val activePlayers =
             playerOrder.filter {
-                !eliminatedPlayers.contains(
-                    it
-                )
+                !eliminatedPlayers.contains(it)
             }
 
         if (
@@ -3583,9 +3544,7 @@ class OnlineGameRoundActivity : Activity() {
                 "Winner becomes Word Master" -> {
 
                 if (
-                    activePlayers.contains(
-                        winner
-                    )
+                    activePlayers.contains(winner)
                 ) {
                     winner
                 } else {
@@ -3595,12 +3554,12 @@ class OnlineGameRoundActivity : Activity() {
 
             nextWordMaster.contains(
                 "Winner"
-            ) -> {
+            ) &&
+                nextWordMaster !=
+                "Winner chooses" -> {
 
                 if (
-                    activePlayers.contains(
-                        winner
-                    )
+                    activePlayers.contains(winner)
                 ) {
                     winner
                 } else {
@@ -3631,9 +3590,7 @@ class OnlineGameRoundActivity : Activity() {
         val startingPlayer =
             playerOrder.firstOrNull {
                 it != newMasterUid &&
-                    !eliminatedPlayers.contains(
-                        it
-                    )
+                    !eliminatedPlayers.contains(it)
             } ?: ""
 
         val updates =
@@ -3666,9 +3623,7 @@ class OnlineGameRoundActivity : Activity() {
             )
 
         gameReference()
-            .updateChildren(
-                updates
-            )
+            .updateChildren(updates)
     }
 
     private fun isActuallyHost():
@@ -3700,9 +3655,7 @@ class OnlineGameRoundActivity : Activity() {
         gameListener?.let {
 
             gameReference()
-                .removeEventListener(
-                    it
-                )
+                .removeEventListener(it)
         }
 
         super.onDestroy()
