@@ -1,4 +1,3 @@
-
 package com.wordguessing.game
 
 import android.app.Activity
@@ -40,6 +39,9 @@ class GameWaitingActivity : Activity() {
     private lateinit var startButton: Button
 
     private var playersListener: ValueEventListener? = null
+
+    // Prevent the same phone from opening the game more than once.
+    private var gameOpened = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -445,13 +447,23 @@ class GameWaitingActivity : Activity() {
                             )
                             ?: "waiting"
 
-                    // If the game has already started,
-                    // do not continue treating this as a waiting room.
+                    /*
+                     * Once the host's game screen creates the first
+                     * round, it changes the room status to "playing".
+                     *
+                     * Every joining phone sees that change and opens
+                     * OnlineGameRoundActivity.
+                     */
                     if (currentStatus == "playing") {
 
-                        if (!isHost) {
+                        if (!gameOpened) {
+
+                            gameOpened = true
+
                             statusText.text =
                                 "\nGame started!\nOpening the game..."
+
+                            openOnlineGame()
                         }
 
                         return
@@ -505,6 +517,7 @@ class GameWaitingActivity : Activity() {
                             )
 
                             if (host) {
+
                                 builder.append(
                                     " — HOST"
                                 )
@@ -604,31 +617,21 @@ class GameWaitingActivity : Activity() {
 
     private fun startGame() {
 
-        val gameReference =
-            FirebaseDatabase
-                .getInstance()
-                .getReference("games")
-                .child(gameCode)
+        /*
+         * IMPORTANT:
+         *
+         * We do NOT change the Firebase status to "playing" here.
+         *
+         * The host must first enter OnlineGameRoundActivity.
+         * That screen creates/initializes the first round and then
+         * changes the Firebase status to "playing".
+         *
+         * This prevents the "Waiting for word..." problem.
+         */
 
-        // First change the Firebase room status.
-        // This prevents new players from joining after
-        // the host has officially started the game.
-        gameReference
-            .child("status")
-            .setValue("playing")
-            .addOnSuccessListener {
+        gameOpened = true
 
-                openOnlineGame()
-
-            }
-            .addOnFailureListener {
-
-                Toast.makeText(
-                    this,
-                    "Could not start the game. Please try again.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+        openOnlineGame()
     }
 
     private fun openOnlineGame() {
