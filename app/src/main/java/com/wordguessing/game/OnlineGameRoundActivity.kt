@@ -2305,13 +2305,10 @@ class OnlineGameRoundActivity : Activity() {
                     val selected =
                         chooseOnlineWord()
 
-                    val activePlayers =
-                        players.filter { uid ->
-
+                    val activePlayers = players.filter { uid ->
                             data.child("eliminatedPlayers")
                                 .child(uid)
-                                .getValue(Boolean::class.java)
-                                != true
+                                .getValue(Boolean::class.java) != true
                         }
 
                     if (activePlayers.isEmpty()) {
