@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -36,11 +37,8 @@ class OnlineGameRoundActivity : Activity() {
     private var timer: CountDownTimer? = null
     private var wholeWordTimer: CountDownTimer? = null
 
-    private val database =
-        FirebaseDatabase.getInstance()
-
-    private val auth =
-        FirebaseAuth.getInstance()
+    private val database = FirebaseDatabase.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     private var gameListener: ValueEventListener? = null
 
@@ -71,26 +69,14 @@ class OnlineGameRoundActivity : Activity() {
 
     private var finalChallengeIndex = 0
 
-    private val playerNames =
-        mutableMapOf<String, String>()
+    private val playerNames = mutableMapOf<String, String>()
+    private val playerOrder = mutableListOf<String>()
+    private val scores = mutableMapOf<String, Int>()
+    private val missedTurns = mutableMapOf<String, Int>()
+    private val eliminatedPlayers = mutableSetOf<String>()
+    private val guessedLetters = mutableSetOf<Char>()
 
-    private val playerOrder =
-        mutableListOf<String>()
-
-    private val scores =
-        mutableMapOf<String, Int>()
-
-    private val missedTurns =
-        mutableMapOf<String, Int>()
-
-    private val eliminatedPlayers =
-        mutableSetOf<String>()
-
-    private val guessedLetters =
-        mutableSetOf<Char>()
-
-    private val letters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     private var wholeWordAttemptUsed = false
 
@@ -99,72 +85,48 @@ class OnlineGameRoundActivity : Activity() {
 
     private var knownHostUid = ""
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    // Used to detect players leaving the active game.
+    private val lastKnownPlayerIds = mutableSetOf<String>()
+    private val lastKnownPlayerNames = mutableMapOf<String, String>()
+    private val notifiedDepartures = mutableSetOf<String>()
+
+    private var playerChangeInitialized = false
+    private var singlePlayerDialogShown = false
+    private var leavingGame = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        gameCode =
-            intent.getStringExtra("gameCode")
-                ?: "------"
+        gameCode = intent.getStringExtra("gameCode") ?: "------"
 
-        maxPlayers =
-            intent.getIntExtra(
-                "maxPlayers",
-                intent.getIntExtra(
-                    "playerCount",
-                    2
-                )
-            )
+        maxPlayers = intent.getIntExtra(
+            "maxPlayers",
+            intent.getIntExtra("playerCount", 2)
+        )
 
-        wordSelection =
-            intent.getStringExtra(
-                "wordSelection"
-            ) ?: "Random Word"
+        wordSelection = intent.getStringExtra("wordSelection") ?: "Random Word"
 
-        selectedCategory =
-            intent.getStringExtra(
-                "category"
-            ) ?: "Random"
+        selectedCategory = intent.getStringExtra("category") ?: "Random"
 
-        secondsPerTurn =
-            intent.getIntExtra(
-                "secondsPerTurn",
-                20
-            )
+        secondsPerTurn = intent.getIntExtra("secondsPerTurn", 20)
 
-        totalTurns =
-            intent.getIntExtra(
-                "totalTurns",
-                0
-            )
+        totalTurns = intent.getIntExtra("totalTurns", 0)
 
         nextWordMaster =
-            intent.getStringExtra(
-                "nextWordMaster"
-            ) ?: "Winner becomes Word Master"
+            intent.getStringExtra("nextWordMaster")
+                ?: "Winner becomes Word Master"
 
-        manualWord =
-            intent.getStringExtra(
-                "manualWord"
-            )
-                ?.trim()
-                ?.uppercase()
+        manualWord = intent.getStringExtra("manualWord")
+            ?.trim()
+            ?.uppercase()
 
-        myUid =
-            auth.currentUser?.uid ?: ""
+        myUid = auth.currentUser?.uid ?: ""
 
         createInitialScreen()
 
         if (myUid.isEmpty()) {
-
-            statusText.text =
-                "Firebase login is not available."
-
-            statusText.setTextColor(
-                Color.RED
-            )
-
+            statusText.text = "Firebase login is not available."
+            statusText.setTextColor(Color.RED)
             return
         }
 
@@ -172,118 +134,46 @@ class OnlineGameRoundActivity : Activity() {
     }
 
     private fun gameReference() =
-        database
-            .reference
+        database.reference
             .child("games")
             .child(gameCode)
 
     private fun createInitialScreen() {
 
-        val scrollView =
-            ScrollView(this)
+        val scrollView = ScrollView(this)
 
-        val layout =
-            LinearLayout(this)
-
-        layout.orientation =
-            LinearLayout.VERTICAL
-
-        layout.setPadding(
-            16,
-            10,
-            16,
-            20
-        )
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(16, 10, 16, 20)
 
         scrollView.addView(layout)
 
-        val title =
-            TextView(this)
-
-        title.text =
-            "Online Game"
-
-        title.textSize =
-            25f
-
-        title.gravity =
-            Gravity.CENTER
-
-        title.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
+        val title = TextView(this)
+        title.text = "Online Game"
+        title.textSize = 25f
+        title.gravity = Gravity.CENTER
+        title.setTypeface(null, Typeface.BOLD)
         layout.addView(title)
 
-        val codeText =
-            TextView(this)
-
-        codeText.text =
-            "Game Code: $gameCode"
-
-        codeText.textSize =
-            17f
-
-        codeText.gravity =
-            Gravity.CENTER
-
-        codeText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        codeText.setTextColor(
-            Color.rgb(
-                0,
-                70,
-                140
-            )
-        )
-
+        val codeText = TextView(this)
+        codeText.text = "Game Code: $gameCode"
+        codeText.textSize = 17f
+        codeText.gravity = Gravity.CENTER
+        codeText.setTypeface(null, Typeface.BOLD)
+        codeText.setTextColor(Color.rgb(0, 70, 140))
         layout.addView(codeText)
 
-        categoryText =
-            TextView(this)
+        categoryText = TextView(this)
+        categoryText.text = "CATEGORY: Waiting..."
+        categoryText.textSize = 20f
+        categoryText.gravity = Gravity.CENTER
+        categoryText.setTypeface(null, Typeface.BOLD)
+        categoryText.setTextColor(Color.rgb(0, 70, 140))
+        categoryText.setPadding(8, 8, 8, 8)
+        layout.addView(categoryText)
 
-        categoryText.text =
-            "CATEGORY: Waiting..."
-
-        categoryText.textSize =
-            20f
-
-        categoryText.gravity =
-            Gravity.CENTER
-
-        categoryText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        categoryText.setTextColor(
-            Color.rgb(
-                0,
-                70,
-                140
-            )
-        )
-
-        categoryText.setPadding(
-            8,
-            8,
-            8,
-            8
-        )
-
-        layout.addView(
-            categoryText
-        )
-
-        val info =
-            TextView(this)
-
-        info.text =
-            """
+        val info = TextView(this)
+        info.text = """
             Turn Time: ${
                 if (secondsPerTurn <= 0)
                     "Unlimited"
@@ -299,385 +189,152 @@ class OnlineGameRoundActivity : Activity() {
             }
 
             Next Word Master: $nextWordMaster
-            """.trimIndent()
-
-        info.textSize =
-            14f
-
-        info.gravity =
-            Gravity.CENTER
-
+        """.trimIndent()
+        info.textSize = 14f
+        info.gravity = Gravity.CENTER
         layout.addView(info)
 
-        val playersTitle =
-            TextView(this)
+        val playersTitle = TextView(this)
+        playersTitle.text = "PLAYERS"
+        playersTitle.textSize = 19f
+        playersTitle.gravity = Gravity.CENTER
+        playersTitle.setTypeface(null, Typeface.BOLD)
+        layout.addView(playersTitle)
 
-        playersTitle.text =
-            "PLAYERS"
+        playersText = TextView(this)
+        playersText.textSize = 16f
+        playersText.setTypeface(null, Typeface.BOLD)
+        playersText.setPadding(0, 5, 0, 8)
+        layout.addView(playersText)
 
-        playersTitle.textSize =
-            19f
+        val wordMasterText = TextView(this)
+        wordMasterText.text = "Word Master information will appear here."
+        wordMasterText.textSize = 15f
+        wordMasterText.gravity = Gravity.CENTER
+        wordMasterText.setTypeface(null, Typeface.BOLD)
+        wordMasterText.setTextColor(Color.DKGRAY)
+        layout.addView(wordMasterText)
 
-        playersTitle.gravity =
-            Gravity.CENTER
+        wordText = TextView(this)
+        wordText.text = "Waiting for game..."
+        wordText.textSize = 30f
+        wordText.gravity = Gravity.CENTER
+        wordText.setTypeface(null, Typeface.BOLD)
+        wordText.setPadding(0, 10, 0, 10)
+        layout.addView(wordText)
 
-        playersTitle.setTypeface(
-            null,
-            Typeface.BOLD
-        )
+        turnText = TextView(this)
+        turnText.text = "Waiting..."
+        turnText.textSize = 21f
+        turnText.gravity = Gravity.CENTER
+        turnText.setTypeface(null, Typeface.BOLD)
+        turnText.setPadding(0, 4, 0, 2)
+        layout.addView(turnText)
 
-        layout.addView(
-            playersTitle
-        )
+        timerText = TextView(this)
+        timerText.text = "Time: --"
+        timerText.textSize = 23f
+        timerText.gravity = Gravity.CENTER
+        timerText.setTypeface(null, Typeface.BOLD)
+        layout.addView(timerText)
 
-        playersText =
-            TextView(this)
-
-        playersText.textSize =
-            16f
-
-        playersText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        playersText.setPadding(
-            0,
-            5,
-            0,
-            8
-        )
-
-        layout.addView(
-            playersText
-        )
-
-        val wordMasterText =
-            TextView(this)
-
-        wordMasterText.text =
-            "Word Master information will appear here."
-
-        wordMasterText.textSize =
-            15f
-
-        wordMasterText.gravity =
-            Gravity.CENTER
-
-        wordMasterText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        wordMasterText.setTextColor(
-            Color.DKGRAY
-        )
-
-        layout.addView(
-            wordMasterText
-        )
-
-        wordText =
-            TextView(this)
-
-        wordText.text =
-            "Waiting for game..."
-
-        wordText.textSize =
-            30f
-
-        wordText.gravity =
-            Gravity.CENTER
-
-        wordText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        wordText.setPadding(
-            0,
-            10,
-            0,
-            10
-        )
-
-        layout.addView(
-            wordText
-        )
-
-        turnText =
-            TextView(this)
-
-        turnText.text =
-            "Waiting..."
-
-        turnText.textSize =
-            21f
-
-        turnText.gravity =
-            Gravity.CENTER
-
-        turnText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        turnText.setPadding(
-            0,
-            4,
-            0,
-            2
-        )
-
-        layout.addView(
-            turnText
-        )
-
-        timerText =
-            TextView(this)
-
-        timerText.text =
-            "Time: --"
-
-        timerText.textSize =
-            23f
-
-        timerText.gravity =
-            Gravity.CENTER
-
-        timerText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        layout.addView(
-            timerText
-        )
-
-        wholeWordButton =
-            Button(this)
-
-        wholeWordButton.text =
-            "GUESS WHOLE WORD"
-
-        wholeWordButton.textSize =
-            17f
-
-        wholeWordButton.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        wholeWordButton.setTextColor(
-            Color.WHITE
-        )
-
-        wholeWordButton.setBackgroundColor(
-            Color.rgb(
-                0,
-                70,
-                140
-            )
-        )
-
-        wholeWordButton.isEnabled =
-            false
+        wholeWordButton = Button(this)
+        wholeWordButton.text = "GUESS WHOLE WORD"
+        wholeWordButton.textSize = 17f
+        wholeWordButton.setTypeface(null, Typeface.BOLD)
+        wholeWordButton.setTextColor(Color.WHITE)
+        wholeWordButton.setBackgroundColor(Color.rgb(0, 70, 140))
+        wholeWordButton.isEnabled = false
 
         wholeWordButton.setOnClickListener {
 
-            if (
-                roundFinished ||
-                phase != "normal"
-            ) {
+            if (roundFinished || phase != "normal") {
                 return@setOnClickListener
             }
 
-            if (
-                currentPlayerUid != myUid
-            ) {
-
-                showStatus(
-                    "It is not your turn.",
-                    Color.RED
-                )
-
+            if (currentPlayerUid != myUid) {
+                showStatus("It is not your turn.", Color.RED)
                 return@setOnClickListener
             }
 
-            if (
-                wholeWordAttemptUsed
-            ) {
-
+            if (wholeWordAttemptUsed) {
                 showStatus(
                     "You already used your whole-word guess this turn.",
                     Color.RED
                 )
-
                 return@setOnClickListener
             }
 
             showWholeWordDialog()
         }
 
-        layout.addView(
-            wholeWordButton
-        )
+        layout.addView(wholeWordButton)
 
-        statusText =
-            TextView(this)
+        statusText = TextView(this)
+        statusText.text = "Connecting to Firebase..."
+        statusText.textSize = 15f
+        statusText.gravity = Gravity.CENTER
+        statusText.setTypeface(null, Typeface.BOLD)
+        statusText.setPadding(4, 5, 4, 5)
+        layout.addView(statusText)
 
-        statusText.text =
-            "Connecting to Firebase..."
-
-        statusText.textSize =
-            15f
-
-        statusText.gravity =
-            Gravity.CENTER
-
-        statusText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        statusText.setPadding(
-            4,
-            5,
-            4,
-            5
-        )
-
-        layout.addView(
-            statusText
-        )
-
-        letterBoard =
-            LinearLayout(this)
-
-        letterBoard.orientation =
-            LinearLayout.VERTICAL
-
-        layout.addView(
-            letterBoard
-        )
+        letterBoard = LinearLayout(this)
+        letterBoard.orientation = LinearLayout.VERTICAL
+        layout.addView(letterBoard)
 
         createLetterButtons()
 
-        val leaveButton =
-            Button(this)
-
-        leaveButton.text =
-            "Leave Game"
-
-        leaveButton.textSize =
-            16f
+        val leaveButton = Button(this)
+        leaveButton.text = "Leave Game"
+        leaveButton.textSize = 16f
 
         leaveButton.setOnClickListener {
-
-            timer?.cancel()
-            wholeWordTimer?.cancel()
-
-            finish()
+            confirmLeaveGame()
         }
 
-        layout.addView(
-            leaveButton
-        )
+        layout.addView(leaveButton)
 
-        setContentView(
-            scrollView
-        )
+        setContentView(scrollView)
     }
 
     private fun createLetterButtons() {
 
         letterBoard.removeAllViews()
 
-        var currentRow =
-            LinearLayout(this)
+        var currentRow = LinearLayout(this)
+        currentRow.orientation = LinearLayout.HORIZONTAL
+        currentRow.gravity = Gravity.CENTER
 
-        currentRow.orientation =
-            LinearLayout.HORIZONTAL
-
-        currentRow.gravity =
-            Gravity.CENTER
-
-        letterBoard.addView(
-            currentRow
-        )
+        letterBoard.addView(currentRow)
 
         for (i in letters.indices) {
 
-            val letter =
-                letters[i]
+            val letter = letters[i]
 
-            val button =
-                Button(this)
-
-            button.text =
-                letter.toString()
-
-            button.textSize =
-                13f
-
-            button.setTextColor(
-                Color.WHITE
-            )
-
-            button.setBackgroundColor(
-                Color.rgb(
-                    0,
-                    100,
-                    0
-                )
-            )
-
-            button.tag =
-                letter
+            val button = Button(this)
+            button.text = letter.toString()
+            button.textSize = 13f
+            button.setTextColor(Color.WHITE)
+            button.setBackgroundColor(Color.rgb(0, 100, 0))
+            button.tag = letter
 
             button.setOnClickListener {
 
-                if (
-                    roundFinished
-                ) {
+                if (roundFinished || phase != "normal") {
                     return@setOnClickListener
                 }
 
-                if (
-                    phase != "normal"
-                ) {
+                if (currentPlayerUid != myUid) {
+                    showStatus("It is not your turn.", Color.RED)
                     return@setOnClickListener
                 }
 
-                if (
-                    currentPlayerUid != myUid
-                ) {
-
-                    showStatus(
-                        "It is not your turn.",
-                        Color.RED
-                    )
-
+                if (guessedLetters.contains(letter)) {
+                    showStatus("Already guessed.", Color.RED)
                     return@setOnClickListener
                 }
 
-                if (
-                    guessedLetters.contains(
-                        letter
-                    )
-                ) {
-
-                    showStatus(
-                        "Already guessed.",
-                        Color.RED
-                    )
-
-                    return@setOnClickListener
-                }
-
-                processLetterGuess(
-                    letter
-                )
+                processLetterGuess(letter)
             }
 
             currentRow.addView(
@@ -689,201 +346,109 @@ class OnlineGameRoundActivity : Activity() {
                 )
             )
 
-            if (
-                (i + 1) % 6 == 0
-            ) {
+            if ((i + 1) % 6 == 0) {
 
-                currentRow =
-                    LinearLayout(this)
+                currentRow = LinearLayout(this)
+                currentRow.orientation = LinearLayout.HORIZONTAL
+                currentRow.gravity = Gravity.CENTER
 
-                currentRow.orientation =
-                    LinearLayout.HORIZONTAL
-
-                currentRow.gravity =
-                    Gravity.CENTER
-
-                letterBoard.addView(
-                    currentRow
-                )
+                letterBoard.addView(currentRow)
             }
         }
     }
 
     private fun startFirebaseListener() {
 
-        val reference =
-            gameReference()
+        val reference = gameReference()
 
-        gameListener =
-            object :
-                ValueEventListener {
+        gameListener = object : ValueEventListener {
 
-                override fun onDataChange(
-                    snapshot: DataSnapshot
-                ) {
+            override fun onDataChange(snapshot: DataSnapshot) {
 
-                    if (
-                        !snapshot.exists()
-                    ) {
-
-                        showStatus(
-                            "Game no longer exists.",
-                            Color.RED
-                        )
-
-                        return
-                    }
-
-                    readGameState(
-                        snapshot
-                    )
+                if (leavingGame) {
+                    return
                 }
 
-                override fun onCancelled(
-                    error: DatabaseError
-                ) {
+                if (!snapshot.exists()) {
 
                     showStatus(
-                        "Firebase error: ${error.message}",
+                        "Game no longer exists.",
                         Color.RED
                     )
+
+                    return
                 }
+
+                readGameState(snapshot)
             }
 
-        reference.addValueEventListener(
-            gameListener!!
-        )
+            override fun onCancelled(error: DatabaseError) {
+
+                showStatus(
+                    "Firebase error: ${error.message}",
+                    Color.RED
+                )
+            }
+        }
+
+        reference.addValueEventListener(gameListener!!)
     }
 
-    private fun readGameState(
-        snapshot: DataSnapshot
-    ) {
+    private fun readGameState(snapshot: DataSnapshot) {
 
-        status =
-            snapshot.child(
-                "status"
-            ).getValue(
-                String::class.java
-            ) ?: "waiting"
+        status = snapshot.child("status")
+            .getValue(String::class.java) ?: "waiting"
 
-        wordSelection =
-            snapshot.child(
-                "wordSelection"
-            ).getValue(
-                String::class.java
-            ) ?: wordSelection
+        wordSelection = snapshot.child("wordSelection")
+            .getValue(String::class.java) ?: wordSelection
 
-        selectedCategory =
-            snapshot.child(
-                "category"
-            ).getValue(
-                String::class.java
-            ) ?: selectedCategory
+        selectedCategory = snapshot.child("category")
+            .getValue(String::class.java) ?: selectedCategory
 
-        secondsPerTurn =
-            snapshot.child(
-                "secondsPerTurn"
-            ).getValue(
-                Int::class.java
-            ) ?: secondsPerTurn
+        secondsPerTurn = snapshot.child("secondsPerTurn")
+            .getValue(Int::class.java) ?: secondsPerTurn
 
-        totalTurns =
-            snapshot.child(
-                "totalTurns"
-            ).getValue(
-                Int::class.java
-            ) ?: totalTurns
+        totalTurns = snapshot.child("totalTurns")
+            .getValue(Int::class.java) ?: totalTurns
 
-        nextWordMaster =
-            snapshot.child(
-                "nextWordMaster"
-            ).getValue(
-                String::class.java
-            ) ?: nextWordMaster
+        nextWordMaster = snapshot.child("nextWordMaster")
+            .getValue(String::class.java) ?: nextWordMaster
 
-        secretWord =
-            snapshot.child(
-                "secretWord"
-            ).getValue(
-                String::class.java
-            ) ?: ""
+        secretWord = snapshot.child("secretWord")
+            .getValue(String::class.java) ?: ""
 
-        actualCategory =
-            snapshot.child(
-                "actualCategory"
-            ).getValue(
-                String::class.java
-            ) ?: selectedCategory
+        actualCategory = snapshot.child("actualCategory")
+            .getValue(String::class.java) ?: selectedCategory
 
-        currentPlayerUid =
-            snapshot.child(
-                "currentPlayerUid"
-            ).getValue(
-                String::class.java
-            ) ?: ""
+        currentPlayerUid = snapshot.child("currentPlayerUid")
+            .getValue(String::class.java) ?: ""
 
-        wordMasterUid =
-            snapshot.child(
-                "wordMasterUid"
-            ).getValue(
-                String::class.java
-            ) ?: ""
+        wordMasterUid = snapshot.child("wordMasterUid")
+            .getValue(String::class.java) ?: ""
 
-        knownHostUid =
-            snapshot.child(
-                "hostUid"
-            ).getValue(
-                String::class.java
-            ) ?: ""
+        knownHostUid = snapshot.child("hostUid")
+            .getValue(String::class.java) ?: ""
 
-        turnEndsAt =
-            snapshot.child(
-                "turnEndsAt"
-            ).getValue(
-                Long::class.java
-            ) ?: 0L
+        turnEndsAt = snapshot.child("turnEndsAt")
+            .getValue(Long::class.java) ?: 0L
 
-        completedTurns =
-            snapshot.child(
-                "completedTurns"
-            ).getValue(
-                Int::class.java
-            ) ?: 0
+        completedTurns = snapshot.child("completedTurns")
+            .getValue(Int::class.java) ?: 0
 
-        roundNumber =
-            snapshot.child(
-                "roundNumber"
-            ).getValue(
-                Int::class.java
-            ) ?: 0
+        roundNumber = snapshot.child("roundNumber")
+            .getValue(Int::class.java) ?: 0
 
-        roundWinnerUid =
-            snapshot.child(
-                "roundWinnerUid"
-            ).getValue(
-                String::class.java
-            ) ?: ""
+        roundWinnerUid = snapshot.child("roundWinnerUid")
+            .getValue(String::class.java) ?: ""
 
-        roundWinnerName =
-            snapshot.child(
-                "roundWinnerName"
-            ).getValue(
-                String::class.java
-            ) ?: ""
+        roundWinnerName = snapshot.child("roundWinnerName")
+            .getValue(String::class.java) ?: ""
 
-        phase =
-            snapshot.child(
-                "phase"
-            ).getValue(
-                String::class.java
-            ) ?: "normal"
+        phase = snapshot.child("phase")
+            .getValue(String::class.java) ?: "normal"
 
-        finalChallengeIndex =
-            snapshot.child(
-                "finalChallengeIndex"
-            ).getValue(
-                Int::class.java
-            ) ?: 0
+        finalChallengeIndex = snapshot.child("finalChallengeIndex")
+            .getValue(Int::class.java) ?: 0
 
         readPlayers(snapshot)
         readGuessedLetters(snapshot)
@@ -891,10 +456,16 @@ class OnlineGameRoundActivity : Activity() {
         readMissedTurns(snapshot)
         readEliminatedPlayers(snapshot)
 
-        roundFinished =
-            status == "roundFinished"
+        roundFinished = status == "roundFinished"
 
         updateAllUI()
+
+        if (
+            status == "playing" &&
+            playerOrder.size == 1
+        ) {
+            showSinglePlayerChoiceIfNeeded()
+        }
 
         if (
             status == "waiting" &&
@@ -902,13 +473,10 @@ class OnlineGameRoundActivity : Activity() {
         ) {
 
             initializeFirstRound(snapshot)
-
             return
         }
 
-        if (
-            status == "roundFinished"
-        ) {
+        if (status == "roundFinished") {
 
             stopTimers()
 
@@ -919,54 +487,47 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        if (
-            status == "playing"
-        ) {
+        if (status == "playing") {
 
-            if (
-                phase == "final"
-            ) {
+            if (phase == "final") {
 
                 handleFinalChallenge()
 
             } else {
 
                 startSynchronizedTimer()
-
                 maybeStartNormalTurnUI()
             }
         }
     }
 
-    private fun readPlayers(
-        snapshot: DataSnapshot
-    ) {
+    private fun readPlayers(snapshot: DataSnapshot) {
+
+        val previousIds =
+            lastKnownPlayerIds.toSet()
+
+        val previousNames =
+            lastKnownPlayerNames.toMap()
 
         playerNames.clear()
         playerOrder.clear()
 
-        val playersSnapshot =
-            snapshot.child("players")
+        val playersSnapshot = snapshot.child("players")
 
         val temp =
             mutableListOf<Triple<String, String, Long>>()
 
-        for (
-            child in playersSnapshot.children
-        ) {
+        for (child in playersSnapshot.children) {
 
-            val uid =
-                child.key ?: continue
+            val uid = child.key ?: continue
 
-            val name =
-                child.child("name").getValue(
-                    String::class.java
-                ) ?: "Player"
+            val name = child.child("name")
+                .getValue(String::class.java)
+                ?: "Player"
 
-            val joinedAt =
-                child.child("joinedAt").getValue(
-                    Long::class.java
-                ) ?: 0L
+            val joinedAt = child.child("joinedAt")
+                .getValue(Long::class.java)
+                ?: 0L
 
             playerNames[uid] = name
 
@@ -979,42 +540,139 @@ class OnlineGameRoundActivity : Activity() {
             )
         }
 
-        temp.sortBy {
-            it.third
-        }
+        temp.sortBy { it.third }
 
-        for (
-            item in temp
-        ) {
-
-            playerOrder.add(
-                item.first
-            )
+        for (item in temp) {
+            playerOrder.add(item.first)
         }
 
         maxPlayers =
-            snapshot.child("maxPlayers").getValue(
-                Int::class.java
-            ) ?: maxPlayers
+            snapshot.child("maxPlayers")
+                .getValue(Int::class.java)
+                ?: maxPlayers
+
+        val currentIds = playerOrder.toSet()
+
+        if (playerChangeInitialized) {
+
+            val departed =
+                previousIds.filter {
+                    !currentIds.contains(it)
+                }
+
+            if (departed.isNotEmpty()) {
+
+                for (uid in departed) {
+
+                    if (
+                        !notifiedDepartures.contains(uid)
+                    ) {
+
+                        notifiedDepartures.add(uid)
+
+                        val departedName =
+                            previousNames[uid]
+                                ?: "A player"
+
+                        showPlayerLeftNotification(
+                            departedName
+                        )
+                    }
+                }
+            }
+        }
+
+        lastKnownPlayerIds.clear()
+        lastKnownPlayerIds.addAll(currentIds)
+
+        lastKnownPlayerNames.clear()
+        lastKnownPlayerNames.putAll(playerNames)
+
+        playerChangeInitialized = true
     }
 
-    private fun readGuessedLetters(
-        snapshot: DataSnapshot
+    private fun showPlayerLeftNotification(
+        departedName: String
     ) {
+
+        if (leavingGame) {
+            return
+        }
+
+        Toast.makeText(
+            this,
+            "$departedName left the game.",
+            Toast.LENGTH_LONG
+        ).show()
+
+        if (playerOrder.size == 1) {
+
+            showStatus(
+                "$departedName left. You are now the only player.",
+                Color.rgb(0, 70, 140)
+            )
+
+        } else {
+
+            showStatus(
+                "$departedName left the game. ${playerOrder.size} players remain.",
+                Color.rgb(0, 70, 140)
+            )
+        }
+    }
+
+    private fun showSinglePlayerChoiceIfNeeded() {
+
+        if (
+            singlePlayerDialogShown ||
+            playerOrder.size != 1 ||
+            roundFinished ||
+            myUid != playerOrder.firstOrNull()
+        ) {
+            return
+        }
+
+        singlePlayerDialogShown = true
+
+        AlertDialog.Builder(this)
+            .setTitle("You are now the only player")
+            .setMessage(
+                "The other player left the game.\n\n" +
+                    "You can continue guessing by yourself, " +
+                    "or leave the game."
+            )
+            .setPositiveButton(
+                "Continue Playing"
+            ) { dialog, _ ->
+
+                dialog.dismiss()
+
+                showStatus(
+                    "You are now playing alone. Continue guessing!",
+                    Color.rgb(0, 100, 0)
+                )
+            }
+            .setNegativeButton(
+                "Leave Game"
+            ) { _, _ ->
+
+                leaveGame()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun readGuessedLetters(snapshot: DataSnapshot) {
 
         guessedLetters.clear()
 
-        val guessed =
-            snapshot.child("guessedLetters")
+        val guessed = snapshot.child("guessedLetters")
 
-        for (
-            child in guessed.children
-        ) {
+        for (child in guessed.children) {
 
             val value =
-                child.getValue(
-                    Boolean::class.java
-                ) ?: false
+                child.getValue(Boolean::class.java)
+                    ?: false
 
             if (value) {
 
@@ -1028,69 +686,47 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    private fun readScores(
-        snapshot: DataSnapshot
-    ) {
+    private fun readScores(snapshot: DataSnapshot) {
 
         scores.clear()
 
-        val scoreSnapshot =
-            snapshot.child("scores")
+        val scoreSnapshot = snapshot.child("scores")
 
-        for (
-            child in scoreSnapshot.children
-        ) {
+        for (child in scoreSnapshot.children) {
 
-            val uid =
-                child.key ?: continue
+            val uid = child.key ?: continue
 
             scores[uid] =
-                child.getValue(
-                    Int::class.java
-                ) ?: 0
+                child.getValue(Int::class.java) ?: 0
         }
     }
 
-    private fun readMissedTurns(
-        snapshot: DataSnapshot
-    ) {
+    private fun readMissedTurns(snapshot: DataSnapshot) {
 
         missedTurns.clear()
 
-        val missSnapshot =
-            snapshot.child("missedTurns")
+        val missSnapshot = snapshot.child("missedTurns")
 
-        for (
-            child in missSnapshot.children
-        ) {
+        for (child in missSnapshot.children) {
 
-            val uid =
-                child.key ?: continue
+            val uid = child.key ?: continue
 
             missedTurns[uid] =
-                child.getValue(
-                    Int::class.java
-                ) ?: 0
+                child.getValue(Int::class.java) ?: 0
         }
     }
 
-    private fun readEliminatedPlayers(
-        snapshot: DataSnapshot
-    ) {
+    private fun readEliminatedPlayers(snapshot: DataSnapshot) {
 
         eliminatedPlayers.clear()
 
-        val eliminated =
-            snapshot.child("eliminatedPlayers")
+        val eliminated = snapshot.child("eliminatedPlayers")
 
-        for (
-            child in eliminated.children
-        ) {
+        for (child in eliminated.children) {
 
             val value =
-                child.getValue(
-                    Boolean::class.java
-                ) ?: false
+                child.getValue(Boolean::class.java)
+                    ?: false
 
             if (value) {
                 child.key?.let {
@@ -1100,39 +736,31 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    private fun isHost(
-        snapshot: DataSnapshot
-    ): Boolean {
+    private fun isHost(snapshot: DataSnapshot): Boolean {
 
         val hostUid =
-            snapshot.child("hostUid").getValue(
-                String::class.java
-            )
+            snapshot.child("hostUid")
+                .getValue(String::class.java)
 
         return hostUid == myUid
     }
 
-    private fun initializeFirstRound(
-        snapshot: DataSnapshot
-    ) {
+    private fun initializeFirstRound(snapshot: DataSnapshot) {
 
         val currentStatus =
-            snapshot.child("status").getValue(
-                String::class.java
-            )
+            snapshot.child("status")
+                .getValue(String::class.java)
 
-        if (
-            currentStatus != "waiting"
-        ) {
+        if (currentStatus != "waiting") {
             return
         }
 
         val players =
-            snapshot.child("players").children.toList()
+            snapshot.child("players")
+                .children
+                .toList()
 
-        if (
-            players.size < 2
-        ) {
+        if (players.size < 2) {
 
             showStatus(
                 "Waiting for at least 2 players.",
@@ -1142,8 +770,7 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        val selected =
-            chooseOnlineWord()
+        val selected = chooseOnlineWord()
 
         val firstPlayerUid =
             chooseFirstPlayer(players)
@@ -1176,16 +803,12 @@ class OnlineGameRoundActivity : Activity() {
                 "finalChallengeIndex" to 0
             )
 
-        gameReference()
-            .updateChildren(updates)
+        gameReference().updateChildren(updates)
     }
 
-    private fun chooseOnlineWord():
-        Pair<String, String> {
+    private fun chooseOnlineWord(): Pair<String, String> {
 
-        if (
-            wordSelection != "Random Word"
-        ) {
+        if (wordSelection != "Random Word") {
 
             val word =
                 manualWord
@@ -1194,24 +817,17 @@ class OnlineGameRoundActivity : Activity() {
                     ?: "APPLE"
 
             val category =
-                if (
-                    selectedCategory == "Random"
-                ) {
+                if (selectedCategory == "Random") {
                     "Random"
                 } else {
                     selectedCategory
                 }
 
-            return Pair(
-                word,
-                category
-            )
+            return Pair(word, category)
         }
 
         val categoryNames =
-            if (
-                selectedCategory == "Random"
-            ) {
+            if (selectedCategory == "Random") {
                 WordBank.categories.keys.toList()
             } else {
                 listOf(selectedCategory)
@@ -1219,57 +835,43 @@ class OnlineGameRoundActivity : Activity() {
 
         val category =
             categoryNames[
-                Random.nextInt(
-                    categoryNames.size
-                )
+                Random.nextInt(categoryNames.size)
             ]
 
         val words =
-            WordBank.categories[
-                category
-            ] ?: listOf("APPLE")
+            WordBank.categories[category]
+                ?: listOf("APPLE")
 
         val word =
             words[
                 Random.nextInt(words.size)
             ]
 
-        return Pair(
-            word,
-            category
-        )
+        return Pair(word, category)
     }
 
     private fun chooseFirstPlayer(
         players: List<DataSnapshot>
     ): String {
 
-        if (
-            wordSelection != "Random Word"
-        ) {
+        if (wordSelection != "Random Word") {
 
             val master =
                 players.firstOrNull {
-                    it.child("isHost").getValue(
-                        Boolean::class.java
-                    ) == true
+                    it.child("isHost")
+                        .getValue(Boolean::class.java) == true
                 }
 
-            val masterUid =
-                master?.key
+            val masterUid = master?.key
 
-            if (
-                masterUid != null
-            ) {
+            if (masterUid != null) {
 
                 val nonMaster =
                     players.firstOrNull {
                         it.key != masterUid
                     }
 
-                if (
-                    nonMaster?.key != null
-                ) {
+                if (nonMaster?.key != null) {
                     return nonMaster.key!!
                 }
             }
@@ -1282,27 +884,22 @@ class OnlineGameRoundActivity : Activity() {
         snapshot: DataSnapshot
     ): String {
 
-        if (
-            wordSelection == "Random Word"
-        ) {
+        if (wordSelection == "Random Word") {
             return ""
         }
 
-        return snapshot.child("hostUid").getValue(
-            String::class.java
-        ) ?: ""
+        return snapshot.child("hostUid")
+            .getValue(String::class.java)
+            ?: ""
     }
 
     private fun createInitialScores(
         players: List<DataSnapshot>
     ): Map<String, Any> {
 
-        val map =
-            mutableMapOf<String, Any>()
+        val map = mutableMapOf<String, Any>()
 
-        for (
-            player in players
-        ) {
+        for (player in players) {
             player.key?.let {
                 map[it] = 0
             }
@@ -1315,12 +912,9 @@ class OnlineGameRoundActivity : Activity() {
         players: List<DataSnapshot>
     ): Map<String, Any> {
 
-        val map =
-            mutableMapOf<String, Any>()
+        val map = mutableMapOf<String, Any>()
 
-        for (
-            player in players
-        ) {
+        for (player in players) {
             player.key?.let {
                 map[it] = 0
             }
@@ -1331,9 +925,7 @@ class OnlineGameRoundActivity : Activity() {
 
     private fun getNewTurnEndTime(): Long {
 
-        if (
-            secondsPerTurn <= 0
-        ) {
+        if (secondsPerTurn <= 0) {
             return 0L
         }
 
@@ -1361,94 +953,56 @@ class OnlineGameRoundActivity : Activity() {
         updateLetterButtons()
         updateTurnDisplay()
 
-        if (
-            phase == "final"
-        ) {
+        if (phase == "final") {
             wholeWordButton.isEnabled = false
         }
     }
 
     private fun updatePlayerList() {
 
-        val builder =
-            StringBuilder()
+        val builder = StringBuilder()
 
-        for (
-            uid in playerOrder
-        ) {
+        for (uid in playerOrder) {
 
             val name =
                 playerNames[uid] ?: "Player"
 
             builder.append(name)
+            builder.append(" — Score: ")
+            builder.append(scores[uid] ?: 0)
 
-            builder.append(
-                " — Score: "
-            )
+            if (eliminatedPlayers.contains(uid)) {
 
-            builder.append(
-                scores[uid] ?: 0
-            )
+                builder.append(" — ELIMINATED")
 
-            if (
-                eliminatedPlayers.contains(uid)
-            ) {
+            } else if (uid == currentPlayerUid) {
 
-                builder.append(
-                    " — ELIMINATED"
-                )
-
-            } else if (
-                uid == currentPlayerUid
-            ) {
-
-                builder.append(
-                    " — CURRENT TURN"
-                )
+                builder.append(" — CURRENT TURN")
             }
 
-            if (
-                uid == wordMasterUid
-            ) {
-
-                builder.append(
-                    " — WORD MASTER"
-                )
+            if (uid == wordMasterUid) {
+                builder.append(" — WORD MASTER")
             }
 
-            if (
-                playerOrder.size >= 3
-            ) {
+            if (playerOrder.size >= 3) {
 
-                builder.append(
-                    " — Misses: "
-                )
-
-                builder.append(
-                    missedTurns[uid] ?: 0
-                )
-
-                builder.append(
-                    "/3"
-                )
+                builder.append(" — Misses: ")
+                builder.append(missedTurns[uid] ?: 0)
+                builder.append("/3")
             }
 
             builder.append("\n")
         }
 
         playersText.text =
-            builder
-                .toString()
-                .trim()
+            builder.toString().trim()
 
         playersText.setTypeface(
             null,
             Typeface.BOLD
         )
 
-        playersText.setTextColor(
-            Color.DKGRAY
-        )
+        playersText.setTextColor(Color.DKGRAY)
 
         if (
             currentPlayerUid == myUid &&
@@ -1456,20 +1010,14 @@ class OnlineGameRoundActivity : Activity() {
         ) {
 
             turnText.setTextColor(
-                Color.rgb(
-                    0,
-                    100,
-                    0
-                )
+                Color.rgb(0, 100, 0)
             )
         }
     }
 
     private fun updateWordDisplay() {
 
-        if (
-            secretWord.isEmpty()
-        ) {
+        if (secretWord.isEmpty()) {
 
             wordText.text =
                 "Waiting for word..."
@@ -1477,22 +1025,15 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        val builder =
-            StringBuilder()
+        val builder = StringBuilder()
 
-        for (
-            letter in secretWord
-        ) {
+        for (letter in secretWord) {
 
-            if (
-                letter == ' '
-            ) {
+            if (letter == ' ') {
 
                 builder.append("   ")
 
-            } else if (
-                guessedLetters.contains(letter)
-            ) {
+            } else if (guessedLetters.contains(letter)) {
 
                 builder.append(letter)
                 builder.append(" ")
@@ -1504,25 +1045,19 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         wordText.text =
-            builder
-                .toString()
-                .trim()
+            builder.toString().trim()
     }
 
     private fun updateLetterButtons() {
 
-        for (
-            i in 0 until letterBoard.childCount
-        ) {
+        for (i in 0 until letterBoard.childCount) {
 
             val row =
                 letterBoard.getChildAt(i)
                     as? LinearLayout
                     ?: continue
 
-            for (
-                j in 0 until row.childCount
-            ) {
+            for (j in 0 until row.childCount) {
 
                 val button =
                     row.getChildAt(j)
@@ -1533,25 +1068,15 @@ class OnlineGameRoundActivity : Activity() {
                     button.tag as? Char
                         ?: continue
 
-                if (
-                    guessedLetters.contains(letter)
-                ) {
+                if (guessedLetters.contains(letter)) {
 
-                    button.setBackgroundColor(
-                        Color.RED
-                    )
-
-                    button.isEnabled =
-                        false
+                    button.setBackgroundColor(Color.RED)
+                    button.isEnabled = false
 
                 } else {
 
                     button.setBackgroundColor(
-                        Color.rgb(
-                            0,
-                            100,
-                            0
-                        )
+                        Color.rgb(0, 100, 0)
                     )
 
                     button.isEnabled =
@@ -1565,379 +1090,281 @@ class OnlineGameRoundActivity : Activity() {
 
     private fun updateTurnDisplay() {
 
-        if (
-            currentPlayerUid.isEmpty()
-        ) {
+        if (currentPlayerUid.isEmpty()) {
 
-            turnText.text =
-                "Waiting..."
-
+            turnText.text = "Waiting..."
             return
         }
 
         val currentName =
-            playerNames[currentPlayerUid]
-                ?: "Player"
+            playerNames[currentPlayerUid] ?: "Player"
 
-        if (
-            phase == "final"
-        ) {
+        if (phase == "final") {
 
             turnText.text =
                 "FINAL CHALLENGE: $currentName"
 
             turnText.setTextColor(
-                Color.rgb(
-                    0,
-                    70,
-                    140
-                )
+                Color.rgb(0, 70, 140)
             )
 
         } else {
 
             turnText.text =
-                if (
-                    currentPlayerUid == myUid
-                ) {
+                if (currentPlayerUid == myUid) {
                     "YOUR TURN"
                 } else {
                     "$currentName'S TURN"
                 }
 
             turnText.setTextColor(
-                Color.rgb(
-                    0,
-                    100,
-                    0
-                )
+                Color.rgb(0, 100, 0)
             )
         }
     }
 
-    private fun processLetterGuess(
-        letter: Char
-    ) {
+    private fun processLetterGuess(letter: Char) {
 
-        gameReference()
-            .runTransaction(
-                object :
-                    Transaction.Handler {
+        gameReference().runTransaction(
+            object : Transaction.Handler {
 
-                    override fun doTransaction(
-                        currentData: MutableData
-                    ): Transaction.Result {
+                override fun doTransaction(
+                    currentData: MutableData
+                ): Transaction.Result {
 
-                        val currentUid =
-                            currentData.child(
-                                "currentPlayerUid"
-                            ).getValue(
-                                String::class.java
-                            ) ?: ""
+                    val currentUid =
+                        currentData.child("currentPlayerUid")
+                            .getValue(String::class.java)
+                            ?: ""
 
-                        if (
-                            currentUid != myUid
-                        ) {
-                            return Transaction.abort()
-                        }
+                    if (currentUid != myUid) {
+                        return Transaction.abort()
+                    }
 
-                        val currentPhase =
-                            currentData.child(
-                                "phase"
-                            ).getValue(
-                                String::class.java
-                            ) ?: "normal"
+                    val currentPhase =
+                        currentData.child("phase")
+                            .getValue(String::class.java)
+                            ?: "normal"
 
-                        if (
-                            currentPhase != "normal"
-                        ) {
-                            return Transaction.abort()
-                        }
+                    if (currentPhase != "normal") {
+                        return Transaction.abort()
+                    }
 
-                        val guessed =
-                            currentData.child(
-                                "guessedLetters"
-                            )
+                    val guessed =
+                        currentData.child("guessedLetters")
 
-                        if (
-                            guessed.child(
-                                letter.toString()
-                            ).value != null
-                        ) {
-                            return Transaction.abort()
-                        }
+                    if (
+                        guessed.child(letter.toString()).value != null
+                    ) {
+                        return Transaction.abort()
+                    }
 
-                        guessed.child(
-                            letter.toString()
-                        ).value = true
+                    guessed.child(letter.toString()).value = true
 
-                        val word =
-                            currentData.child(
-                                "secretWord"
-                            ).getValue(
-                                String::class.java
-                            ) ?: ""
+                    val word =
+                        currentData.child("secretWord")
+                            .getValue(String::class.java)
+                            ?: ""
 
-                        if (
-                            word.contains(letter)
-                        ) {
+                    if (word.contains(letter)) {
 
-                            val occurrences =
-                                word.count {
-                                    it == letter
-                                }
+                        val occurrences =
+                            word.count { it == letter }
 
-                            val score =
-                                currentData.child(
-                                    "scores"
-                                ).child(
-                                    myUid
-                                ).getValue(
-                                    Int::class.java
-                                ) ?: 0
+                        val score =
+                            currentData.child("scores")
+                                .child(myUid)
+                                .getValue(Int::class.java)
+                                ?: 0
 
-                            currentData.child(
-                                "scores"
-                            ).child(
-                                myUid
-                            ).value =
-                                score + occurrences
+                        currentData.child("scores")
+                            .child(myUid)
+                            .value =
+                            score + occurrences
 
-                            var complete =
-                                true
+                        var complete = true
 
-                            for (
-                                c in word
-                            ) {
-
-                                if (
-                                    c != ' ' &&
-                                    guessed.child(
-                                        c.toString()
-                                    ).value == null
-                                ) {
-
-                                    complete = false
-                                    break
-                                }
-                            }
+                        for (c in word) {
 
                             if (
-                                complete
+                                c != ' ' &&
+                                guessed.child(c.toString()).value == null
                             ) {
 
-                                currentData.child(
-                                    "status"
-                                ).value =
-                                    "roundFinished"
+                                complete = false
+                                break
+                            }
+                        }
 
-                                currentData.child(
-                                    "roundWinnerUid"
-                                ).value =
-                                    myUid
+                        if (complete) {
 
-                                currentData.child(
-                                    "roundWinnerName"
-                                ).value =
-                                    playerNames[
-                                        myUid
-                                    ] ?: "Player"
+                            currentData.child("status").value =
+                                "roundFinished"
 
-                                currentData.child(
-                                    "turnEndsAt"
-                                ).value =
-                                    0L
+                            currentData.child("roundWinnerUid").value =
+                                myUid
 
-                                return Transaction.success(
-                                    currentData
-                                )
+                            currentData.child("roundWinnerName").value =
+                                playerNames[myUid] ?: "Player"
+
+                            currentData.child("turnEndsAt").value =
+                                0L
+
+                            return Transaction.success(currentData)
+                        }
+
+                        // CORRECT LETTER:
+                        // The same player continues, but gets a
+                        // completely fresh turn timer.
+                        currentData.child("turnEndsAt").value =
+                            if (secondsPerTurn <= 0) {
+                                0L
+                            } else {
+                                System.currentTimeMillis() +
+                                    secondsPerTurn * 1000L
                             }
 
-                        } else {
+                    } else {
 
-                            advanceTurnInsideTransaction(
-                                currentData
-                            )
-                        }
+                        advanceTurnInsideTransaction(currentData)
+                    }
 
-                        return Transaction.success(
-                            currentData
+                    return Transaction.success(currentData)
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (error != null) {
+
+                        showStatus(
+                            "Could not submit letter.",
+                            Color.RED
+                        )
+
+                        return
+                    }
+
+                    if (!committed) {
+
+                        showStatus(
+                            "That move is no longer available.",
+                            Color.RED
+                        )
+
+                        return
+                    }
+
+                    if (secretWord.contains(letter)) {
+
+                        val occurrences =
+                            secretWord.count { it == letter }
+
+                        // Allow another whole-word attempt for the
+                        // refreshed turn.
+                        wholeWordAttemptUsed = false
+
+                        showStatus(
+                            "Correct! You earned $occurrences point(s). Timer reset.",
+                            Color.rgb(0, 100, 0)
+                        )
+
+                        startSynchronizedTimer()
+
+                    } else {
+
+                        showStatus(
+                            "Wrong letter. Next player's turn.",
+                            Color.RED
                         )
                     }
-
-                    override fun onComplete(
-                        error: DatabaseError?,
-                        committed: Boolean,
-                        currentData: DataSnapshot?
-                    ) {
-
-                        if (
-                            error != null
-                        ) {
-
-                            showStatus(
-                                "Could not submit letter.",
-                                Color.RED
-                            )
-
-                            return
-                        }
-
-                        if (
-                            !committed
-                        ) {
-
-                            showStatus(
-                                "That move is no longer available.",
-                                Color.RED
-                            )
-
-                            return
-                        }
-
-                        if (
-                            secretWord.contains(letter)
-                        ) {
-
-                            val occurrences =
-                                secretWord.count {
-                                    it == letter
-                                }
-
-                            showStatus(
-                                "Correct! You earned $occurrences point(s).",
-                                Color.rgb(
-                                    0,
-                                    100,
-                                    0
-                                )
-                            )
-
-                        } else {
-
-                            showStatus(
-                                "Wrong letter. Next player's turn.",
-                                Color.RED
-                            )
-                        }
-                    }
                 }
-            )
+            }
+        )
     }
 
     private fun advanceTurnInsideTransaction(
         data: MutableData
     ) {
 
-        val players =
-            mutableListOf<String>()
+        val players = mutableListOf<String>()
 
-        val playersData =
-            data.child("players")
+        val playersData = data.child("players")
 
-        for (
-            child in playersData.children
-        ) {
-
+        for (child in playersData.children) {
             child.key?.let {
                 players.add(it)
             }
         }
 
-        if (
-            players.isEmpty()
-        ) {
+        if (players.isEmpty()) {
             return
         }
 
         val currentUid =
-            data.child(
-                "currentPlayerUid"
-            ).getValue(
-                String::class.java
-            ) ?: ""
+            data.child("currentPlayerUid")
+                .getValue(String::class.java)
+                ?: ""
 
         val eliminated =
-            data.child(
-                "eliminatedPlayers"
-            )
+            data.child("eliminatedPlayers")
 
-        var index =
-            players.indexOf(currentUid)
+        var index = players.indexOf(currentUid)
 
-        if (
-            index < 0
-        ) {
+        if (index < 0) {
             index = 0
         }
 
         var nextUid = ""
 
-        for (
-            step in 1..players.size
-        ) {
+        for (step in 1..players.size) {
 
             val nextIndex =
-                (index + step) %
-                    players.size
+                (index + step) % players.size
 
             val candidate =
                 players[nextIndex]
 
             if (
-                eliminated.child(
-                    candidate
-                ).getValue(
-                    Boolean::class.java
-                ) != true &&
+                eliminated.child(candidate)
+                    .getValue(Boolean::class.java) != true &&
                 candidate != wordMasterUid
             ) {
 
-                nextUid =
-                    candidate
-
+                nextUid = candidate
                 break
             }
         }
 
-        if (
-            nextUid.isEmpty()
-        ) {
+        if (nextUid.isEmpty()) {
 
-            data.child(
-                "status"
-            ).value =
+            data.child("status").value =
                 "roundFinished"
 
             return
         }
 
-        data.child(
-            "currentPlayerUid"
-        ).value =
+        data.child("currentPlayerUid").value =
             nextUid
 
         val completed =
-            data.child(
-                "completedTurns"
-            ).getValue(
-                Int::class.java
-            ) ?: 0
+            data.child("completedTurns")
+                .getValue(Int::class.java)
+                ?: 0
 
         val newCompleted =
             completed + 1
 
-        data.child(
-            "completedTurns"
-        ).value =
+        data.child("completedTurns").value =
             newCompleted
 
         val configuredTotal =
-            data.child(
-                "totalTurns"
-            ).getValue(
-                Int::class.java
-            ) ?: 0
+            data.child("totalTurns")
+                .getValue(Int::class.java)
+                ?: 0
 
         if (
             configuredTotal > 0 &&
@@ -1952,10 +1379,13 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        data.child(
-            "turnEndsAt"
-        ).value =
-            getNewTurnEndTime()
+        data.child("turnEndsAt").value =
+            if (secondsPerTurn <= 0) {
+                0L
+            } else {
+                System.currentTimeMillis() +
+                    secondsPerTurn * 1000L
+            }
     }
 
     private fun startFinalChallengeInsideTransaction(
@@ -1963,171 +1393,119 @@ class OnlineGameRoundActivity : Activity() {
         players: List<String>
     ) {
 
-        val order =
-            mutableListOf<String>()
+        val order = mutableListOf<String>()
 
         val eliminated =
-            data.child(
-                "eliminatedPlayers"
-            )
+            data.child("eliminatedPlayers")
 
-        for (
-            uid in players
-        ) {
+        for (uid in players) {
 
             if (
-                eliminated.child(
-                    uid
-                ).getValue(
-                    Boolean::class.java
-                ) == true
+                eliminated.child(uid)
+                    .getValue(Boolean::class.java) == true
             ) {
                 continue
             }
 
-            if (
-                uid == wordMasterUid
-            ) {
+            if (uid == wordMasterUid) {
                 continue
             }
 
             order.add(uid)
         }
 
-        data.child(
-            "phase"
-        ).value =
-            "final"
+        data.child("phase").value = "final"
+        data.child("finalChallengeIndex").value = 0
+        data.child("finalChallengePlayers").value = order
 
-        data.child(
-            "finalChallengeIndex"
-        ).value =
-            0
+        if (order.isEmpty()) {
 
-        data.child(
-            "finalChallengePlayers"
-        ).value =
-            order
-
-        if (
-            order.isEmpty()
-        ) {
-
-            data.child(
-                "status"
-            ).value =
+            data.child("status").value =
                 "roundFinished"
 
             return
         }
 
-        data.child(
-            "currentPlayerUid"
-        ).value =
+        data.child("currentPlayerUid").value =
             order.first()
 
-        data.child(
-            "turnEndsAt"
-        ).value =
-            System.currentTimeMillis() +
-                20000L
+        data.child("turnEndsAt").value =
+            System.currentTimeMillis() + 20000L
     }
 
     private fun handleMissedTurn() {
 
-        if (
-            roundFinished
-        ) {
+        if (roundFinished) {
             return
         }
 
-        if (
-            currentPlayerUid != myUid
-        ) {
+        if (currentPlayerUid != myUid) {
             return
         }
 
-        gameReference()
-            .runTransaction(
-                object :
-                    Transaction.Handler {
+        gameReference().runTransaction(
+            object : Transaction.Handler {
 
-                    override fun doTransaction(
-                        currentData: MutableData
-                    ): Transaction.Result {
+                override fun doTransaction(
+                    currentData: MutableData
+                ): Transaction.Result {
 
-                        val currentUid =
-                            currentData.child(
-                                "currentPlayerUid"
-                            ).getValue(
-                                String::class.java
-                            ) ?: ""
+                    val currentUid =
+                        currentData.child("currentPlayerUid")
+                            .getValue(String::class.java)
+                            ?: ""
 
-                        if (
-                            currentUid != myUid
-                        ) {
-                            return Transaction.abort()
-                        }
-
-                        val misses =
-                            currentData.child(
-                                "missedTurns"
-                            ).child(
-                                myUid
-                            ).getValue(
-                                Int::class.java
-                            ) ?: 0
-
-                        val newMisses =
-                            misses + 1
-
-                        currentData.child(
-                            "missedTurns"
-                        ).child(
-                            myUid
-                        ).value =
-                            newMisses
-
-                        if (
-                            playerOrder.size >= 3 &&
-                            newMisses >= 3
-                        ) {
-
-                            currentData.child(
-                                "eliminatedPlayers"
-                            ).child(
-                                myUid
-                            ).value =
-                                true
-                        }
-
-                        advanceTurnInsideTransaction(
-                            currentData
-                        )
-
-                        return Transaction.success(
-                            currentData
-                        )
+                    if (currentUid != myUid) {
+                        return Transaction.abort()
                     }
 
-                    override fun onComplete(
-                        error: DatabaseError?,
-                        committed: Boolean,
-                        currentData: DataSnapshot?
+                    val misses =
+                        currentData.child("missedTurns")
+                            .child(myUid)
+                            .getValue(Int::class.java)
+                            ?: 0
+
+                    val newMisses = misses + 1
+
+                    currentData.child("missedTurns")
+                        .child(myUid)
+                        .value = newMisses
+
+                    if (
+                        playerOrder.size >= 3 &&
+                        newMisses >= 3
                     ) {
 
-                        if (
-                            committed
-                        ) {
+                        currentData.child("eliminatedPlayers")
+                            .child(myUid)
+                            .value = true
+                    }
 
-                            showStatus(
-                                "Time is up.",
-                                Color.RED
-                            )
-                        }
+                    advanceTurnInsideTransaction(
+                        currentData
+                    )
+
+                    return Transaction.success(currentData)
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (committed) {
+
+                        wholeWordAttemptUsed = false
+
+                        showStatus(
+                            "Time is up.",
+                            Color.RED
+                        )
                     }
                 }
-            )
+            }
+        )
     }
 
     private fun startSynchronizedTimer() {
@@ -2141,12 +1519,9 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        if (
-            currentPlayerUid != myUid
-        ) {
+        if (currentPlayerUid != myUid) {
 
-            wholeWordButton.isEnabled =
-                false
+            wholeWordButton.isEnabled = false
 
         } else {
 
@@ -2155,27 +1530,18 @@ class OnlineGameRoundActivity : Activity() {
             )
         }
 
-        if (
-            secondsPerTurn <= 0
-        ) {
+        if (secondsPerTurn <= 0) {
 
-            timerText.text =
-                "Time: Unlimited"
+            timerText.text = "Time: Unlimited"
 
             timerText.setTextColor(
-                Color.rgb(
-                    0,
-                    100,
-                    0
-                )
+                Color.rgb(0, 100, 0)
             )
 
             return
         }
 
-        if (
-            turnEndsAt <= 0
-        ) {
+        if (turnEndsAt <= 0) {
             return
         }
 
@@ -2183,14 +1549,13 @@ class OnlineGameRoundActivity : Activity() {
             (
                 turnEndsAt -
                     System.currentTimeMillis()
-                ).coerceAtLeast(0L)
+            ).coerceAtLeast(0L)
 
         timer =
-            object :
-                CountDownTimer(
-                    remaining,
-                    250L
-                ) {
+            object : CountDownTimer(
+                remaining,
+                250L
+            ) {
 
                 override fun onTick(
                     millisUntilFinished: Long
@@ -2208,9 +1573,7 @@ class OnlineGameRoundActivity : Activity() {
                         "Time: $seconds"
 
                     timerText.setTextColor(
-                        if (
-                            seconds <= 3
-                        ) {
+                        if (seconds <= 3) {
                             Color.RED
                         } else {
                             Color.BLACK
@@ -2220,54 +1583,35 @@ class OnlineGameRoundActivity : Activity() {
 
                 override fun onFinish() {
 
-                    timerText.text =
-                        "Time: 0"
+                    timerText.text = "Time: 0"
+                    timerText.setTextColor(Color.RED)
 
-                    timerText.setTextColor(
-                        Color.RED
-                    )
-
-                    if (
-                        currentPlayerUid ==
-                        myUid
-                    ) {
-
+                    if (currentPlayerUid == myUid) {
                         handleMissedTurn()
                     }
                 }
-            }
-                .start()
+            }.start()
     }
 
     private fun maybeStartNormalTurnUI() {
 
-        if (
-            currentPlayerUid == myUid
-        ) {
+        if (currentPlayerUid == myUid) {
 
             statusText.text =
                 "Choose a letter or guess the whole word."
 
             statusText.setTextColor(
-                Color.rgb(
-                    0,
-                    100,
-                    0
-                )
+                Color.rgb(0, 100, 0)
             )
 
         } else {
 
             statusText.text =
                 "Waiting for ${
-                    playerNames[
-                        currentPlayerUid
-                    ] ?: "player"
+                    playerNames[currentPlayerUid] ?: "player"
                 }..."
 
-            statusText.setTextColor(
-                Color.DKGRAY
-            )
+            statusText.setTextColor(Color.DKGRAY)
         }
 
         setWholeWordButtonEnabled(
@@ -2282,30 +1626,19 @@ class OnlineGameRoundActivity : Activity() {
         enabled: Boolean
     ) {
 
-        wholeWordButton.isEnabled =
-            enabled
+        wholeWordButton.isEnabled = enabled
 
-        if (
-            enabled
-        ) {
+        if (enabled) {
 
-            wholeWordButton.setTextColor(
-                Color.WHITE
-            )
+            wholeWordButton.setTextColor(Color.WHITE)
 
             wholeWordButton.setBackgroundColor(
-                Color.rgb(
-                    0,
-                    70,
-                    140
-                )
+                Color.rgb(0, 70, 140)
             )
 
         } else {
 
-            wholeWordButton.setTextColor(
-                Color.DKGRAY
-            )
+            wholeWordButton.setTextColor(Color.DKGRAY)
 
             wholeWordButton.setBackgroundColor(
                 Color.LTGRAY
@@ -2318,70 +1651,33 @@ class OnlineGameRoundActivity : Activity() {
         color: Int
     ) {
 
-        statusText.text =
-            message
-
-        statusText.setTextColor(
-            color
-        )
-
-        statusText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
+        statusText.text = message
+        statusText.setTextColor(color)
+        statusText.setTypeface(null, Typeface.BOLD)
     }
 
     private fun showWholeWordDialog() {
 
-        wholeWordAttemptUsed =
-            true
+        wholeWordAttemptUsed = true
 
-        setWholeWordButtonEnabled(
-            false
-        )
+        setWholeWordButtonEnabled(false)
 
         timer?.cancel()
 
-        val input =
-            EditText(this)
-
-        input.hint =
-            "Enter your word"
-
+        val input = EditText(this)
+        input.hint = "Enter your word"
         input.setSingleLine(true)
+        input.textSize = 18f
 
-        input.textSize =
-            18f
+        val timerDisplay = TextView(this)
+        timerDisplay.text = "Time: 20"
+        timerDisplay.textSize = 22f
+        timerDisplay.gravity = Gravity.CENTER
+        timerDisplay.setTypeface(null, Typeface.BOLD)
 
-        val timerDisplay =
-            TextView(this)
-
-        timerDisplay.text =
-            "Time: 20"
-
-        timerDisplay.textSize =
-            22f
-
-        timerDisplay.gravity =
-            Gravity.CENTER
-
-        timerDisplay.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        val dialogLayout =
-            LinearLayout(this)
-
-        dialogLayout.orientation =
-            LinearLayout.VERTICAL
-
-        dialogLayout.setPadding(
-            30,
-            10,
-            30,
-            5
-        )
+        val dialogLayout = LinearLayout(this)
+        dialogLayout.orientation = LinearLayout.VERTICAL
+        dialogLayout.setPadding(30, 10, 30, 5)
 
         dialogLayout.addView(input)
         dialogLayout.addView(timerDisplay)
@@ -2390,14 +1686,8 @@ class OnlineGameRoundActivity : Activity() {
             AlertDialog.Builder(this)
                 .setTitle("Guess Whole Word")
                 .setView(dialogLayout)
-                .setNegativeButton(
-                    "Cancel",
-                    null
-                )
-                .setPositiveButton(
-                    "Guess",
-                    null
-                )
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Guess", null)
                 .create()
 
         dialog.setOnShowListener {
@@ -2429,13 +1719,9 @@ class OnlineGameRoundActivity : Activity() {
                         .trim()
                         .uppercase()
 
-                if (
-                    guess.isEmpty()
-                ) {
+                if (guess.isEmpty()) {
 
-                    input.error =
-                        "Enter a word."
-
+                    input.error = "Enter a word."
                     return@setOnClickListener
                 }
 
@@ -2443,17 +1729,14 @@ class OnlineGameRoundActivity : Activity() {
 
                 dialog.dismiss()
 
-                submitWholeWordGuess(
-                    guess
-                )
+                submitWholeWordGuess(guess)
             }
 
             wholeWordTimer =
-                object :
-                    CountDownTimer(
-                        20000L,
-                        250L
-                    ) {
+                object : CountDownTimer(
+                    20000L,
+                    250L
+                ) {
 
                     override fun onTick(
                         millisUntilFinished: Long
@@ -2471,9 +1754,7 @@ class OnlineGameRoundActivity : Activity() {
                             "Time: $seconds"
 
                         timerDisplay.setTextColor(
-                            if (
-                                seconds <= 3
-                            ) {
+                            if (seconds <= 3) {
                                 Color.RED
                             } else {
                                 Color.BLACK
@@ -2490,14 +1771,12 @@ class OnlineGameRoundActivity : Activity() {
 
                         submitWholeWordGuess("")
                     }
-                }
-                    .start()
+                }.start()
         }
 
         dialog.setOnCancelListener {
 
             wholeWordTimer?.cancel()
-
             resumeNormalTimer()
         }
 
@@ -2506,16 +1785,12 @@ class OnlineGameRoundActivity : Activity() {
 
     private fun resumeNormalTimer() {
 
-        if (
-            roundFinished
-        ) {
+        if (roundFinished) {
             return
         }
 
         val remaining =
-            if (
-                secondsPerTurn <= 0
-            ) {
+            if (secondsPerTurn <= 0) {
                 0
             } else {
                 (
@@ -2532,7 +1807,6 @@ class OnlineGameRoundActivity : Activity() {
         ) {
 
             handleMissedTurn()
-
             return
         }
 
@@ -2543,144 +1817,109 @@ class OnlineGameRoundActivity : Activity() {
         guess: String
     ) {
 
-        gameReference()
-            .runTransaction(
-                object :
-                    Transaction.Handler {
+        gameReference().runTransaction(
+            object : Transaction.Handler {
 
-                    override fun doTransaction(
-                        currentData: MutableData
-                    ): Transaction.Result {
+                override fun doTransaction(
+                    currentData: MutableData
+                ): Transaction.Result {
 
-                        val currentUid =
-                            currentData.child(
-                                "currentPlayerUid"
-                            ).getValue(
-                                String::class.java
-                            ) ?: ""
+                    val currentUid =
+                        currentData.child("currentPlayerUid")
+                            .getValue(String::class.java)
+                            ?: ""
 
-                        if (
-                            currentUid != myUid
-                        ) {
-                            return Transaction.abort()
-                        }
+                    if (currentUid != myUid) {
+                        return Transaction.abort()
+                    }
 
-                        if (
-                            currentData.child(
-                                "phase"
-                            ).getValue(
-                                String::class.java
-                            ) != "normal"
-                        ) {
-                            return Transaction.abort()
-                        }
+                    if (
+                        currentData.child("phase")
+                            .getValue(String::class.java)
+                            != "normal"
+                    ) {
+                        return Transaction.abort()
+                    }
 
-                        val word =
-                            currentData.child(
-                                "secretWord"
-                            ).getValue(
-                                String::class.java
-                            ) ?: ""
+                    val word =
+                        currentData.child("secretWord")
+                            .getValue(String::class.java)
+                            ?: ""
 
-                        if (
-                            guess.isNotEmpty() &&
-                            guess ==
-                            word.trim().uppercase()
-                        ) {
+                    if (
+                        guess.isNotEmpty() &&
+                        guess == word.trim().uppercase()
+                    ) {
 
-                            currentData.child(
-                                "status"
-                            ).value =
-                                "roundFinished"
+                        currentData.child("status").value =
+                            "roundFinished"
 
-                            currentData.child(
-                                "roundWinnerUid"
-                            ).value =
-                                myUid
+                        currentData.child("roundWinnerUid").value =
+                            myUid
 
-                            currentData.child(
-                                "roundWinnerName"
-                            ).value =
-                                playerNames[
-                                    myUid
-                                ] ?: "Player"
+                        currentData.child("roundWinnerName").value =
+                            playerNames[myUid] ?: "Player"
 
-                            currentData.child(
-                                "turnEndsAt"
-                            ).value =
-                                0L
+                        currentData.child("turnEndsAt").value =
+                            0L
 
-                        } else {
+                    } else {
 
-                            advanceTurnInsideTransaction(
-                                currentData
-                            )
-                        }
-
-                        return Transaction.success(
+                        advanceTurnInsideTransaction(
                             currentData
                         )
                     }
 
-                    override fun onComplete(
-                        error: DatabaseError?,
-                        committed: Boolean,
-                        currentData: DataSnapshot?
-                    ) {
+                    return Transaction.success(currentData)
+                }
 
-                        if (
-                            !committed
-                        ) {
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (!committed) {
+
+                        showStatus(
+                            "That guess could not be submitted.",
+                            Color.RED
+                        )
+
+                    } else if (guess.isEmpty()) {
+
+                        showStatus(
+                            "Whole-word time is up.",
+                            Color.RED
+                        )
+
+                    } else {
+
+                        val winner =
+                            currentData
+                                ?.child("roundWinnerUid")
+                                ?.getValue(String::class.java)
+
+                        if (winner == myUid) {
 
                             showStatus(
-                                "That guess could not be submitted.",
-                                Color.RED
-                            )
-
-                        } else if (
-                            guess.isEmpty()
-                        ) {
-
-                            showStatus(
-                                "Whole-word time is up.",
-                                Color.RED
+                                "Correct! You win the round!",
+                                Color.rgb(0, 100, 0)
                             )
 
                         } else {
 
-                            val winner =
-                                currentData
-                                    ?.child(
-                                        "roundWinnerUid"
-                                    )
-                                    ?.getValue(
-                                        String::class.java
-                                    )
+                            wholeWordAttemptUsed = false
 
-                            if (
-                                winner == myUid
-                            ) {
-
-                                showStatus(
-                                    "Correct! You win the round!",
-                                    Color.rgb(
-                                        0,
-                                        100,
-                                        0
-                                    )
-                                )
-
-                            } else {
-
-                                showStatus(
-                                    "Wrong whole-word guess.",
-                                    Color.RED
-                                )
-                            }
+                            showStatus(
+                                "Wrong whole-word guess.",
+                                Color.RED
+                            )
                         }
                     }
                 }
-            )
+            }
+        )
     }
 
     private fun handleFinalChallenge() {
@@ -2689,23 +1928,15 @@ class OnlineGameRoundActivity : Activity() {
 
         setWholeWordButtonEnabled(false)
 
-        val finalPlayers =
-            getFinalPlayers()
+        val finalPlayers = getFinalPlayers()
 
-        if (
-            finalPlayers.isEmpty()
-        ) {
+        if (finalPlayers.isEmpty()) {
             return
         }
 
-        if (
-            finalChallengeIndex >=
-            finalPlayers.size
-        ) {
+        if (finalChallengeIndex >= finalPlayers.size) {
 
-            if (
-                isHostFromCurrentData()
-            ) {
+            if (isHostFromCurrentData()) {
                 finishWithoutWinner()
             }
 
@@ -2713,40 +1944,26 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         val currentFinalUid =
-            finalPlayers[
-                finalChallengeIndex
-            ]
+            finalPlayers[finalChallengeIndex]
 
-        if (
-            currentPlayerUid !=
-            currentFinalUid
-        ) {
+        if (currentPlayerUid != currentFinalUid) {
             return
         }
 
-        if (
-            currentFinalUid != myUid
-        ) {
+        if (currentFinalUid != myUid) {
             return
         }
 
-        if (
-            lastShownFinalIndex ==
-            finalChallengeIndex
-        ) {
+        if (lastShownFinalIndex == finalChallengeIndex) {
             return
         }
 
-        lastShownFinalIndex =
-            finalChallengeIndex
+        lastShownFinalIndex = finalChallengeIndex
 
-        showFinalWholeWordDialog(
-            currentFinalUid
-        )
+        showFinalWholeWordDialog(currentFinalUid)
     }
 
-    private fun getFinalPlayers():
-        List<String> {
+    private fun getFinalPlayers(): List<String> {
 
         return playerOrder.filter {
             !eliminatedPlayers.contains(it) &&
@@ -2754,53 +1971,25 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    private fun showFinalWholeWordDialog(
-        uid: String
-    ) {
+    private fun showFinalWholeWordDialog(uid: String) {
 
         val playerName =
             playerNames[uid] ?: "Player"
 
-        val input =
-            EditText(this)
-
-        input.hint =
-            "Type the entire word"
-
+        val input = EditText(this)
+        input.hint = "Type the entire word"
         input.setSingleLine(true)
+        input.textSize = 18f
 
-        input.textSize =
-            18f
+        val timerDisplay = TextView(this)
+        timerDisplay.text = "Time: 20"
+        timerDisplay.textSize = 22f
+        timerDisplay.gravity = Gravity.CENTER
+        timerDisplay.setTypeface(null, Typeface.BOLD)
 
-        val timerDisplay =
-            TextView(this)
-
-        timerDisplay.text =
-            "Time: 20"
-
-        timerDisplay.textSize =
-            22f
-
-        timerDisplay.gravity =
-            Gravity.CENTER
-
-        timerDisplay.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        val layout =
-            LinearLayout(this)
-
-        layout.orientation =
-            LinearLayout.VERTICAL
-
-        layout.setPadding(
-            30,
-            10,
-            30,
-            5
-        )
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+        layout.setPadding(30, 10, 30, 5)
 
         layout.addView(input)
         layout.addView(timerDisplay)
@@ -2814,14 +2003,8 @@ class OnlineGameRoundActivity : Activity() {
                     "Type the entire word and press Guess."
                 )
                 .setView(layout)
-                .setNegativeButton(
-                    "Skip",
-                    null
-                )
-                .setPositiveButton(
-                    "Guess",
-                    null
-                )
+                .setNegativeButton("Skip", null)
+                .setPositiveButton("Guess", null)
                 .setCancelable(false)
                 .create()
 
@@ -2848,9 +2031,7 @@ class OnlineGameRoundActivity : Activity() {
                         .trim()
                         .uppercase()
 
-                if (
-                    guess.isEmpty()
-                ) {
+                if (guess.isEmpty()) {
 
                     input.error =
                         "Enter the entire word."
@@ -2866,11 +2047,10 @@ class OnlineGameRoundActivity : Activity() {
             }
 
             wholeWordTimer =
-                object :
-                    CountDownTimer(
-                        20000L,
-                        250L
-                    ) {
+                object : CountDownTimer(
+                    20000L,
+                    250L
+                ) {
 
                     override fun onTick(
                         millisUntilFinished: Long
@@ -2894,188 +2074,135 @@ class OnlineGameRoundActivity : Activity() {
 
                         submitFinalGuess("")
                     }
-                }
-                    .start()
+                }.start()
         }
 
         dialog.show()
     }
 
-    private fun submitFinalGuess(
-        guess: String
-    ) {
+    private fun submitFinalGuess(guess: String) {
 
-        gameReference()
-            .runTransaction(
-                object :
-                    Transaction.Handler {
+        gameReference().runTransaction(
+            object : Transaction.Handler {
 
-                    override fun doTransaction(
-                        data: MutableData
-                    ): Transaction.Result {
+                override fun doTransaction(
+                    data: MutableData
+                ): Transaction.Result {
 
-                        val currentUid =
-                            data.child(
-                                "currentPlayerUid"
-                            ).getValue(
-                                String::class.java
-                            ) ?: ""
+                    val currentUid =
+                        data.child("currentPlayerUid")
+                            .getValue(String::class.java)
+                            ?: ""
 
-                        if (
-                            currentUid != myUid
-                        ) {
-                            return Transaction.abort()
-                        }
+                    if (currentUid != myUid) {
+                        return Transaction.abort()
+                    }
 
-                        if (
-                            data.child(
-                                "phase"
-                            ).getValue(
-                                String::class.java
-                            ) != "final"
-                        ) {
-                            return Transaction.abort()
-                        }
+                    if (
+                        data.child("phase")
+                            .getValue(String::class.java)
+                            != "final"
+                    ) {
+                        return Transaction.abort()
+                    }
 
-                        val word =
-                            data.child(
-                                "secretWord"
-                            ).getValue(
-                                String::class.java
-                            ) ?: ""
+                    val word =
+                        data.child("secretWord")
+                            .getValue(String::class.java)
+                            ?: ""
 
-                        if (
-                            guess.isNotEmpty() &&
-                            guess ==
-                            word.trim().uppercase()
-                        ) {
+                    if (
+                        guess.isNotEmpty() &&
+                        guess == word.trim().uppercase()
+                    ) {
 
-                            data.child(
-                                "status"
-                            ).value =
-                                "roundFinished"
+                        data.child("status").value =
+                            "roundFinished"
 
-                            data.child(
-                                "roundWinnerUid"
-                            ).value =
-                                myUid
+                        data.child("roundWinnerUid").value =
+                            myUid
 
-                            data.child(
-                                "roundWinnerName"
-                            ).value =
-                                playerNames[
-                                    myUid
-                                ] ?: "Player"
-
-                            return Transaction.success(data)
-                        }
-
-                        val index =
-                            data.child(
-                                "finalChallengeIndex"
-                            ).getValue(
-                                Int::class.java
-                            ) ?: 0
-
-                        val newIndex =
-                            index + 1
-
-                        val finalPlayers =
-                            mutableListOf<String>()
-
-                        val finalData =
-                            data.child(
-                                "finalChallengePlayers"
-                            )
-
-                        for (
-                            child in finalData.children
-                        ) {
-
-                            child.getValue(
-                                String::class.java
-                            )?.let {
-                                finalPlayers.add(it)
-                            }
-                        }
-
-                        if (
-                            newIndex >=
-                            finalPlayers.size
-                        ) {
-
-                            data.child(
-                                "status"
-                            ).value =
-                                "roundFinished"
-
-                            data.child(
-                                "roundWinnerUid"
-                            ).value =
-                                ""
-
-                            data.child(
-                                "roundWinnerName"
-                            ).value =
-                                ""
-
-                        } else {
-
-                            data.child(
-                                "finalChallengeIndex"
-                            ).value =
-                                newIndex
-
-                            data.child(
-                                "currentPlayerUid"
-                            ).value =
-                                finalPlayers[newIndex]
-
-                            data.child(
-                                "turnEndsAt"
-                            ).value =
-                                System.currentTimeMillis() +
-                                    20000L
-                        }
+                        data.child("roundWinnerName").value =
+                            playerNames[myUid] ?: "Player"
 
                         return Transaction.success(data)
                     }
 
-                    override fun onComplete(
-                        error: DatabaseError?,
-                        committed: Boolean,
-                        currentData: DataSnapshot?
-                    ) {
+                    val index =
+                        data.child("finalChallengeIndex")
+                            .getValue(Int::class.java)
+                            ?: 0
 
-                        if (!committed) {
+                    val newIndex = index + 1
 
-                            showStatus(
-                                "Final guess could not be submitted.",
-                                Color.RED
-                            )
-                        }
+                    val finalPlayers =
+                        mutableListOf<String>()
+
+                    val finalData =
+                        data.child("finalChallengePlayers")
+
+                    for (child in finalData.children) {
+
+                        child.getValue(String::class.java)
+                            ?.let {
+                                finalPlayers.add(it)
+                            }
+                    }
+
+                    if (newIndex >= finalPlayers.size) {
+
+                        data.child("status").value =
+                            "roundFinished"
+
+                        data.child("roundWinnerUid").value = ""
+                        data.child("roundWinnerName").value = ""
+
+                    } else {
+
+                        data.child("finalChallengeIndex").value =
+                            newIndex
+
+                        data.child("currentPlayerUid").value =
+                            finalPlayers[newIndex]
+
+                        data.child("turnEndsAt").value =
+                            System.currentTimeMillis() + 20000L
+                    }
+
+                    return Transaction.success(data)
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (!committed) {
+
+                        showStatus(
+                            "Final guess could not be submitted.",
+                            Color.RED
+                        )
                     }
                 }
-            )
+            }
+        )
     }
 
     private fun showRoundFinishedDialogIfNeeded() {
 
         if (
             roundNumber <= 0 ||
-            lastShownRoundFinished ==
-            roundNumber
+            lastShownRoundFinished == roundNumber
         ) {
             return
         }
 
-        lastShownRoundFinished =
-            roundNumber
+        lastShownRoundFinished = roundNumber
 
         val winnerMessage =
-            if (
-                roundWinnerUid.isNotEmpty()
-            ) {
+            if (roundWinnerUid.isNotEmpty()) {
                 "$roundWinnerName wins the round!"
             } else {
                 "Nobody guessed the whole word."
@@ -3106,25 +2233,15 @@ class OnlineGameRoundActivity : Activity() {
                     AlertDialog.BUTTON_POSITIVE
                 )
 
-            val canContinue =
-                myUid == knownHostUid
+            // IMPORTANT:
+            // Continue is now enabled for the joining player too.
+            continueButton.isEnabled = true
 
-            continueButton.isEnabled =
-                canContinue
+            continueButton.setOnClickListener {
 
-            if (canContinue) {
+                dialog.dismiss()
 
-                continueButton.setOnClickListener {
-
-                    dialog.dismiss()
-
-                    startNextRoundAsHost()
-                }
-
-            } else {
-
-                continueButton.text =
-                    "Waiting for Host"
+                requestContinueGame()
             }
 
             dialog.getButton(
@@ -3133,84 +2250,207 @@ class OnlineGameRoundActivity : Activity() {
 
                 dialog.dismiss()
 
-                finish()
+                leaveGame()
             }
         }
 
         dialog.show()
     }
 
+    private fun requestContinueGame() {
+
+        if (wordSelection == "Random Word") {
+
+            startNextRandomRound()
+
+        } else {
+
+            showNextManualWordDialog()
+        }
+    }
+
+    private fun startNextRandomRound() {
+
+        gameReference().runTransaction(
+            object : Transaction.Handler {
+
+                override fun doTransaction(
+                    data: MutableData
+                ): Transaction.Result {
+
+                    val currentStatus =
+                        data.child("status")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    if (currentStatus != "roundFinished") {
+                        return Transaction.abort()
+                    }
+
+                    val players =
+                        mutableListOf<String>()
+
+                    for (
+                        child in data.child("players").children
+                    ) {
+                        child.key?.let {
+                            players.add(it)
+                        }
+                    }
+
+                    if (players.isEmpty()) {
+                        return Transaction.abort()
+                    }
+
+                    val selected =
+                        chooseOnlineWord()
+
+                    val activePlayers =
+                        players.filter { uid ->
+
+                            data.child("eliminatedPlayers")
+                                .child(uid)
+                                .getValue(Boolean::class.java)
+                                != true
+                        }
+
+                    if (activePlayers.isEmpty()) {
+                        return Transaction.abort()
+                    }
+
+                    val startingPlayer =
+                        activePlayers.first()
+
+                    data.child("status").value =
+                        "playing"
+
+                    val oldRound =
+                        data.child("roundNumber")
+                            .getValue(Int::class.java)
+                            ?: 0
+
+                    data.child("roundNumber").value =
+                        oldRound + 1
+
+                    data.child("phase").value =
+                        "normal"
+
+                    data.child("secretWord").value =
+                        selected.first
+
+                    data.child("actualCategory").value =
+                        selected.second
+
+                    data.child("currentPlayerUid").value =
+                        startingPlayer
+
+                    data.child("completedTurns").value =
+                        0
+
+                    data.child("roundWinnerUid").value =
+                        ""
+
+                    data.child("roundWinnerName").value =
+                        ""
+
+                    data.child("wordMasterUid").value =
+                        ""
+
+                    data.child("turnEndsAt").value =
+                        if (secondsPerTurn <= 0) {
+                            0L
+                        } else {
+                            System.currentTimeMillis() +
+                                secondsPerTurn * 1000L
+                        }
+
+                    data.child("guessedLetters").value =
+                        emptyMap<String, Any>()
+
+                    data.child("missedTurns").value =
+                        createPlayerMapFromIds(players)
+
+                    data.child("eliminatedPlayers").value =
+                        emptyMap<String, Any>()
+
+                    data.child("finalChallengePlayers").value =
+                        emptyList<String>()
+
+                    data.child("finalChallengeIndex").value =
+                        0
+
+                    return Transaction.success(data)
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (!committed) {
+
+                        showStatus(
+                            "Another player already started the next round.",
+                            Color.DKGRAY
+                        )
+
+                        return
+                    }
+
+                    wholeWordAttemptUsed = false
+
+                    showStatus(
+                        "New round started!",
+                        Color.rgb(0, 100, 0)
+                    )
+                }
+            }
+        )
+    }
+
+    private fun createPlayerMapFromIds(
+        ids: List<String>
+    ): Map<String, Any> {
+
+        val map = mutableMapOf<String, Any>()
+
+        for (uid in ids) {
+            map[uid] = 0
+        }
+
+        return map
+    }
+
     private fun getHostUid(): String {
         return knownHostUid
     }
 
-    private fun isHostFromCurrentData():
-        Boolean {
-
+    private fun isHostFromCurrentData(): Boolean {
         return myUid.isNotEmpty() &&
             knownHostUid == myUid
     }
 
     private fun finishWithoutWinner() {
 
-        gameReference()
-            .updateChildren(
-                mapOf(
-                    "status" to "roundFinished",
-                    "roundWinnerUid" to "",
-                    "roundWinnerName" to ""
-                )
+        gameReference().updateChildren(
+            mapOf(
+                "status" to "roundFinished",
+                "roundWinnerUid" to "",
+                "roundWinnerName" to ""
             )
+        )
     }
 
     private fun startNextRoundAsHost() {
 
-        if (
-            !isActuallyHost()
-        ) {
+        if (!isActuallyHost()) {
             return
         }
 
-        if (
-            wordSelection ==
-            "Random Word"
-        ) {
+        if (wordSelection == "Random Word") {
 
-            val selected =
-                chooseOnlineWord()
-
-            val updates =
-                hashMapOf<String, Any>(
-                    "status" to "playing",
-                    "roundNumber" to
-                        roundNumber + 1,
-                    "phase" to "normal",
-                    "secretWord" to
-                        selected.first,
-                    "actualCategory" to
-                        selected.second,
-                    "currentPlayerUid" to
-                        chooseNextStartingPlayer(),
-                    "completedTurns" to 0,
-                    "roundWinnerUid" to "",
-                    "roundWinnerName" to "",
-                    "wordMasterUid" to "",
-                    "turnEndsAt" to
-                        getNewTurnEndTime(),
-                    "guessedLetters" to
-                        emptyMap<String, Any>(),
-                    "scores" to scores,
-                    "missedTurns" to
-                        createEmptyPlayerMap(),
-                    "eliminatedPlayers" to
-                        emptyMap<String, Any>(),
-                    "finalChallengePlayers" to
-                        emptyList<String>(),
-                    "finalChallengeIndex" to 0
-                )
-
-            gameReference()
-                .updateChildren(updates)
+            startNextRandomRound()
 
         } else {
 
@@ -3221,20 +2461,16 @@ class OnlineGameRoundActivity : Activity() {
     private fun createEmptyPlayerMap():
         Map<String, Any> {
 
-        val map =
-            mutableMapOf<String, Any>()
+        val map = mutableMapOf<String, Any>()
 
-        for (
-            uid in playerOrder
-        ) {
+        for (uid in playerOrder) {
             map[uid] = 0
         }
 
         return map
     }
 
-    private fun chooseNextStartingPlayer():
-        String {
+    private fun chooseNextStartingPlayer(): String {
 
         val active =
             playerOrder.filter {
@@ -3249,21 +2485,16 @@ class OnlineGameRoundActivity : Activity() {
 
     private fun showNextManualWordDialog() {
 
-        if (
-            nextWordMaster == "Winner chooses"
-        ) {
+        if (nextWordMaster == "Winner chooses") {
 
             showWinnerChoosesWordMaster()
-
             return
         }
 
         val newMaster =
             chooseNextWordMaster()
 
-        if (
-            newMaster.isEmpty()
-        ) {
+        if (newMaster.isEmpty()) {
 
             showStatus(
                 "Could not determine the next Word Master.",
@@ -3273,22 +2504,16 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        wordMasterUid =
-            newMaster
+        wordMasterUid = newMaster
 
-        showNewWordEntryForMaster(
-            newMaster
-        )
+        showNewWordEntryForMaster(newMaster)
     }
 
     private fun showWinnerChoosesWordMaster() {
 
-        val winnerUid =
-            roundWinnerUid
+        val winnerUid = roundWinnerUid
 
-        if (
-            winnerUid.isEmpty()
-        ) {
+        if (winnerUid.isEmpty()) {
 
             showStatus(
                 "There was no winner to choose the next Word Master.",
@@ -3298,26 +2523,17 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        if (
-            winnerUid != myUid
-        ) {
+        if (winnerUid != myUid) {
 
             val winnerName =
-                playerNames[
-                    winnerUid
-                ] ?: "Winner"
+                playerNames[winnerUid] ?: "Winner"
 
             AlertDialog.Builder(this)
-                .setTitle(
-                    "Next Word Master"
-                )
+                .setTitle("Next Word Master")
                 .setMessage(
                     "$winnerName will choose the next Word Master."
                 )
-                .setPositiveButton(
-                    "Waiting",
-                    null
-                )
+                .setPositiveButton("Waiting", null)
                 .show()
 
             return
@@ -3328,9 +2544,7 @@ class OnlineGameRoundActivity : Activity() {
                 !eliminatedPlayers.contains(it)
             }
 
-        if (
-            activePlayers.isEmpty()
-        ) {
+        if (activePlayers.isEmpty()) {
 
             showStatus(
                 "No active players are available.",
@@ -3345,8 +2559,7 @@ class OnlineGameRoundActivity : Activity() {
                 playerNames[it] ?: "Player"
             }.toTypedArray()
 
-        var selectedIndex =
-            -1
+        var selectedIndex = -1
 
         val dialog =
             AlertDialog.Builder(this)
@@ -3358,19 +2571,12 @@ class OnlineGameRoundActivity : Activity() {
                     -1
                 ) { _, which ->
 
-                    selectedIndex =
-                        which
+                    selectedIndex = which
                 }
-                .setNegativeButton(
-                    "Cancel"
-                ) { _, _ ->
-
+                .setNegativeButton("Cancel") { _, _ ->
                     finish()
                 }
-                .setPositiveButton(
-                    "Continue",
-                    null
-                )
+                .setPositiveButton("Continue", null)
                 .setCancelable(false)
                 .create()
 
@@ -3383,9 +2589,7 @@ class OnlineGameRoundActivity : Activity() {
 
             continueButton.setOnClickListener {
 
-                if (
-                    selectedIndex < 0
-                ) {
+                if (selectedIndex < 0) {
 
                     Toast.makeText(
                         this,
@@ -3397,14 +2601,11 @@ class OnlineGameRoundActivity : Activity() {
                 }
 
                 val selectedUid =
-                    activePlayers[
-                        selectedIndex
-                    ]
+                    activePlayers[selectedIndex]
 
                 dialog.dismiss()
 
-                wordMasterUid =
-                    selectedUid
+                wordMasterUid = selectedUid
 
                 showNewWordEntryForMaster(
                     selectedUid
@@ -3420,35 +2621,22 @@ class OnlineGameRoundActivity : Activity() {
     ) {
 
         val masterName =
-            playerNames[
-                newMaster
-            ] ?: "Player"
+            playerNames[newMaster] ?: "Player"
 
-        val input =
-            EditText(this)
-
-        input.hint =
-            "Enter the new word"
-
+        val input = EditText(this)
+        input.hint = "Enter the new word"
         input.setSingleLine(true)
-
-        input.textSize =
-            18f
+        input.textSize = 18f
 
         val dialog =
             AlertDialog.Builder(this)
-                .setTitle(
-                    "$masterName — New Word"
-                )
+                .setTitle("$masterName — New Word")
                 .setMessage(
                     "The selected Word Master must enter the word."
                 )
                 .setView(input)
                 .setCancelable(false)
-                .setNegativeButton(
-                    "Cancel"
-                ) { _, _ ->
-
+                .setNegativeButton("Cancel") { _, _ ->
                     finish()
                 }
                 .setPositiveButton(
@@ -3464,13 +2652,9 @@ class OnlineGameRoundActivity : Activity() {
                     AlertDialog.BUTTON_POSITIVE
                 )
 
-            if (
-                newMaster != myUid
-            ) {
+            if (newMaster != myUid) {
 
-                startButton.isEnabled =
-                    false
-
+                startButton.isEnabled = false
                 startButton.text =
                     "Waiting for $masterName"
 
@@ -3485,9 +2669,7 @@ class OnlineGameRoundActivity : Activity() {
                         .trim()
                         .uppercase()
 
-                if (
-                    word.isEmpty()
-                ) {
+                if (word.isEmpty()) {
 
                     input.error =
                         "Enter a word."
@@ -3507,20 +2689,16 @@ class OnlineGameRoundActivity : Activity() {
         dialog.show()
     }
 
-    private fun chooseNextWordMaster():
-        String {
+    private fun chooseNextWordMaster(): String {
 
-        val winner =
-            roundWinnerUid
+        val winner = roundWinnerUid
 
         val activePlayers =
             playerOrder.filter {
                 !eliminatedPlayers.contains(it)
             }
 
-        if (
-            activePlayers.isEmpty()
-        ) {
+        if (activePlayers.isEmpty()) {
             return ""
         }
 
@@ -3552,11 +2730,8 @@ class OnlineGameRoundActivity : Activity() {
                 }
             }
 
-            nextWordMaster.contains(
-                "Winner"
-            ) &&
-                nextWordMaster !=
-                "Winner chooses" -> {
+            nextWordMaster.contains("Winner") &&
+                nextWordMaster != "Winner chooses" -> {
 
                 if (
                     activePlayers.contains(winner)
@@ -3601,10 +2776,8 @@ class OnlineGameRoundActivity : Activity() {
                 "phase" to "normal",
                 "secretWord" to word,
                 "actualCategory" to selectedCategory,
-                "wordMasterUid" to
-                    newMasterUid,
-                "currentPlayerUid" to
-                    startingPlayer,
+                "wordMasterUid" to newMasterUid,
+                "currentPlayerUid" to startingPlayer,
                 "completedTurns" to 0,
                 "roundWinnerUid" to "",
                 "roundWinnerName" to "",
@@ -3622,21 +2795,223 @@ class OnlineGameRoundActivity : Activity() {
                 "finalChallengeIndex" to 0
             )
 
-        gameReference()
-            .updateChildren(updates)
+        gameReference().updateChildren(updates)
     }
 
-    private fun isActuallyHost():
-        Boolean {
+    private fun isActuallyHost(): Boolean {
 
         return auth.currentUser?.uid ==
             getKnownHostUid()
     }
 
-    private fun getKnownHostUid():
-        String {
-
+    private fun getKnownHostUid(): String {
         return knownHostUid
+    }
+
+    private fun confirmLeaveGame() {
+
+        if (leavingGame) {
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Leave Game?")
+            .setMessage(
+                "Are you sure you want to leave this game?"
+            )
+            .setNegativeButton(
+                "Cancel",
+                null
+            )
+            .setPositiveButton(
+                "Leave"
+            ) { _, _ ->
+                leaveGame()
+            }
+            .show()
+    }
+
+    private fun leaveGame() {
+
+        if (leavingGame) {
+            return
+        }
+
+        leavingGame = true
+
+        stopTimers()
+
+        val uid = auth.currentUser?.uid
+
+        if (uid == null) {
+
+            removeFirebaseListener()
+            finish()
+            return
+        }
+
+        showStatus(
+            "Leaving game...",
+            Color.DKGRAY
+        )
+
+        gameReference().runTransaction(
+            object : Transaction.Handler {
+
+                override fun doTransaction(
+                    data: MutableData
+                ): Transaction.Result {
+
+                    val playersNode =
+                        data.child("players")
+
+                    if (
+                        playersNode.child(uid).value == null
+                    ) {
+                        return Transaction.success(data)
+                    }
+
+                    playersNode.child(uid).value = null
+
+                    val remaining =
+                        mutableListOf<String>()
+
+                    for (child in playersNode.children) {
+                        child.key?.let {
+                            remaining.add(it)
+                        }
+                    }
+
+                    if (remaining.isEmpty()) {
+
+                        data.child("status").value =
+                            "ended"
+
+                        return Transaction.success(data)
+                    }
+
+                    val currentUid =
+                        data.child("currentPlayerUid")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    val oldMaster =
+                        data.child("wordMasterUid")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    val oldHost =
+                        data.child("hostUid")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    // If the host leaves, transfer host control
+                    // to the first remaining player.
+                    if (oldHost == uid) {
+
+                        data.child("hostUid").value =
+                            remaining.first()
+                    }
+
+                    // If the Word Master leaves, transfer the role.
+                    if (oldMaster == uid) {
+
+                        data.child("wordMasterUid").value =
+                            if (remaining.size == 1) {
+                                ""
+                            } else {
+                                remaining.first()
+                            }
+                    }
+
+                    // If only one player remains, let that player
+                    // continue as a normal guessing player.
+                    if (remaining.size == 1) {
+
+                        data.child("wordMasterUid").value =
+                            ""
+
+                        data.child("currentPlayerUid").value =
+                            remaining.first()
+
+                        data.child("turnEndsAt").value =
+                            if (secondsPerTurn <= 0) {
+                                0L
+                            } else {
+                                System.currentTimeMillis() +
+                                    secondsPerTurn * 1000L
+                            }
+
+                        data.child("phase").value =
+                            "normal"
+
+                    } else if (
+                        currentUid == uid
+                    ) {
+
+                        val currentIndex =
+                            remaining.indexOf(
+                                currentUid
+                            )
+
+                        val nextIndex =
+                            if (currentIndex >= 0) {
+                                (currentIndex + 1) %
+                                    remaining.size
+                            } else {
+                                0
+                            }
+
+                        data.child(
+                            "currentPlayerUid"
+                        ).value =
+                            remaining[nextIndex]
+
+                        data.child(
+                            "turnEndsAt"
+                        ).value =
+                            if (secondsPerTurn <= 0) {
+                                0L
+                            } else {
+                                System.currentTimeMillis() +
+                                    secondsPerTurn * 1000L
+                            }
+                    }
+
+                    return Transaction.success(data)
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+
+                    if (error != null || !committed) {
+
+                        leavingGame = false
+
+                        Toast.makeText(
+                            this@OnlineGameRoundActivity,
+                            "Could not leave the game. Please try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        return
+                    }
+
+                    removeFirebaseListener()
+
+                    Toast.makeText(
+                        this@OnlineGameRoundActivity,
+                        "You left the game.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    finish()
+                }
+            }
+        )
     }
 
     private fun stopTimers() {
@@ -3648,15 +3023,21 @@ class OnlineGameRoundActivity : Activity() {
         wholeWordTimer = null
     }
 
+    private fun removeFirebaseListener() {
+
+        gameListener?.let {
+            gameReference()
+                .removeEventListener(it)
+        }
+
+        gameListener = null
+    }
+
     override fun onDestroy() {
 
         stopTimers()
 
-        gameListener?.let {
-
-            gameReference()
-                .removeEventListener(it)
-        }
+        removeFirebaseListener()
 
         super.onDestroy()
     }
