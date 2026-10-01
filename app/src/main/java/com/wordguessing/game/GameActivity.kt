@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
 import android.graphics.Typeface
+import android.util.TypedValue
 import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
@@ -13,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.app.AlertDialog
+import androidx.core.widget.TextViewCompat
 
 class GameActivity : Activity() {
 
@@ -619,7 +621,7 @@ class GameActivity : Activity() {
             TextView(this)
 
         wordText.textSize =
-            32f
+            30f
 
         wordText.gravity =
             Gravity.CENTER
@@ -634,6 +636,20 @@ class GameActivity : Activity() {
             20,
             0,
             20
+        )
+
+        // Keep the word on ONE line.
+        // Normal words remain at 30sp, while longer
+        // words automatically shrink to fit.
+        wordText.maxLines = 1
+        wordText.isSingleLine = true
+
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+            wordText,
+            16,
+            30,
+            1,
+            TypedValue.COMPLEX_UNIT_SP
         )
 
         layout.addView(
@@ -1468,6 +1484,7 @@ class GameActivity : Activity() {
         wordText.text =
             testWord
 
+        // Keep the final word on one line too.
         wordText.textSize =
             30f
 
@@ -1577,6 +1594,7 @@ class GameActivity : Activity() {
         wordText.text =
             testWord
 
+        // Keep the final word on one line too.
         wordText.textSize =
             30f
 
