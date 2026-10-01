@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.util.TypedValue
 import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
@@ -85,7 +86,6 @@ class OnlineGameRoundActivity : Activity() {
 
     private var knownHostUid = ""
 
-    // Used to detect players leaving the active game.
     private val lastKnownPlayerIds = mutableSetOf<String>()
     private val lastKnownPlayerNames = mutableMapOf<String, String>()
     private val notifiedDepartures = mutableSetOf<String>()
@@ -216,12 +216,36 @@ class OnlineGameRoundActivity : Activity() {
         layout.addView(wordMasterText)
 
         wordText = TextView(this)
-        wordText.text = "Waiting for game..."
-        wordText.textSize = 30f
+
+        // Keep the displayed word on ONE line.
+        // The text automatically becomes smaller when needed
+        // so longer words do not wrap onto a second line.
+        wordText.setTextSize(
+            TypedValue.COMPLEX_UNIT_SP,
+            30f
+        )
+        wordText.setAutoSizeTextTypeUniformWithConfiguration(
+            16,
+            30,
+            1,
+            TypedValue.COMPLEX_UNIT_SP
+        )
+        wordText.maxLines = 1
+        wordText.isSingleLine = true
+        wordText.ellipsize = null
         wordText.gravity = Gravity.CENTER
         wordText.setTypeface(null, Typeface.BOLD)
         wordText.setPadding(0, 10, 0, 10)
-        layout.addView(wordText)
+
+        layout.addView(
+            wordText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        wordText.text = "Waiting for game..."
 
         turnText = TextView(this)
         turnText.text = "Waiting..."
@@ -1213,9 +1237,6 @@ class OnlineGameRoundActivity : Activity() {
                             return Transaction.success(currentData)
                         }
 
-                        // CORRECT LETTER:
-                        // The same player continues, but gets a
-                        // completely fresh turn timer.
                         currentData.child("turnEndsAt").value =
                             if (secondsPerTurn <= 0) {
                                 0L
@@ -1263,8 +1284,6 @@ class OnlineGameRoundActivity : Activity() {
                         val occurrences =
                             secretWord.count { it == letter }
 
-                        // Allow another whole-word attempt for the
-                        // refreshed turn.
                         wholeWordAttemptUsed = false
 
                         showStatus(
@@ -2233,8 +2252,6 @@ class OnlineGameRoundActivity : Activity() {
                     AlertDialog.BUTTON_POSITIVE
                 )
 
-            // IMPORTANT:
-            // Continue is now enabled for the joining player too.
             continueButton.isEnabled = true
 
             continueButton.setOnClickListener {
@@ -2902,15 +2919,12 @@ class OnlineGameRoundActivity : Activity() {
                             .getValue(String::class.java)
                             ?: ""
 
-                    // If the host leaves, transfer host control
-                    // to the first remaining player.
                     if (oldHost == uid) {
 
                         data.child("hostUid").value =
                             remaining.first()
                     }
 
-                    // If the Word Master leaves, transfer the role.
                     if (oldMaster == uid) {
 
                         data.child("wordMasterUid").value =
@@ -2921,8 +2935,6 @@ class OnlineGameRoundActivity : Activity() {
                             }
                     }
 
-                    // If only one player remains, let that player
-                    // continue as a normal guessing player.
                     if (remaining.size == 1) {
 
                         data.child("wordMasterUid").value =
