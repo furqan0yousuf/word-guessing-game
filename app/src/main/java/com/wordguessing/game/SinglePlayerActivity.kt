@@ -6,12 +6,14 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.util.TypedValue
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.widget.TextViewCompat
 
 class SinglePlayerActivity : Activity() {
 
@@ -124,10 +126,36 @@ class SinglePlayerActivity : Activity() {
         layout.addView(attemptsText)
 
         wordText = TextView(this)
-        wordText.textSize = 28f
+
+        // Normal words stay large.
+        wordText.textSize = 30f
+
         wordText.gravity = Gravity.CENTER
-        wordText.setTypeface(null, Typeface.BOLD)
-        wordText.setPadding(0, 20, 0, 20)
+
+        wordText.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        wordText.setPadding(
+            0,
+            20,
+            0,
+            20
+        )
+
+        // Keep the word on ONE line.
+        // Longer words automatically shrink to fit.
+        wordText.maxLines = 1
+        wordText.isSingleLine = true
+
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+            wordText,
+            16,
+            30,
+            1,
+            TypedValue.COMPLEX_UNIT_SP
+        )
 
         layout.addView(wordText)
 
