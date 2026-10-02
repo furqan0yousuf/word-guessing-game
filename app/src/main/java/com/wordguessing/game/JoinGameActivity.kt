@@ -29,7 +29,8 @@ class JoinGameActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val layout = LinearLayout(this)
+        val layout =
+            LinearLayout(this)
 
         layout.orientation =
             LinearLayout.VERTICAL
@@ -42,7 +43,8 @@ class JoinGameActivity : Activity() {
         )
 
         // TITLE
-        val title = TextView(this)
+        val title =
+            TextView(this)
 
         title.text =
             "Join Game"
@@ -229,7 +231,8 @@ class JoinGameActivity : Activity() {
                 return@setOnClickListener
             }
 
-            joinButton.isEnabled = false
+            joinButton.isEnabled =
+                false
 
             val currentUser =
                 auth.currentUser
@@ -237,11 +240,16 @@ class JoinGameActivity : Activity() {
             if (currentUser != null) {
 
                 joinFirebaseGame(
-                    gameCode = gameCode,
-                    playerName = playerName,
-                    enteredPassword = enteredPassword,
-                    uid = currentUser.uid,
-                    joinButton = joinButton
+                    gameCode =
+                        gameCode,
+                    playerName =
+                        playerName,
+                    enteredPassword =
+                        enteredPassword,
+                    uid =
+                        currentUser.uid,
+                    joinButton =
+                        joinButton
                 )
 
             } else {
@@ -254,7 +262,8 @@ class JoinGameActivity : Activity() {
 
                         if (uid == null) {
 
-                            joinButton.isEnabled = true
+                            joinButton.isEnabled =
+                                true
 
                             Toast.makeText(
                                 this,
@@ -266,16 +275,22 @@ class JoinGameActivity : Activity() {
                         }
 
                         joinFirebaseGame(
-                            gameCode = gameCode,
-                            playerName = playerName,
-                            enteredPassword = enteredPassword,
-                            uid = uid,
-                            joinButton = joinButton
+                            gameCode =
+                                gameCode,
+                            playerName =
+                                playerName,
+                            enteredPassword =
+                                enteredPassword,
+                            uid =
+                                uid,
+                            joinButton =
+                                joinButton
                         )
                     }
                     .addOnFailureListener {
 
-                        joinButton.isEnabled = true
+                        joinButton.isEnabled =
+                            true
 
                         Toast.makeText(
                             this,
@@ -310,7 +325,8 @@ class JoinGameActivity : Activity() {
 
                 if (!snapshot.exists()) {
 
-                    joinButton.isEnabled = true
+                    joinButton.isEnabled =
+                        true
 
                     Toast.makeText(
                         this,
@@ -331,7 +347,8 @@ class JoinGameActivity : Activity() {
 
                 if (status != "waiting") {
 
-                    joinButton.isEnabled = true
+                    joinButton.isEnabled =
+                        true
 
                     Toast.makeText(
                         this,
@@ -358,7 +375,8 @@ class JoinGameActivity : Activity() {
                     enteredPassword != gamePassword
                 ) {
 
-                    joinButton.isEnabled = true
+                    joinButton.isEnabled =
+                        true
 
                     Toast.makeText(
                         this,
@@ -370,7 +388,9 @@ class JoinGameActivity : Activity() {
                 }
 
                 /*
-                 * Maximum players.
+                 * Existing setting:
+                 *
+                 * Maximum ACTIVE players.
                  */
                 val maxPlayers =
                     snapshot
@@ -381,15 +401,46 @@ class JoinGameActivity : Activity() {
                         ?: 2
 
                 /*
-                 * Use a Firebase transaction so two
-                 * phones cannot easily take the same
-                 * final player slot at the same time.
+                 * New setting:
+                 *
+                 * Maximum TOTAL people allowed
+                 * in the Game Room.
+                 *
+                 * The fallback keeps older games
+                 * working exactly as before.
+                 */
+                val roomCapacity =
+                    snapshot
+                        .child("roomCapacity")
+                        .getValue(
+                            Int::class.java
+                        )
+                        ?: maxPlayers
+
+                /*
+                 * New waiting-player setting.
+                 *
+                 * Default = 2.
+                 */
+                val waitingPlayerGuesses =
+                    snapshot
+                        .child("waitingPlayerGuesses")
+                        .getValue(
+                            Int::class.java
+                        )
+                        ?: 2
+
+                /*
+                 * Use a Firebase transaction so
+                 * two phones cannot easily take
+                 * the same final room slot.
                  */
                 gameReference.runTransaction(
                     object : Transaction.Handler {
 
                         override fun doTransaction(
-                            currentData: MutableData
+                            currentData:
+                                MutableData
                         ): Transaction.Result {
 
                             val playersData =
@@ -402,39 +453,95 @@ class JoinGameActivity : Activity() {
 
                             /*
                              * If this device is already
-                             * in the game, don't add it again.
+                             * in the game, don't add it
+                             * again.
                              */
-                            if (existingPlayer.value != null) {
+                            if (
+                                existingPlayer.value !=
+                                null
+                            ) {
 
                                 return Transaction.success(
                                     currentData
                                 )
                             }
 
-                            var playerCount = 0
+                            var totalPlayers =
+                                0
 
+                            var activePlayers =
+                                0
+
+                            /*
+                             * Count everyone in the room.
+                             *
+                             * Also count currently active
+                             * players.
+                             */
                             for (
-                                player in playersData.children
+                                player in
+                                playersData.children
                             ) {
-                                playerCount++
+
+                                totalPlayers++
+
+                                val isActive =
+                                    player
+                                        .child(
+                                            "isActive"
+                                        )
+                                        .getValue(
+                                            Boolean::class.java
+                                        )
+                                        ?: (
+                                            totalPlayers <=
+                                                maxPlayers
+                                            )
+
+                                if (isActive) {
+                                    activePlayers++
+                                }
                             }
 
-                            if (playerCount >= maxPlayers) {
+                            /*
+                             * Room capacity controls
+                             * whether this person can
+                             * enter the room.
+                             */
+                            if (
+                                totalPlayers >=
+                                roomCapacity
+                            ) {
 
                                 return Transaction.abort()
                             }
+
+                            /*
+                             * The first maxPlayers
+                             * people are active.
+                             *
+                             * Everyone after that
+                             * becomes a waiting player.
+                             */
+                            val shouldBeActive =
+                                activePlayers <
+                                    maxPlayers
 
                             val playerData =
                                 hashMapOf<String, Any>(
                                     "uid" to uid,
                                     "name" to playerName,
                                     "isHost" to false,
-                                    "joinedAt" to System.currentTimeMillis()
+                                    "isActive" to
+                                        shouldBeActive,
+                                    "joinedAt" to
+                                        System.currentTimeMillis()
                                 )
 
                             playersData
                                 .child(uid)
-                                .value = playerData
+                                .value =
+                                playerData
 
                             return Transaction.success(
                                 currentData
@@ -444,7 +551,8 @@ class JoinGameActivity : Activity() {
                         override fun onComplete(
                             error: DatabaseError?,
                             committed: Boolean,
-                            currentData: DataSnapshot?
+                            currentData:
+                                DataSnapshot?
                         ) {
 
                             if (error != null) {
@@ -468,7 +576,7 @@ class JoinGameActivity : Activity() {
 
                                 Toast.makeText(
                                     this@JoinGameActivity,
-                                    "The game is full.",
+                                    "The game room is full.",
                                     Toast.LENGTH_LONG
                                 ).show()
 
@@ -486,10 +594,14 @@ class JoinGameActivity : Activity() {
                                     ?: snapshot
 
                             openWaitingRoom(
-                                gameSnapshot = gameSnapshot,
-                                gameCode = gameCode,
-                                playerName = playerName,
-                                enteredPassword = enteredPassword
+                                gameSnapshot =
+                                    gameSnapshot,
+                                gameCode =
+                                    gameCode,
+                                playerName =
+                                    playerName,
+                                enteredPassword =
+                                    enteredPassword
                             )
                         }
                     }
@@ -497,7 +609,8 @@ class JoinGameActivity : Activity() {
             }
             .addOnFailureListener {
 
-                joinButton.isEnabled = true
+                joinButton.isEnabled =
+                    true
 
                 Toast.makeText(
                     this,
@@ -508,7 +621,8 @@ class JoinGameActivity : Activity() {
     }
 
     private fun openWaitingRoom(
-        gameSnapshot: DataSnapshot,
+        gameSnapshot:
+            DataSnapshot,
         gameCode: String,
         playerName: String,
         enteredPassword: String
@@ -517,6 +631,24 @@ class JoinGameActivity : Activity() {
         val playerCount =
             gameSnapshot
                 .child("maxPlayers")
+                .getValue(
+                    Int::class.java
+                )
+                ?: 2
+
+        val roomCapacity =
+            gameSnapshot
+                .child("roomCapacity")
+                .getValue(
+                    Int::class.java
+                )
+                ?: playerCount
+
+        val waitingPlayerGuesses =
+            gameSnapshot
+                .child(
+                    "waitingPlayerGuesses"
+                )
                 .getValue(
                     Int::class.java
                 )
@@ -584,6 +716,16 @@ class JoinGameActivity : Activity() {
         intent.putExtra(
             "playerCount",
             playerCount
+        )
+
+        intent.putExtra(
+            "roomCapacity",
+            roomCapacity
+        )
+
+        intent.putExtra(
+            "waitingPlayerGuesses",
+            waitingPlayerGuesses
         )
 
         intent.putExtra(
