@@ -6,7 +6,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -30,297 +29,583 @@ class CreateGameActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        /*
-         * Main screen
-         */
-        val mainLayout = LinearLayout(this)
-        mainLayout.orientation = LinearLayout.VERTICAL
+        val scrollView =
+            ScrollView(this)
 
-        /*
-         * Scrollable settings area
-         */
-        val scrollView = ScrollView(this)
+        val layout =
+            LinearLayout(this)
 
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(24, 24, 24, 40)
+        layout.orientation =
+            LinearLayout.VERTICAL
 
-        /*
-         * TITLE
-         */
-        val title = TextView(this)
-        title.text = "Create Game"
-        title.textSize = 28f
-        title.gravity = Gravity.CENTER
-        title.setTextColor(Color.BLACK)
+        layout.setPadding(
+            24,
+            24,
+            24,
+            40
+        )
+
+        scrollView.addView(layout)
+
+        // TITLE
+        val title =
+            TextView(this)
+
+        title.text =
+            "Create Game"
+
+        title.textSize =
+            28f
+
+        title.gravity =
+            Gravity.CENTER
+
+        title.setTextColor(
+            Color.BLACK
+        )
 
         layout.addView(title)
 
-        /*
-         * YOUR NAME
-         */
-        val nameTitle = TextView(this)
-        nameTitle.text = "Your Name"
-        nameTitle.textSize = 20f
-        nameTitle.setPadding(0, 30, 0, 10)
+        // YOUR NAME
+        val nameTitle =
+            TextView(this)
+
+        nameTitle.text =
+            "Your Name"
+
+        nameTitle.textSize =
+            20f
+
+        nameTitle.setPadding(
+            0,
+            30,
+            0,
+            10
+        )
+
         layout.addView(nameTitle)
 
-        val nameInput = EditText(this)
-        nameInput.hint = "Enter your name"
-        nameInput.textSize = 18f
+        val nameInput =
+            EditText(this)
+
+        nameInput.hint =
+            "Enter your name"
+
+        nameInput.textSize =
+            20f
+
         nameInput.setSingleLine(true)
+
         layout.addView(nameInput)
 
-        /*
-         * MAXIMUM PLAYERS
-         */
-        val playersTitle = TextView(this)
-        playersTitle.text = "Maximum Players"
-        playersTitle.textSize = 20f
-        playersTitle.setPadding(0, 30, 0, 10)
+        // MAXIMUM ACTIVE PLAYERS
+        val playersTitle =
+            TextView(this)
+
+        playersTitle.text =
+            "Maximum Active Players"
+
+        playersTitle.textSize =
+            20f
+
+        playersTitle.setPadding(
+            0,
+            30,
+            0,
+            10
+        )
+
         layout.addView(playersTitle)
 
-        val playersSpinner = Spinner(this)
+        val playersSpinner =
+            Spinner(this)
 
-        val playerOptions = arrayOf(
-            "2 Players",
-            "3 Players",
-            "4 Players"
-        )
+        val playerOptions =
+            arrayOf(
+                "2 Players",
+                "3 Players",
+                "4 Players"
+            )
 
-        playersSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            playerOptions
-        )
+        playersSpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                playerOptions
+            )
 
         layout.addView(playersSpinner)
 
+        // MAXIMUM ROOM PLAYERS
+        val roomCapacityTitle =
+            TextView(this)
+
+        roomCapacityTitle.text =
+            "Maximum Room Players"
+
+        roomCapacityTitle.textSize =
+            20f
+
+        roomCapacityTitle.setPadding(
+            0,
+            25,
+            0,
+            10
+        )
+
+        layout.addView(roomCapacityTitle)
+
+        val roomCapacitySpinner =
+            Spinner(this)
+
+        val roomCapacityOptions =
+            arrayOf(
+                "4 People",
+                "5 People",
+                "6 People",
+                "7 People",
+                "8 People",
+                "9 People",
+                "10 People"
+            )
+
+        roomCapacitySpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                roomCapacityOptions
+            )
+
         /*
-         * WORD SELECTION
+         * Default room capacity is 4.
+         *
+         * This keeps the current behavior
+         * unchanged unless the host chooses
+         * a larger room.
          */
-        val wordTitle = TextView(this)
-        wordTitle.text = "Word Selection"
-        wordTitle.textSize = 20f
-        wordTitle.setPadding(0, 30, 0, 10)
-        layout.addView(wordTitle)
+        roomCapacitySpinner.setSelection(0)
 
-        val wordSpinner = Spinner(this)
+        layout.addView(roomCapacitySpinner)
 
-        val wordOptions = arrayOf(
-            "Random Word",
-            "Manual Word"
+        // WAITING PLAYER GUESSES
+        val waitingGuessesTitle =
+            TextView(this)
+
+        waitingGuessesTitle.text =
+            "Waiting Player Whole-Word Guesses"
+
+        waitingGuessesTitle.textSize =
+            20f
+
+        waitingGuessesTitle.setPadding(
+            0,
+            25,
+            0,
+            10
         )
 
-        wordSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            wordOptions
+        layout.addView(waitingGuessesTitle)
+
+        val waitingGuessesSpinner =
+            Spinner(this)
+
+        val waitingGuessOptions =
+            arrayOf(
+                "1 Guess",
+                "2 Guesses",
+                "3 Guesses",
+                "4 Guesses",
+                "5 Guesses"
+            )
+
+        waitingGuessesSpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                waitingGuessOptions
+            )
+
+        /*
+         * Default = 2 guesses.
+         */
+        waitingGuessesSpinner.setSelection(1)
+
+        layout.addView(waitingGuessesSpinner)
+
+        // WORD SELECTION
+        val wordSelectionTitle =
+            TextView(this)
+
+        wordSelectionTitle.text =
+            "WORD SELECTION"
+
+        wordSelectionTitle.textSize =
+            18f
+
+        wordSelectionTitle.setTypeface(
+            null,
+            android.graphics.Typeface.BOLD
         )
 
-        layout.addView(wordSpinner)
+        wordSelectionTitle.setPadding(
+            0,
+            30,
+            0,
+            10
+        )
 
-        val manualWordInput = EditText(this)
-        manualWordInput.hint = "Enter word"
-        manualWordInput.textSize = 18f
+        layout.addView(wordSelectionTitle)
+
+        val wordSelectionSpinner =
+            Spinner(this)
+
+        val wordSelectionOptions =
+            arrayOf(
+                "Random Word",
+                "Manual Word"
+            )
+
+        wordSelectionSpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                wordSelectionOptions
+            )
+
+        layout.addView(wordSelectionSpinner)
+
+        // MANUAL WORD
+        val manualWordInput =
+            EditText(this)
+
+        manualWordInput.hint =
+            "Enter the word"
+
+        manualWordInput.textSize =
+            20f
+
         manualWordInput.setSingleLine(true)
-        manualWordInput.visibility = View.GONE
 
-        layout.addView(manualWordInput)
+        manualWordInput.visibility =
+            View.GONE
 
-        wordSpinner.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
+        layout.addView(
+            manualWordInput
+        )
+
+        wordSelectionSpinner.onItemSelectedListener =
+            object :
+                android.widget.AdapterView.OnItemSelectedListener {
 
                 override fun onItemSelected(
-                    parent: AdapterView<*>?,
+                    parent: android.widget.AdapterView<*>?,
                     view: View?,
                     position: Int,
                     id: Long
                 ) {
 
-                    if (position == 1) {
-                        manualWordInput.visibility = View.VISIBLE
-                    } else {
-                        manualWordInput.visibility = View.GONE
-                        manualWordInput.text.clear()
-                    }
+                    manualWordInput.visibility =
+                        if (position == 1) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
                 }
 
                 override fun onNothingSelected(
-                    parent: AdapterView<*>?
+                    parent: android.widget.AdapterView<*>?
                 ) {
                 }
             }
 
-        /*
-         * CATEGORY
-         */
-        val categoryTitle = TextView(this)
-        categoryTitle.text = "Category"
-        categoryTitle.textSize = 20f
-        categoryTitle.setPadding(0, 30, 0, 10)
+        // CATEGORY
+        val categoryTitle =
+            TextView(this)
+
+        categoryTitle.text =
+            "CATEGORY"
+
+        categoryTitle.textSize =
+            18f
+
+        categoryTitle.setTypeface(
+            null,
+            android.graphics.Typeface.BOLD
+        )
+
+        categoryTitle.setPadding(
+            0,
+            25,
+            0,
+            10
+        )
+
         layout.addView(categoryTitle)
 
-        val categorySpinner = Spinner(this)
+        val categorySpinner =
+            Spinner(this)
 
-        val categories = arrayOf(
-            "Random",
-            "Animals",
-            "Food",
-            "Places",
-            "Sports",
-            "Movies",
-            "Things"
-        )
+        val categoryOptions =
+            arrayOf(
+                "Random",
+                "Animals",
+                "Food",
+                "Places",
+                "Sports",
+                "Movies",
+                "Things"
+            )
 
-        categorySpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            categories
-        )
+        categorySpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                categoryOptions
+            )
 
         layout.addView(categorySpinner)
 
-        /*
-         * ADVANCED SETTINGS
-         */
-        val advancedButton = Button(this)
-        advancedButton.text = "Advanced Settings ▼"
-        advancedButton.textSize = 18f
+        // ADVANCED SETTINGS BUTTON
+        val advancedButton =
+            Button(this)
 
-        advancedButton.setPadding(
-            10,
-            12,
-            10,
-            12
+        advancedButton.text =
+            "ADVANCED SETTINGS"
+
+        advancedButton.textSize =
+            17f
+
+        layout.addView(
+            advancedButton
         )
 
-        layout.addView(advancedButton)
+        val advancedLayout =
+            LinearLayout(this)
 
-        val advancedLayout = LinearLayout(this)
-        advancedLayout.orientation = LinearLayout.VERTICAL
-        advancedLayout.visibility = View.GONE
+        advancedLayout.orientation =
+            LinearLayout.VERTICAL
 
-        /*
-         * TIME PER TURN
-         */
-        val timeTitle = TextView(this)
-        timeTitle.text = "Time per Turn"
-        timeTitle.textSize = 20f
-        timeTitle.setPadding(0, 20, 0, 10)
+        advancedLayout.visibility =
+            View.GONE
 
-        advancedLayout.addView(timeTitle)
-
-        val timeSpinner = Spinner(this)
-
-        val times = arrayOf(
-            "20 seconds",
-            "30 seconds",
-            "45 seconds",
-            "60 seconds",
-            "Unlimited"
+        layout.addView(
+            advancedLayout
         )
 
-        timeSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            times
+        // TIME PER TURN
+        val timeTitle =
+            TextView(this)
+
+        timeTitle.text =
+            "Time per Turn"
+
+        timeTitle.textSize =
+            20f
+
+        timeTitle.setPadding(
+            0,
+            20,
+            0,
+            10
         )
 
-        timeSpinner.setSelection(0)
-
-        advancedLayout.addView(timeSpinner)
-
-        /*
-         * TOTAL TURNS
-         */
-        val totalTurnsTitle = TextView(this)
-        totalTurnsTitle.text = "Total Turns"
-        totalTurnsTitle.textSize = 20f
-        totalTurnsTitle.setPadding(0, 20, 0, 10)
-
-        advancedLayout.addView(totalTurnsTitle)
-
-        val totalTurnsSpinner = Spinner(this)
-
-        val totalTurnOptions = arrayOf(
-            "Unlimited",
-            "5 Turns",
-            "10 Turns",
-            "15 Turns",
-            "20 Turns",
-            "30 Turns"
+        advancedLayout.addView(
+            timeTitle
         )
 
-        totalTurnsSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            totalTurnOptions
+        val timeSpinner =
+            Spinner(this)
+
+        val timeOptions =
+            arrayOf(
+                "20 Seconds",
+                "30 Seconds",
+                "45 Seconds",
+                "60 Seconds",
+                "Unlimited"
+            )
+
+        timeSpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                timeOptions
+            )
+
+        advancedLayout.addView(
+            timeSpinner
         )
 
-        totalTurnsSpinner.setSelection(0)
+        // TOTAL TURNS
+        val turnsTitle =
+            TextView(this)
 
-        advancedLayout.addView(totalTurnsSpinner)
+        turnsTitle.text =
+            "Total Turns"
 
-        /*
-         * NEXT WORD MASTER
-         */
-        val nextMasterTitle = TextView(this)
-        nextMasterTitle.text = "Next Word Master"
-        nextMasterTitle.textSize = 20f
-        nextMasterTitle.setPadding(0, 20, 0, 10)
+        turnsTitle.textSize =
+            20f
 
-        advancedLayout.addView(nextMasterTitle)
-
-        val nextMasterSpinner = Spinner(this)
-
-        val nextMasterOptions = arrayOf(
-            "Same Word Master",
-            "Winner becomes Word Master",
-            "Host chooses Word Master",
-            "Winner chooses Word Master"
+        turnsTitle.setPadding(
+            0,
+            20,
+            0,
+            10
         )
 
-        nextMasterSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            nextMasterOptions
+        advancedLayout.addView(
+            turnsTitle
         )
 
-        nextMasterSpinner.setSelection(1)
+        val turnsSpinner =
+            Spinner(this)
 
-        advancedLayout.addView(nextMasterSpinner)
+        val turnsOptions =
+            arrayOf(
+                "Unlimited",
+                "5 Turns",
+                "10 Turns",
+                "15 Turns",
+                "20 Turns",
+                "30 Turns"
+            )
 
-        /*
-         * PASSWORD
-         */
-        val passwordTitle = TextView(this)
-        passwordTitle.text = "Game Password (Optional)"
-        passwordTitle.textSize = 20f
-        passwordTitle.setPadding(0, 20, 0, 10)
+        turnsSpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                turnsOptions
+            )
 
-        advancedLayout.addView(passwordTitle)
+        advancedLayout.addView(
+            turnsSpinner
+        )
 
-        val passwordInput = EditText(this)
-        passwordInput.hint = "Enter password or leave blank"
-        passwordInput.textSize = 18f
+        // NEXT WORD MASTER
+        val nextMasterTitle =
+            TextView(this)
+
+        nextMasterTitle.text =
+            "Next Word Master"
+
+        nextMasterTitle.textSize =
+            20f
+
+        nextMasterTitle.setPadding(
+            0,
+            20,
+            0,
+            10
+        )
+
+        advancedLayout.addView(
+            nextMasterTitle
+        )
+
+        val nextMasterSpinner =
+            Spinner(this)
+
+        val nextMasterOptions =
+            arrayOf(
+                "Same Word Master",
+                "Winner becomes Word Master",
+                "Host chooses Word Master",
+                "Winner chooses Word Master"
+            )
+
+        nextMasterSpinner.adapter =
+            ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                nextMasterOptions
+            )
+
+        advancedLayout.addView(
+            nextMasterSpinner
+        )
+
+        // PASSWORD
+        val passwordTitle =
+            TextView(this)
+
+        passwordTitle.text =
+            "Password (Optional)"
+
+        passwordTitle.textSize =
+            20f
+
+        passwordTitle.setPadding(
+            0,
+            20,
+            0,
+            10
+        )
+
+        advancedLayout.addView(
+            passwordTitle
+        )
+
+        val passwordInput =
+            EditText(this)
+
+        passwordInput.hint =
+            "Leave blank for no password"
+
+        passwordInput.textSize =
+            20f
+
         passwordInput.setSingleLine(true)
 
-        advancedLayout.addView(passwordInput)
+        advancedLayout.addView(
+            passwordInput
+        )
 
-        /*
-         * USE DEFAULT SETTINGS
-         */
-        val defaultButton = Button(this)
-        defaultButton.text = "Use Default Settings"
-        defaultButton.textSize = 17f
+        // DEFAULT SETTINGS BUTTON
+        val defaultButton =
+            Button(this)
+
+        defaultButton.text =
+            "Use Default Settings"
+
+        defaultButton.textSize =
+            16f
+
+        advancedLayout.addView(
+            defaultButton
+        )
+
+        advancedButton.setOnClickListener {
+
+            if (
+                advancedLayout.visibility ==
+                View.GONE
+            ) {
+
+                advancedLayout.visibility =
+                    View.VISIBLE
+
+                advancedButton.text =
+                    "HIDE ADVANCED SETTINGS"
+
+            } else {
+
+                advancedLayout.visibility =
+                    View.GONE
+
+                advancedButton.text =
+                    "ADVANCED SETTINGS"
+            }
+        }
 
         defaultButton.setOnClickListener {
 
             timeSpinner.setSelection(0)
-            totalTurnsSpinner.setSelection(0)
+
+            turnsSpinner.setSelection(0)
+
             nextMasterSpinner.setSelection(1)
-            passwordInput.text.clear()
+
+            passwordInput.setText("")
 
             Toast.makeText(
                 this,
@@ -329,74 +614,53 @@ class CreateGameActivity : Activity() {
             ).show()
         }
 
-        advancedLayout.addView(defaultButton)
+        // CREATE GAME
+        val createButton =
+            Button(this)
 
-        /*
-         * Add advanced settings container
-         */
-        layout.addView(advancedLayout)
+        createButton.text =
+            "CREATE GAME & JOIN"
 
-        /*
-         * ADVANCED SETTINGS EXPAND / COLLAPSE
-         */
-        advancedButton.setOnClickListener {
-
-            if (advancedLayout.visibility == View.GONE) {
-
-                advancedLayout.visibility = View.VISIBLE
-                advancedButton.text = "Advanced Settings ▲"
-
-            } else {
-
-                advancedLayout.visibility = View.GONE
-                advancedButton.text = "Advanced Settings ▼"
-            }
-        }
-
-        /*
-         * CREATE & JOIN BUTTON
-         */
-        val createButton = Button(this)
-
-        createButton.text = "CREATE GAME & JOIN"
-        createButton.textSize = 19f
+        createButton.textSize =
+            18f
 
         createButton.setPadding(
-            10,
-            14,
-            10,
-            14
-        )
-
-        val createButtonParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-
-        createButtonParams.setMargins(
             0,
-            30,
+            20,
             0,
             20
         )
 
         layout.addView(
-            createButton,
-            createButtonParams
+            createButton
         )
 
-        /*
-         * CREATE GAME
-         */
+        // BACK
+        val backButton =
+            Button(this)
+
+        backButton.text =
+            "BACK"
+
+        backButton.textSize =
+            18f
+
+        layout.addView(
+            backButton
+        )
+
+        backButton.setOnClickListener {
+            finish()
+        }
+
         createButton.setOnClickListener {
 
-            val hostName =
+            val playerName =
                 nameInput.text
                     .toString()
                     .trim()
 
-            if (hostName.isEmpty()) {
+            if (playerName.isEmpty()) {
 
                 Toast.makeText(
                     this,
@@ -404,17 +668,42 @@ class CreateGameActivity : Activity() {
                     Toast.LENGTH_SHORT
                 ).show()
 
-                scrollView.post {
-                    scrollView.fullScroll(
-                        ScrollView.FOCUS_UP
-                    )
-                }
+                return@setOnClickListener
+            }
+
+            val playerCount =
+                playersSpinner
+                    .selectedItemPosition + 2
+
+            val roomCapacity =
+                roomCapacitySpinner
+                    .selectedItemPosition + 4
+
+            /*
+             * The room must always be large enough
+             * for the maximum active players.
+             */
+            if (
+                roomCapacity < playerCount
+            ) {
+
+                Toast.makeText(
+                    this,
+                    "Room capacity cannot be less than active players.",
+                    Toast.LENGTH_LONG
+                ).show()
 
                 return@setOnClickListener
             }
 
+            val waitingPlayerGuesses =
+                waitingGuessesSpinner
+                    .selectedItemPosition + 1
+
             val selectedWordSelection =
-                wordSpinner.selectedItem.toString()
+                wordSelectionSpinner
+                    .selectedItem
+                    .toString()
 
             val manualWord =
                 manualWordInput.text
@@ -430,59 +719,41 @@ class CreateGameActivity : Activity() {
 
                 Toast.makeText(
                     this,
-                    "Please enter a word.",
+                    "Please enter the word.",
                     Toast.LENGTH_SHORT
                 ).show()
 
                 return@setOnClickListener
             }
 
-            val playerCount =
-                playersSpinner.selectedItem
-                    .toString()
-                    .substringBefore(" ")
-                    .toInt()
-
             val selectedCategory =
-                categorySpinner.selectedItem
-                    .toString()
-
-            /*
-             * TIME PER TURN
-             *
-             * Unlimited = 0
-             */
-            val selectedTimeText =
-                timeSpinner.selectedItem.toString()
-
-            val selectedTime =
-                when {
-                    selectedTimeText == "Unlimited" -> 0
-
-                    else ->
-                        selectedTimeText
-                            .substringBefore(" ")
-                            .toInt()
-                }
-
-            /*
-             * TOTAL TURNS
-             *
-             * Unlimited = 0
-             */
-            val selectedTotalTurnsText =
-                totalTurnsSpinner
+                categorySpinner
                     .selectedItem
                     .toString()
 
-            val selectedTotalTurns =
-                when {
-                    selectedTotalTurnsText == "Unlimited" -> 0
+            val selectedTime =
+                when (
+                    timeSpinner.selectedItem.toString()
+                ) {
 
-                    else ->
-                        selectedTotalTurnsText
-                            .substringBefore(" ")
-                            .toInt()
+                    "20 Seconds" -> 20
+                    "30 Seconds" -> 30
+                    "45 Seconds" -> 45
+                    "60 Seconds" -> 60
+                    else -> 0
+                }
+
+            val selectedTotalTurns =
+                when (
+                    turnsSpinner.selectedItem.toString()
+                ) {
+
+                    "5 Turns" -> 5
+                    "10 Turns" -> 10
+                    "15 Turns" -> 15
+                    "20 Turns" -> 20
+                    "30 Turns" -> 30
+                    else -> 0
                 }
 
             val selectedNextMaster =
@@ -495,17 +766,9 @@ class CreateGameActivity : Activity() {
                     .toString()
                     .trim()
 
-            /*
-             * Prevent multiple taps.
-             */
-            createButton.isEnabled = false
+            createButton.isEnabled =
+                false
 
-            /*
-             * Make sure the host is authenticated.
-             *
-             * Anonymous authentication is already enabled
-             * in Firebase.
-             */
             val currentUser =
                 auth.currentUser
 
@@ -513,16 +776,23 @@ class CreateGameActivity : Activity() {
 
                 createFirebaseGame(
                     uid = currentUser.uid,
-                    hostName = hostName,
+                    playerName = playerName,
                     playerCount = playerCount,
-                    selectedWordSelection = selectedWordSelection,
+                    roomCapacity = roomCapacity,
+                    waitingPlayerGuesses =
+                        waitingPlayerGuesses,
+                    selectedWordSelection =
+                        selectedWordSelection,
                     manualWord = manualWord,
-                    selectedCategory = selectedCategory,
-                    selectedTime = selectedTime,
-                    selectedTotalTurns = selectedTotalTurns,
-                    selectedNextMaster = selectedNextMaster,
-                    password = password,
-                    createButton = createButton
+                    selectedCategory =
+                        selectedCategory,
+                    selectedTime =
+                        selectedTime,
+                    selectedTotalTurns =
+                        selectedTotalTurns,
+                    selectedNextMaster =
+                        selectedNextMaster,
+                    password = password
                 )
 
             } else {
@@ -530,172 +800,247 @@ class CreateGameActivity : Activity() {
                 auth.signInAnonymously()
                     .addOnSuccessListener { result ->
 
+                        val uid =
+                            result.user?.uid
+
+                        if (uid == null) {
+
+                            createButton.isEnabled =
+                                true
+
+                            Toast.makeText(
+                                this,
+                                "Firebase login failed.",
+                                Toast.LENGTH_LONG
+                            ).show()
+
+                            return@addOnSuccessListener
+                        }
+
                         createFirebaseGame(
-                            uid = result.user!!.uid,
-                            hostName = hostName,
-                            playerCount = playerCount,
-                            selectedWordSelection = selectedWordSelection,
-                            manualWord = manualWord,
-                            selectedCategory = selectedCategory,
-                            selectedTime = selectedTime,
-                            selectedTotalTurns = selectedTotalTurns,
-                            selectedNextMaster = selectedNextMaster,
-                            password = password,
-                            createButton = createButton
+                            uid = uid,
+                            playerName =
+                                playerName,
+                            playerCount =
+                                playerCount,
+                            roomCapacity =
+                                roomCapacity,
+                            waitingPlayerGuesses =
+                                waitingPlayerGuesses,
+                            selectedWordSelection =
+                                selectedWordSelection,
+                            manualWord =
+                                manualWord,
+                            selectedCategory =
+                                selectedCategory,
+                            selectedTime =
+                                selectedTime,
+                            selectedTotalTurns =
+                                selectedTotalTurns,
+                            selectedNextMaster =
+                                selectedNextMaster,
+                            password =
+                                password
                         )
                     }
                     .addOnFailureListener {
 
-                        createButton.isEnabled = true
+                        createButton.isEnabled =
+                            true
 
                         Toast.makeText(
                             this,
-                            "Firebase login failed. Please try again.",
+                            "Firebase login failed.",
                             Toast.LENGTH_LONG
                         ).show()
                     }
             }
         }
 
-        /*
-         * BACK
-         */
-        val backButton = Button(this)
-        backButton.text = "Back"
-        backButton.textSize = 18f
-
-        layout.addView(backButton)
-
-        backButton.setOnClickListener {
-            finish()
-        }
-
-        /*
-         * SCREEN
-         */
-        mainLayout.addView(
-            scrollView,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-
-        scrollView.addView(layout)
-
-        setContentView(mainLayout)
+        setContentView(scrollView)
     }
 
-    /*
-     * CREATE THE GAME ROOM IN FIREBASE
-     */
     private fun createFirebaseGame(
         uid: String,
-        hostName: String,
+        playerName: String,
         playerCount: Int,
+        roomCapacity: Int,
+        waitingPlayerGuesses: Int,
         selectedWordSelection: String,
         manualWord: String,
         selectedCategory: String,
         selectedTime: Int,
         selectedTotalTurns: Int,
         selectedNextMaster: String,
-        password: String,
-        createButton: Button
+        password: String
     ) {
 
-        /*
-         * Generate a six-digit game code.
-         */
+        val gamesReference =
+            database
+                .getReference("games")
+
+        findAvailableGameCode(
+            gamesReference = gamesReference,
+            uid = uid,
+            playerName = playerName,
+            playerCount = playerCount,
+            roomCapacity = roomCapacity,
+            waitingPlayerGuesses =
+                waitingPlayerGuesses,
+            selectedWordSelection =
+                selectedWordSelection,
+            manualWord = manualWord,
+            selectedCategory =
+                selectedCategory,
+            selectedTime =
+                selectedTime,
+            selectedTotalTurns =
+                selectedTotalTurns,
+            selectedNextMaster =
+                selectedNextMaster,
+            password = password
+        )
+    }
+
+    private fun findAvailableGameCode(
+        gamesReference:
+            com.google.firebase.database.DatabaseReference,
+        uid: String,
+        playerName: String,
+        playerCount: Int,
+        roomCapacity: Int,
+        waitingPlayerGuesses: Int,
+        selectedWordSelection: String,
+        manualWord: String,
+        selectedCategory: String,
+        selectedTime: Int,
+        selectedTotalTurns: Int,
+        selectedNextMaster: String,
+        password: String
+    ) {
+
         val gameCode =
             (100000..999999)
                 .random()
                 .toString()
 
-        /*
-         * Firebase location:
-         *
-         * games
-         *   └── 123456
-         */
         val gameReference =
-            database
-                .getReference("games")
+            gamesReference
                 .child(gameCode)
 
-        /*
-         * Make sure this code is not already being used.
-         */
         gameReference.get()
             .addOnSuccessListener { snapshot ->
 
                 if (snapshot.exists()) {
 
-                    createFirebaseGame(
+                    findAvailableGameCode(
+                        gamesReference =
+                            gamesReference,
                         uid = uid,
-                        hostName = hostName,
-                        playerCount = playerCount,
-                        selectedWordSelection = selectedWordSelection,
-                        manualWord = manualWord,
-                        selectedCategory = selectedCategory,
-                        selectedTime = selectedTime,
-                        selectedTotalTurns = selectedTotalTurns,
-                        selectedNextMaster = selectedNextMaster,
-                        password = password,
-                        createButton = createButton
+                        playerName =
+                            playerName,
+                        playerCount =
+                            playerCount,
+                        roomCapacity =
+                            roomCapacity,
+                        waitingPlayerGuesses =
+                            waitingPlayerGuesses,
+                        selectedWordSelection =
+                            selectedWordSelection,
+                        manualWord =
+                            manualWord,
+                        selectedCategory =
+                            selectedCategory,
+                        selectedTime =
+                            selectedTime,
+                        selectedTotalTurns =
+                            selectedTotalTurns,
+                        selectedNextMaster =
+                            selectedNextMaster,
+                        password =
+                            password
                     )
 
                     return@addOnSuccessListener
                 }
 
-                /*
-                 * Host player.
-                 */
                 val hostPlayer =
                     hashMapOf<String, Any>(
                         "uid" to uid,
-                        "name" to hostName,
+                        "name" to playerName,
                         "isHost" to true,
-                        "joinedAt" to System.currentTimeMillis()
+                        "isActive" to true,
+                        "joinedAt" to
+                            System.currentTimeMillis()
                     )
 
-                /*
-                 * Complete game room.
-                 */
                 val gameData =
                     hashMapOf<String, Any>(
                         "gameCode" to gameCode,
                         "hostUid" to uid,
-                        "hostName" to hostName,
-                        "maxPlayers" to playerCount,
-                        "wordSelection" to selectedWordSelection,
-                        "manualWord" to manualWord,
-                        "category" to selectedCategory,
-                        "secondsPerTurn" to selectedTime,
-                        "totalTurns" to selectedTotalTurns,
-                        "nextWordMaster" to selectedNextMaster,
-                        "password" to password,
-                        "status" to "waiting",
-                        "createdAt" to System.currentTimeMillis(),
-                        "players" to mapOf(
-                            uid to hostPlayer
-                        )
-                    )
-
-                /*
-                 * Save the room.
-                 */
-                gameReference.setValue(gameData)
-                    .addOnSuccessListener {
-
-                        Toast.makeText(
-                            this,
-                            "Game created!",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        "hostName" to playerName,
 
                         /*
-                         * Open the waiting room.
+                         * Existing field.
+                         *
+                         * This now represents the
+                         * maximum ACTIVE players.
                          */
+                        "maxPlayers" to playerCount,
+
+                        /*
+                         * New Game Room setting.
+                         *
+                         * This represents everyone who
+                         * can join the room, including
+                         * waiting players.
+                         */
+                        "roomCapacity" to roomCapacity,
+
+                        /*
+                         * New Game Room setting.
+                         *
+                         * Number of whole-word guesses
+                         * allowed for each waiting player
+                         * per round.
+                         */
+                        "waitingPlayerGuesses" to
+                            waitingPlayerGuesses,
+
+                        "wordSelection" to
+                            selectedWordSelection,
+
+                        "manualWord" to manualWord,
+
+                        "category" to
+                            selectedCategory,
+
+                        "secondsPerTurn" to
+                            selectedTime,
+
+                        "totalTurns" to
+                            selectedTotalTurns,
+
+                        "nextWordMaster" to
+                            selectedNextMaster,
+
+                        "password" to password,
+
+                        "status" to "waiting",
+
+                        "createdAt" to
+                            System.currentTimeMillis(),
+
+                        "players" to
+                            mapOf(
+                                uid to hostPlayer
+                            )
+                    )
+
+                gameReference
+                    .setValue(gameData)
+                    .addOnSuccessListener {
+
                         val intent =
                             Intent(
                                 this,
@@ -710,6 +1055,16 @@ class CreateGameActivity : Activity() {
                         intent.putExtra(
                             "playerCount",
                             playerCount
+                        )
+
+                        intent.putExtra(
+                            "roomCapacity",
+                            roomCapacity
+                        )
+
+                        intent.putExtra(
+                            "waitingPlayerGuesses",
+                            waitingPlayerGuesses
                         )
 
                         intent.putExtra(
@@ -749,7 +1104,7 @@ class CreateGameActivity : Activity() {
 
                         intent.putExtra(
                             "playerName",
-                            hostName
+                            playerName
                         )
 
                         intent.putExtra(
@@ -758,21 +1113,19 @@ class CreateGameActivity : Activity() {
                         )
 
                         startActivity(intent)
+
+                        finish()
                     }
                     .addOnFailureListener {
 
-                        createButton.isEnabled = true
-
                         Toast.makeText(
                             this,
-                            "Could not create game in Firebase.",
+                            "Could not create game.",
                             Toast.LENGTH_LONG
                         ).show()
                     }
             }
             .addOnFailureListener {
-
-                createButton.isEnabled = true
 
                 Toast.makeText(
                     this,
