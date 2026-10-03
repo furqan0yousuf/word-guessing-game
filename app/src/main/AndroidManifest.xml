@@ -30,6 +30,10 @@
             android:name=".GameActivity"
             android:exported="false" />
 
+        <activity
+    android:name=".OnlineMultiplayerActivity"
+    android:exported="false" />
+
 <activity
     android:name=".SinglePlayerActivity"
     android:exported="false" />
