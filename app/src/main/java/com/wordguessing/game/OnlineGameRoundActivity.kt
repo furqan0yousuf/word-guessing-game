@@ -1,7 +1,7 @@
 package com.wordguessing.game
 
-import android.app.AlertDialog
 import android.app.Activity
+import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -34,6 +34,7 @@ class OnlineGameRoundActivity : Activity() {
     private lateinit var wholeWordButton: Button
     private lateinit var categoryText: TextView
     private lateinit var letterBoard: LinearLayout
+    private lateinit var wordMasterText: TextView
 
     private var timer: CountDownTimer? = null
     private var wholeWordTimer: CountDownTimer? = null
@@ -44,16 +45,10 @@ class OnlineGameRoundActivity : Activity() {
     private var gameListener: ValueEventListener? = null
 
     private var gameCode = "------"
-
     private var myUid = ""
 
-    // Maximum number of players who can actively play.
     private var maxPlayers = 2
-
-    // Maximum number of people allowed in the room.
     private var roomCapacity = 4
-
-    // Number of whole-word guesses waiting players will eventually get.
     private var waitingPlayerGuesses = 2
 
     private var wordSelection = "Random Word"
@@ -83,12 +78,25 @@ class OnlineGameRoundActivity : Activity() {
     private val playerNames = mutableMapOf<String, String>()
     private val playerOrder = mutableListOf<String>()
 
+    /*
+     * This is important.
+     *
+     * The previous version did not keep the Firebase isActive
+     * value locally and instead guessed whether a player was
+     * active based on their position in playerOrder.
+     *
+     * That could cause waiting players to be treated as active.
+     */
+    private val playerActiveStates =
+        mutableMapOf<String, Boolean>()
+
     private val scores = mutableMapOf<String, Int>()
     private val missedTurns = mutableMapOf<String, Int>()
     private val eliminatedPlayers = mutableSetOf<String>()
     private val guessedLetters = mutableSetOf<Char>()
 
-    private val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private val letters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     private var wholeWordAttemptUsed = false
 
@@ -97,15 +105,38 @@ class OnlineGameRoundActivity : Activity() {
 
     private var knownHostUid = ""
 
-    private val lastKnownPlayerIds = mutableSetOf<String>()
-    private val lastKnownPlayerNames = mutableMapOf<String, String>()
-    private val notifiedDepartures = mutableSetOf<String>()
+    private val lastKnownPlayerIds =
+        mutableSetOf<String>()
+
+    private val lastKnownPlayerNames =
+        mutableMapOf<String, String>()
+
+    private val notifiedDepartures =
+        mutableSetOf<String>()
 
     private var playerChangeInitialized = false
     private var singlePlayerDialogShown = false
     private var leavingGame = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    /*
+     * Timer synchronization state.
+     *
+     * The old code cancelled and restarted the CountDownTimer
+     * on every Firebase snapshot. Clicking a letter causes a
+     * Firebase snapshot, so this made the screen appear to
+     * refresh/flicker.
+     *
+     * We now restart the timer only when one of these values
+     * actually changes.
+     */
+    private var timerStateUid = ""
+    private var timerStateEndsAt = -1L
+    private var timerStatePhase = ""
+    private var timerStateRound = -1
+
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
         super.onCreate(savedInstanceState)
 
         gameCode =
@@ -115,7 +146,10 @@ class OnlineGameRoundActivity : Activity() {
         maxPlayers =
             intent.getIntExtra(
                 "maxPlayers",
-                intent.getIntExtra("playerCount", 2)
+                intent.getIntExtra(
+                    "playerCount",
+                    2
+                )
             )
 
         roomCapacity =
@@ -131,11 +165,15 @@ class OnlineGameRoundActivity : Activity() {
             )
 
         wordSelection =
-            intent.getStringExtra("wordSelection")
+            intent.getStringExtra(
+                "wordSelection"
+            )
                 ?: "Random Word"
 
         selectedCategory =
-            intent.getStringExtra("category")
+            intent.getStringExtra(
+                "category"
+            )
                 ?: "Random"
 
         secondsPerTurn =
@@ -151,16 +189,21 @@ class OnlineGameRoundActivity : Activity() {
             )
 
         nextWordMaster =
-            intent.getStringExtra("nextWordMaster")
+            intent.getStringExtra(
+                "nextWordMaster"
+            )
                 ?: "Winner becomes Word Master"
 
         manualWord =
-            intent.getStringExtra("manualWord")
+            intent.getStringExtra(
+                "manualWord"
+            )
                 ?.trim()
                 ?.uppercase()
 
         myUid =
-            auth.currentUser?.uid ?: ""
+            auth.currentUser?.uid
+                ?: ""
 
         createInitialScreen()
 
@@ -169,7 +212,9 @@ class OnlineGameRoundActivity : Activity() {
             statusText.text =
                 "Firebase login is not available."
 
-            statusText.setTextColor(Color.RED)
+            statusText.setTextColor(
+                Color.RED
+            )
 
             return
         }
@@ -347,7 +392,7 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(playersText)
 
-        val wordMasterText =
+        wordMasterText =
             TextView(this)
 
         wordMasterText.text =
@@ -373,7 +418,6 @@ class OnlineGameRoundActivity : Activity() {
         wordText =
             TextView(this)
 
-        // Keep the displayed word on ONE line.
         wordText.setTextSize(
             TypedValue.COMPLEX_UNIT_SP,
             30f
@@ -389,7 +433,8 @@ class OnlineGameRoundActivity : Activity() {
         wordText.maxLines = 1
         wordText.isSingleLine = true
         wordText.ellipsize = null
-        wordText.gravity = Gravity.CENTER
+        wordText.gravity =
+            Gravity.CENTER
 
         wordText.setTypeface(
             null,
@@ -493,7 +538,21 @@ class OnlineGameRoundActivity : Activity() {
                 return@setOnClickListener
             }
 
-            if (currentPlayerUid != myUid) {
+            if (
+                !isMyPlayerActive()
+            ) {
+
+                showStatus(
+                    "You are a waiting player. Active players take the turns.",
+                    Color.RED
+                )
+
+                return@setOnClickListener
+            }
+
+            if (
+                currentPlayerUid != myUid
+            ) {
 
                 showStatus(
                     "It is not your turn.",
@@ -632,7 +691,7 @@ class OnlineGameRoundActivity : Activity() {
                 ) {
 
                     showStatus(
-                        "You are a waiting player. Active players take the letter turns.",
+                        "You are a waiting player. Active players take the turns.",
                         Color.RED
                     )
 
@@ -652,7 +711,9 @@ class OnlineGameRoundActivity : Activity() {
                 }
 
                 if (
-                    guessedLetters.contains(letter)
+                    guessedLetters.contains(
+                        letter
+                    )
                 ) {
 
                     showStatus(
@@ -663,7 +724,9 @@ class OnlineGameRoundActivity : Activity() {
                     return@setOnClickListener
                 }
 
-                processLetterGuess(letter)
+                processLetterGuess(
+                    letter
+                )
             }
 
             currentRow.addView(
@@ -675,7 +738,9 @@ class OnlineGameRoundActivity : Activity() {
                 )
             )
 
-            if ((i + 1) % 6 == 0) {
+            if (
+                (i + 1) % 6 == 0
+            ) {
 
                 currentRow =
                     LinearLayout(this)
@@ -711,6 +776,8 @@ class OnlineGameRoundActivity : Activity() {
 
                     if (!snapshot.exists()) {
 
+                        stopTimers()
+
                         showStatus(
                             "Game no longer exists.",
                             Color.RED
@@ -719,17 +786,22 @@ class OnlineGameRoundActivity : Activity() {
                         return
                     }
 
-                    readGameState(snapshot)
+                    readGameState(
+                        snapshot
+                    )
                 }
 
                 override fun onCancelled(
                     error: DatabaseError
                 ) {
 
-                    showStatus(
-                        "Firebase error: ${error.message}",
-                        Color.RED
-                    )
+                    if (!leavingGame) {
+
+                        showStatus(
+                            "Firebase error: ${error.message}",
+                            Color.RED
+                        )
+                    }
                 }
             }
 
@@ -742,133 +814,222 @@ class OnlineGameRoundActivity : Activity() {
         snapshot: DataSnapshot
     ) {
 
+        val oldStatus =
+            status
+
+        val oldCurrentPlayer =
+            currentPlayerUid
+
+        val oldTurnEndsAt =
+            turnEndsAt
+
+        val oldPhase =
+            phase
+
+        val oldRoundNumber =
+            roundNumber
+
         status =
             snapshot.child("status")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: "waiting"
 
         wordSelection =
             snapshot.child("wordSelection")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: wordSelection
 
         selectedCategory =
             snapshot.child("category")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: selectedCategory
 
         secondsPerTurn =
             snapshot.child("secondsPerTurn")
-                .getValue(Int::class.java)
+                .getValue(
+                    Int::class.java
+                )
                 ?: secondsPerTurn
 
         totalTurns =
             snapshot.child("totalTurns")
-                .getValue(Int::class.java)
+                .getValue(
+                    Int::class.java
+                )
                 ?: totalTurns
 
         nextWordMaster =
             snapshot.child("nextWordMaster")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: nextWordMaster
 
         roomCapacity =
             snapshot.child("roomCapacity")
-                .getValue(Int::class.java)
+                .getValue(
+                    Int::class.java
+                )
                 ?: roomCapacity
 
         waitingPlayerGuesses =
-            snapshot.child("waitingPlayerGuesses")
-                .getValue(Int::class.java)
+            snapshot.child(
+                "waitingPlayerGuesses"
+            )
+                .getValue(
+                    Int::class.java
+                )
                 ?: waitingPlayerGuesses
 
         secretWord =
             snapshot.child("secretWord")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: ""
 
         actualCategory =
             snapshot.child("actualCategory")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: selectedCategory
 
         currentPlayerUid =
-            snapshot.child("currentPlayerUid")
-                .getValue(String::class.java)
+            snapshot.child(
+                "currentPlayerUid"
+            )
+                .getValue(
+                    String::class.java
+                )
                 ?: ""
 
         wordMasterUid =
-            snapshot.child("wordMasterUid")
-                .getValue(String::class.java)
+            snapshot.child(
+                "wordMasterUid"
+            )
+                .getValue(
+                    String::class.java
+                )
                 ?: ""
 
         knownHostUid =
             snapshot.child("hostUid")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: ""
 
         turnEndsAt =
             snapshot.child("turnEndsAt")
-                .getValue(Long::class.java)
+                .getValue(
+                    Long::class.java
+                )
                 ?: 0L
 
         completedTurns =
-            snapshot.child("completedTurns")
-                .getValue(Int::class.java)
+            snapshot.child(
+                "completedTurns"
+            )
+                .getValue(
+                    Int::class.java
+                )
                 ?: 0
 
         roundNumber =
             snapshot.child("roundNumber")
-                .getValue(Int::class.java)
+                .getValue(
+                    Int::class.java
+                )
                 ?: 0
 
         roundWinnerUid =
-            snapshot.child("roundWinnerUid")
-                .getValue(String::class.java)
+            snapshot.child(
+                "roundWinnerUid"
+            )
+                .getValue(
+                    String::class.java
+                )
                 ?: ""
 
         roundWinnerName =
-            snapshot.child("roundWinnerName")
-                .getValue(String::class.java)
+            snapshot.child(
+                "roundWinnerName"
+            )
+                .getValue(
+                    String::class.java
+                )
                 ?: ""
 
         phase =
             snapshot.child("phase")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
                 ?: "normal"
 
         finalChallengeIndex =
-            snapshot.child("finalChallengeIndex")
-                .getValue(Int::class.java)
+            snapshot.child(
+                "finalChallengeIndex"
+            )
+                .getValue(
+                    Int::class.java
+                )
                 ?: 0
 
-        readPlayers(snapshot)
-        readGuessedLetters(snapshot)
-        readScores(snapshot)
-        readMissedTurns(snapshot)
-        readEliminatedPlayers(snapshot)
+        readPlayers(
+            snapshot
+        )
+
+        readGuessedLetters(
+            snapshot
+        )
+
+        readScores(
+            snapshot
+        )
+
+        readMissedTurns(
+            snapshot
+        )
+
+        readEliminatedPlayers(
+            snapshot
+        )
 
         roundFinished =
             status == "roundFinished"
 
-        updateAllUI()
-
-        val activePlayers =
-            getActivePlayersFromSnapshot(snapshot)
-
+        /*
+         * If Firebase tells us the turn changed, clear the
+         * local whole-word attempt flag for the new turn.
+         */
         if (
-            status == "playing" &&
-            activePlayers.size == 1
+            oldCurrentPlayer != currentPlayerUid ||
+            oldRoundNumber != roundNumber ||
+            oldPhase != phase
         ) {
-            showSinglePlayerChoiceIfNeeded()
+
+            wholeWordAttemptUsed =
+                false
         }
+
+        updateAllUI()
 
         if (
             status == "waiting" &&
             isHost(snapshot)
         ) {
 
-            initializeFirstRound(snapshot)
+            initializeFirstRound(
+                snapshot
+            )
 
             return
         }
@@ -879,7 +1040,9 @@ class OnlineGameRoundActivity : Activity() {
 
             stopTimers()
 
-            setWholeWordButtonEnabled(false)
+            setWholeWordButtonEnabled(
+                false
+            )
 
             showRoundFinishedDialogIfNeeded()
 
@@ -890,13 +1053,45 @@ class OnlineGameRoundActivity : Activity() {
             status == "playing"
         ) {
 
-            if (phase == "final") {
+            val activePlayers =
+                getActivePlayersFromSnapshot(
+                    snapshot
+                )
+
+            if (
+                activePlayers.size == 1
+            ) {
+
+                showSinglePlayerChoiceIfNeeded()
+            }
+
+            if (
+                phase == "final"
+            ) {
 
                 handleFinalChallenge()
 
             } else {
 
-                startSynchronizedTimer()
+                /*
+                 * Do NOT blindly restart the timer here.
+                 *
+                 * This is the main fix for the visual refresh
+                 * that happened after clicking letters.
+                 */
+                val stateChanged =
+                    oldStatus != status ||
+                        oldCurrentPlayer !=
+                        currentPlayerUid ||
+                        oldTurnEndsAt !=
+                        turnEndsAt ||
+                        oldPhase != phase ||
+                        oldRoundNumber !=
+                        roundNumber
+
+                startSynchronizedTimer(
+                    forceRestart = stateChanged
+                )
 
                 maybeStartNormalTurnUI()
             }
@@ -915,12 +1110,15 @@ class OnlineGameRoundActivity : Activity() {
 
         playerNames.clear()
         playerOrder.clear()
+        playerActiveStates.clear()
 
         val playersSnapshot =
             snapshot.child("players")
 
         val temp =
-            mutableListOf<Triple<String, String, Long>>()
+            mutableListOf<
+                Triple<String, String, Long>
+            >()
 
         for (
             child in playersSnapshot.children
@@ -931,16 +1129,34 @@ class OnlineGameRoundActivity : Activity() {
 
             val name =
                 child.child("name")
-                    .getValue(String::class.java)
+                    .getValue(
+                        String::class.java
+                    )
                     ?: "Player"
 
             val joinedAt =
                 child.child("joinedAt")
-                    .getValue(Long::class.java)
+                    .getValue(
+                        Long::class.java
+                    )
                     ?: 0L
+
+            /*
+             * Older games may not have isActive.
+             * In that case we treat the player as active.
+             */
+            val isActive =
+                child.child("isActive")
+                    .getValue(
+                        Boolean::class.java
+                    )
+                    ?: true
 
             playerNames[uid] =
                 name
+
+            playerActiveStates[uid] =
+                isActive
 
             temp.add(
                 Triple(
@@ -956,6 +1172,7 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         for (item in temp) {
+
             playerOrder.add(
                 item.first
             )
@@ -963,38 +1180,56 @@ class OnlineGameRoundActivity : Activity() {
 
         maxPlayers =
             snapshot.child("maxPlayers")
-                .getValue(Int::class.java)
+                .getValue(
+                    Int::class.java
+                )
                 ?: maxPlayers
 
         roomCapacity =
             snapshot.child("roomCapacity")
-                .getValue(Int::class.java)
+                .getValue(
+                    Int::class.java
+                )
                 ?: roomCapacity
 
         waitingPlayerGuesses =
-            snapshot.child("waitingPlayerGuesses")
-                .getValue(Int::class.java)
+            snapshot.child(
+                "waitingPlayerGuesses"
+            )
+                .getValue(
+                    Int::class.java
+                )
                 ?: waitingPlayerGuesses
 
         val currentIds =
             playerOrder.toSet()
 
-        if (playerChangeInitialized) {
+        if (
+            playerChangeInitialized
+        ) {
 
             val departed =
                 previousIds.filter {
                     !currentIds.contains(it)
                 }
 
-            if (departed.isNotEmpty()) {
+            if (
+                departed.isNotEmpty()
+            ) {
 
-                for (uid in departed) {
+                for (
+                    uid in departed
+                ) {
 
                     if (
-                        !notifiedDepartures.contains(uid)
+                        !notifiedDepartures.contains(
+                            uid
+                        )
                     ) {
 
-                        notifiedDepartures.add(uid)
+                        notifiedDepartures.add(
+                            uid
+                        )
 
                         val departedName =
                             previousNames[uid]
@@ -1022,19 +1257,14 @@ class OnlineGameRoundActivity : Activity() {
             true
     }
 
-    /*
-     * Backward-compatible active-player check.
-     *
-     * New games have isActive stored explicitly.
-     * Older games may not have the field, so those players
-     * are treated as active.
-     */
     private fun isPlayerActive(
         player: DataSnapshot
     ): Boolean {
 
         return player.child("isActive")
-            .getValue(Boolean::class.java)
+            .getValue(
+                Boolean::class.java
+            )
             ?: true
     }
 
@@ -1046,18 +1276,21 @@ class OnlineGameRoundActivity : Activity() {
         return data.child("players")
             .child(uid)
             .child("isActive")
-            .getValue(Boolean::class.java)
+            .getValue(
+                Boolean::class.java
+            )
             ?: true
     }
 
     private fun isMyPlayerActive(): Boolean {
 
-        val player =
-            gameReference()
-                .child("players")
-                .child(myUid)
+        if (myUid.isEmpty()) {
+            return false
+        }
 
-        return true
+        return playerActiveStates[
+            myUid
+        ] ?: false
     }
 
     private fun getActivePlayersFromSnapshot(
@@ -1068,13 +1301,18 @@ class OnlineGameRoundActivity : Activity() {
             mutableListOf<String>()
 
         for (
-            child in snapshot.child("players").children
+            child in snapshot.child(
+                "players"
+            ).children
         ) {
 
             val uid =
                 child.key ?: continue
 
-            if (isPlayerActive(child)) {
+            if (
+                isPlayerActive(child)
+            ) {
+
                 active.add(uid)
             }
         }
@@ -1084,7 +1322,9 @@ class OnlineGameRoundActivity : Activity() {
             snapshot.child("players")
                 .child(uid)
                 .child("joinedAt")
-                .getValue(Long::class.java)
+                .getValue(
+                    Long::class.java
+                )
                 ?: 0L
         }
 
@@ -1099,7 +1339,9 @@ class OnlineGameRoundActivity : Activity() {
             mutableListOf<String>()
 
         for (
-            child in data.child("players").children
+            child in data.child(
+                "players"
+            ).children
         ) {
 
             val uid =
@@ -1107,9 +1349,12 @@ class OnlineGameRoundActivity : Activity() {
 
             if (
                 child.child("isActive")
-                    .getValue(Boolean::class.java)
+                    .getValue(
+                        Boolean::class.java
+                    )
                     ?: true
             ) {
+
                 active.add(uid)
             }
         }
@@ -1134,7 +1379,9 @@ class OnlineGameRoundActivity : Activity() {
         val activeCount =
             getCurrentActivePlayerCount()
 
-        if (activeCount == 1) {
+        if (
+            activeCount == 1
+        ) {
 
             showStatus(
                 "$departedName left. There is now only one active player.",
@@ -1150,34 +1397,11 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    private fun getCurrentActivePlayerCount(): Int {
+    private fun getCurrentActivePlayerCount():
+        Int {
 
-        var count = 0
-
-        for (uid in playerOrder) {
-
-            val player =
-                gameReference()
-                    .child("players")
-                    .child(uid)
-
-            // Firebase values are already reflected in the
-            // latest UI state, so use the local fallback logic
-            // through the current player list when possible.
-            //
-            // Actual round logic is always verified inside
-            // Firebase transactions.
-            if (uid == currentPlayerUid) {
-                count++
-            }
-        }
-
-        return if (count > 0) {
-            count
-        } else {
-            maxPlayers.coerceAtMost(
-                playerOrder.size
-            )
+        return playerActiveStates.values.count {
+            it
         }
     }
 
@@ -1192,13 +1416,21 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         val activeCount =
-            playerOrder.count { uid ->
-                uid == currentPlayerUid ||
-                    uid == myUid
-            }
+            getCurrentActivePlayerCount()
 
         if (
-            activeCount != 1 ||
+            activeCount != 1
+        ) {
+            return
+        }
+
+        if (
+            !isMyPlayerActive()
+        ) {
+            return
+        }
+
+        if (
             currentPlayerUid != myUid
         ) {
             return
@@ -1244,15 +1476,18 @@ class OnlineGameRoundActivity : Activity() {
         guessedLetters.clear()
 
         val guessed =
-            snapshot.child("guessedLetters")
+            snapshot.child(
+                "guessedLetters"
+            )
 
         for (
             child in guessed.children
         ) {
 
             val value =
-                child.getValue(Boolean::class.java)
-                    ?: false
+                child.getValue(
+                    Boolean::class.java
+                ) ?: false
 
             if (value) {
 
@@ -1283,8 +1518,9 @@ class OnlineGameRoundActivity : Activity() {
                 child.key ?: continue
 
             scores[uid] =
-                child.getValue(Int::class.java)
-                    ?: 0
+                child.getValue(
+                    Int::class.java
+                ) ?: 0
         }
     }
 
@@ -1295,7 +1531,9 @@ class OnlineGameRoundActivity : Activity() {
         missedTurns.clear()
 
         val missSnapshot =
-            snapshot.child("missedTurns")
+            snapshot.child(
+                "missedTurns"
+            )
 
         for (
             child in missSnapshot.children
@@ -1305,8 +1543,9 @@ class OnlineGameRoundActivity : Activity() {
                 child.key ?: continue
 
             missedTurns[uid] =
-                child.getValue(Int::class.java)
-                    ?: 0
+                child.getValue(
+                    Int::class.java
+                ) ?: 0
         }
     }
 
@@ -1326,8 +1565,9 @@ class OnlineGameRoundActivity : Activity() {
         ) {
 
             val value =
-                child.getValue(Boolean::class.java)
-                    ?: false
+                child.getValue(
+                    Boolean::class.java
+                ) ?: false
 
             if (value) {
 
@@ -1344,7 +1584,9 @@ class OnlineGameRoundActivity : Activity() {
 
         val hostUid =
             snapshot.child("hostUid")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
 
         return hostUid == myUid
     }
@@ -1355,7 +1597,9 @@ class OnlineGameRoundActivity : Activity() {
 
         val currentStatus =
             snapshot.child("status")
-                .getValue(String::class.java)
+                .getValue(
+                    String::class.java
+                )
 
         if (
             currentStatus != "waiting"
@@ -1389,38 +1633,70 @@ class OnlineGameRoundActivity : Activity() {
                 activePlayers
             )
 
+        if (
+            firstPlayerUid.isEmpty()
+        ) {
+            return
+        }
+
         val updates =
             hashMapOf<String, Any>(
-                "status" to "playing",
-                "roundNumber" to 1,
-                "phase" to "normal",
-                "secretWord" to selected.first,
-                "actualCategory" to selected.second,
-                "currentPlayerUid" to firstPlayerUid,
-                "completedTurns" to 0,
-                "roundWinnerUid" to "",
-                "roundWinnerName" to "",
+                "status" to
+                    "playing",
+
+                "roundNumber" to
+                    1,
+
+                "phase" to
+                    "normal",
+
+                "secretWord" to
+                    selected.first,
+
+                "actualCategory" to
+                    selected.second,
+
+                "currentPlayerUid" to
+                    firstPlayerUid,
+
+                "completedTurns" to
+                    0,
+
+                "roundWinnerUid" to
+                    "",
+
+                "roundWinnerName" to
+                    "",
+
                 "wordMasterUid" to
                     getInitialWordMasterUid(
                         snapshot
                     ),
+
                 "turnEndsAt" to
                     getNewTurnEndTime(),
+
                 "guessedLetters" to
                     emptyMap<String, Any>(),
+
                 "scores" to
                     createInitialScores(
                         activePlayers
                     ),
+
                 "missedTurns" to
                     createInitialMisses(
                         activePlayers
                     ),
+
                 "eliminatedPlayers" to
                     emptyMap<String, Any>(),
+
                 "finalChallengePlayers" to
                     emptyList<String>(),
-                "finalChallengeIndex" to 0
+
+                "finalChallengeIndex" to
+                    0
             )
 
         gameReference()
@@ -1444,7 +1720,8 @@ class OnlineGameRoundActivity : Activity() {
 
             val category =
                 if (
-                    selectedCategory == "Random"
+                    selectedCategory ==
+                    "Random"
                 ) {
                     "Random"
                 } else {
@@ -1459,7 +1736,8 @@ class OnlineGameRoundActivity : Activity() {
 
         val categoryNames =
             if (
-                selectedCategory == "Random"
+                selectedCategory ==
+                "Random"
             ) {
 
                 WordBank.categories.keys
@@ -1472,6 +1750,16 @@ class OnlineGameRoundActivity : Activity() {
                 )
             }
 
+        if (
+            categoryNames.isEmpty()
+        ) {
+
+            return Pair(
+                "APPLE",
+                "Random"
+            )
+        }
+
         val category =
             categoryNames[
                 Random.nextInt(
@@ -1480,8 +1768,12 @@ class OnlineGameRoundActivity : Activity() {
             ]
 
         val words =
-            WordBank.categories[category]
-                ?: listOf("APPLE")
+            WordBank.categories[
+                category
+            ]
+                ?: listOf(
+                    "APPLE"
+                )
 
         val word =
             words[
@@ -1502,7 +1794,8 @@ class OnlineGameRoundActivity : Activity() {
     ): String {
 
         if (
-            wordSelection != "Random Word"
+            wordSelection !=
+            "Random Word"
         ) {
 
             val master =
@@ -1510,20 +1803,23 @@ class OnlineGameRoundActivity : Activity() {
                     snapshot.child("players")
                         .child(it)
                         .child("isHost")
-                        .getValue(Boolean::class.java) == true
+                        .getValue(
+                            Boolean::class.java
+                        ) == true
                 }
 
-            val masterUid =
-                master
-
-            if (masterUid != null) {
+            if (
+                master != null
+            ) {
 
                 val nonMaster =
                     activePlayers.firstOrNull {
-                        it != masterUid
+                        it != master
                     }
 
-                if (nonMaster != null) {
+                if (
+                    nonMaster != null
+                ) {
                     return nonMaster
                 }
             }
@@ -1538,13 +1834,16 @@ class OnlineGameRoundActivity : Activity() {
     ): String {
 
         if (
-            wordSelection == "Random Word"
+            wordSelection ==
+            "Random Word"
         ) {
             return ""
         }
 
         return snapshot.child("hostUid")
-            .getValue(String::class.java)
+            .getValue(
+                String::class.java
+            )
             ?: ""
     }
 
@@ -1558,6 +1857,7 @@ class OnlineGameRoundActivity : Activity() {
         for (
             uid in activePlayers
         ) {
+
             map[uid] = 0
         }
 
@@ -1574,6 +1874,7 @@ class OnlineGameRoundActivity : Activity() {
         for (
             uid in activePlayers
         ) {
+
             map[uid] = 0
         }
 
@@ -1596,8 +1897,10 @@ class OnlineGameRoundActivity : Activity() {
 
         val categoryDisplay =
             if (
-                selectedCategory == "Random" &&
-                wordSelection == "Random Word"
+                selectedCategory ==
+                "Random" &&
+                wordSelection ==
+                "Random Word"
             ) {
 
                 "Random: $actualCategory"
@@ -1611,6 +1914,7 @@ class OnlineGameRoundActivity : Activity() {
             "CATEGORY: $categoryDisplay"
 
         updatePlayerList()
+        updateWordMasterDisplay()
         updateWordDisplay()
         updateLetterButtons()
         updateTurnDisplay()
@@ -1618,9 +1922,54 @@ class OnlineGameRoundActivity : Activity() {
         if (
             phase == "final"
         ) {
+
             wholeWordButton.isEnabled =
                 false
         }
+    }
+
+    private fun updateWordMasterDisplay() {
+
+        if (
+            wordSelection ==
+            "Random Word"
+        ) {
+
+            wordMasterText.text =
+                "Random Word — no Word Master"
+
+            wordMasterText.setTextColor(
+                Color.rgb(0, 70, 140)
+            )
+
+            return
+        }
+
+        if (
+            wordMasterUid.isEmpty()
+        ) {
+
+            wordMasterText.text =
+                "Word Master: Waiting..."
+
+            wordMasterText.setTextColor(
+                Color.DKGRAY
+            )
+
+            return
+        }
+
+        val name =
+            playerNames[
+                wordMasterUid
+            ] ?: "Player"
+
+        wordMasterText.text =
+            "WORD MASTER: $name"
+
+        wordMasterText.setTextColor(
+            Color.rgb(0, 70, 140)
+        )
     }
 
     private fun updatePlayerList() {
@@ -1632,7 +1981,10 @@ class OnlineGameRoundActivity : Activity() {
             getLocalActivePlayerCount()
 
         val waitingCount =
-            playerOrder.size - activeCount
+            (
+                playerOrder.size -
+                    activeCount
+            ).coerceAtLeast(0)
 
         builder.append(
             "Active: $activeCount / $maxPlayers"
@@ -1655,18 +2007,26 @@ class OnlineGameRoundActivity : Activity() {
                     ?: "Player"
 
             val active =
-                isPlayerCurrentlyActive(uid)
+                isPlayerCurrentlyActive(
+                    uid
+                )
 
             if (active) {
 
-                builder.append("🟢 ")
+                builder.append(
+                    "🟢 "
+                )
 
             } else {
 
-                builder.append("🟡 ")
+                builder.append(
+                    "🟡 "
+                )
             }
 
-            builder.append(name)
+            builder.append(
+                name
+            )
 
             builder.append(
                 " — Score: "
@@ -1746,7 +2106,8 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         if (
-            currentPlayerUid == myUid &&
+            currentPlayerUid ==
+            myUid &&
             !roundFinished
         ) {
 
@@ -1756,62 +2117,21 @@ class OnlineGameRoundActivity : Activity() {
         }
     }
 
-    private fun getLocalActivePlayerCount(): Int {
+    private fun getLocalActivePlayerCount():
+        Int {
 
-        var count = 0
-
-        for (
-            uid in playerOrder
-        ) {
-
-            if (
-                isPlayerCurrentlyActive(
-                    uid
-                )
-            ) {
-                count++
-            }
+        return playerActiveStates.values.count {
+            it
         }
-
-        return count
     }
 
-    /*
-     * This reads the player's current active state from
-     * Firebase synchronously through the local cached value
-     * available to the Activity.
-     *
-     * For current rounds, currentPlayerUid and playerOrder
-     * are enough to maintain compatibility while the actual
-     * turn-selection transactions perform the authoritative
-     * isActive checks.
-     */
     private fun isPlayerCurrentlyActive(
         uid: String
     ): Boolean {
 
-        // The waiting/active distinction is primarily kept
-        // in Firebase. We use the currently loaded players
-        // through a lightweight local approximation here.
-        //
-        // A player is definitely active if they are:
-        // - the current player
-        // - the Word Master
-        //
-        // For other players, the active limit is used in
-        // joined order for display compatibility.
-        if (
-            uid == currentPlayerUid ||
-            uid == wordMasterUid
-        ) {
-            return true
-        }
-
-        val index =
-            playerOrder.indexOf(uid)
-
-        return index >= 0 &&
-            index < maxPlayers
+        return playerActiveStates[
+            uid
+        ] ?: false
     }
 
     private fun updateWordDisplay() {
@@ -1870,7 +2190,8 @@ class OnlineGameRoundActivity : Activity() {
     private fun updateLetterButtons() {
 
         for (
-            i in 0 until letterBoard.childCount
+            i in 0 until
+                letterBoard.childCount
         ) {
 
             val row =
@@ -1879,7 +2200,8 @@ class OnlineGameRoundActivity : Activity() {
                     ?: continue
 
             for (
-                j in 0 until row.childCount
+                j in 0 until
+                    row.childCount
             ) {
 
                 val button =
@@ -1907,13 +2229,18 @@ class OnlineGameRoundActivity : Activity() {
                 } else {
 
                     button.setBackgroundColor(
-                        Color.rgb(0, 100, 0)
+                        Color.rgb(
+                            0,
+                            100,
+                            0
+                        )
                     )
 
                     button.isEnabled =
                         !roundFinished &&
                             phase == "normal" &&
-                            currentPlayerUid == myUid &&
+                            currentPlayerUid ==
+                            myUid &&
                             isMyPlayerActive()
                 }
             }
@@ -1945,14 +2272,19 @@ class OnlineGameRoundActivity : Activity() {
                 "FINAL CHALLENGE: $currentName"
 
             turnText.setTextColor(
-                Color.rgb(0, 70, 140)
+                Color.rgb(
+                    0,
+                    70,
+                    140
+                )
             )
 
         } else {
 
             turnText.text =
                 if (
-                    currentPlayerUid == myUid
+                    currentPlayerUid ==
+                    myUid
                 ) {
 
                     "YOUR TURN"
@@ -1963,7 +2295,11 @@ class OnlineGameRoundActivity : Activity() {
                 }
 
             turnText.setTextColor(
-                Color.rgb(0, 100, 0)
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
             )
         }
     }
@@ -1971,6 +2307,16 @@ class OnlineGameRoundActivity : Activity() {
     private fun processLetterGuess(
         letter: Char
     ) {
+
+        /*
+         * Disable the clicked letter immediately.
+         * Firebase remains authoritative, so this is only
+         * a visual protection against double tapping.
+         */
+        setLetterEnabled(
+            letter,
+            false
+        )
 
         gameReference().runTransaction(
             object : Transaction.Handler {
@@ -1992,6 +2338,7 @@ class OnlineGameRoundActivity : Activity() {
                     if (
                         currentUid != myUid
                     ) {
+
                         return Transaction.abort()
                     }
 
@@ -2001,6 +2348,23 @@ class OnlineGameRoundActivity : Activity() {
                             myUid
                         )
                     ) {
+
+                        return Transaction.abort()
+                    }
+
+                    val currentStatus =
+                        currentData
+                            .child("status")
+                            .getValue(
+                                String::class.java
+                            )
+                            ?: "waiting"
+
+                    if (
+                        currentStatus !=
+                        "playing"
+                    ) {
+
                         return Transaction.abort()
                     }
 
@@ -2013,8 +2377,32 @@ class OnlineGameRoundActivity : Activity() {
                             ?: "normal"
 
                     if (
-                        currentPhase != "normal"
+                        currentPhase !=
+                        "normal"
                     ) {
+
+                        return Transaction.abort()
+                    }
+
+                    /*
+                     * Reject a letter that arrives after the
+                     * Firebase turn deadline.
+                     */
+                    val firebaseTurnEndsAt =
+                        currentData
+                            .child("turnEndsAt")
+                            .getValue(
+                                Long::class.java
+                            )
+                            ?: 0L
+
+                    if (
+                        secondsPerTurn > 0 &&
+                        firebaseTurnEndsAt > 0 &&
+                        firebaseTurnEndsAt <=
+                        System.currentTimeMillis()
+                    ) {
+
                         return Transaction.abort()
                     }
 
@@ -2030,6 +2418,7 @@ class OnlineGameRoundActivity : Activity() {
                             )
                             .value != null
                     ) {
+
                         return Transaction.abort()
                     }
 
@@ -2121,7 +2510,8 @@ class OnlineGameRoundActivity : Activity() {
                                 .child(
                                     "turnEndsAt"
                                 )
-                                .value = 0L
+                                .value =
+                                0L
 
                             return Transaction.success(
                                 currentData
@@ -2142,7 +2532,8 @@ class OnlineGameRoundActivity : Activity() {
                             } else {
 
                                 System.currentTimeMillis() +
-                                    secondsPerTurn * 1000L
+                                    secondsPerTurn *
+                                    1000L
                             }
 
                     } else {
@@ -2170,6 +2561,8 @@ class OnlineGameRoundActivity : Activity() {
                             Color.RED
                         )
 
+                        updateLetterButtons()
+
                         return
                     }
 
@@ -2179,6 +2572,8 @@ class OnlineGameRoundActivity : Activity() {
                             "That move is no longer available.",
                             Color.RED
                         )
+
+                        updateLetterButtons()
 
                         return
                     }
@@ -2199,21 +2594,76 @@ class OnlineGameRoundActivity : Activity() {
 
                         showStatus(
                             "Correct! You earned $occurrences point(s). Timer reset.",
-                            Color.rgb(0, 100, 0)
+                            Color.rgb(
+                                0,
+                                100,
+                                0
+                            )
                         )
 
-                        startSynchronizedTimer()
-
                     } else {
+
+                        wholeWordAttemptUsed =
+                            false
 
                         showStatus(
                             "Wrong letter. Next player's turn.",
                             Color.RED
                         )
                     }
+
+                    /*
+                     * Do not manually restart the timer here.
+                     *
+                     * Firebase will deliver the authoritative
+                     * new turnEndsAt/currentPlayerUid and the
+                     * listener will restart it exactly once.
+                     */
                 }
             }
         )
+    }
+
+    private fun setLetterEnabled(
+        letter: Char,
+        enabled: Boolean
+    ) {
+
+        for (
+            i in 0 until
+                letterBoard.childCount
+        ) {
+
+            val row =
+                letterBoard.getChildAt(i)
+                    as? LinearLayout
+                    ?: continue
+
+            for (
+                j in 0 until
+                    row.childCount
+            ) {
+
+                val button =
+                    row.getChildAt(j)
+                        as? Button
+                        ?: continue
+
+                val buttonLetter =
+                    button.tag as? Char
+                        ?: continue
+
+                if (
+                    buttonLetter == letter
+                ) {
+
+                    button.isEnabled =
+                        enabled
+
+                    return
+                }
+            }
+        }
     }
 
     private fun advanceTurnInsideTransaction(
@@ -2305,6 +2755,11 @@ class OnlineGameRoundActivity : Activity() {
             ).value =
                 "roundFinished"
 
+            data.child(
+                "turnEndsAt"
+            ).value =
+                0L
+
             return
         }
 
@@ -2364,7 +2819,8 @@ class OnlineGameRoundActivity : Activity() {
             } else {
 
                 System.currentTimeMillis() +
-                    secondsPerTurn * 1000L
+                    secondsPerTurn *
+                    1000L
             }
     }
 
@@ -2437,6 +2893,11 @@ class OnlineGameRoundActivity : Activity() {
             ).value =
                 "roundFinished"
 
+            data.child(
+                "turnEndsAt"
+            ).value =
+                0L
+
             return
         }
 
@@ -2495,6 +2956,42 @@ class OnlineGameRoundActivity : Activity() {
                             myUid
                         )
                     ) {
+                        return Transaction.abort()
+                    }
+
+                    val currentPhase =
+                        currentData
+                            .child("phase")
+                            .getValue(
+                                String::class.java
+                            )
+                            ?: "normal"
+
+                    if (
+                        currentPhase != "normal"
+                    ) {
+                        return Transaction.abort()
+                    }
+
+                    val firebaseTurnEndsAt =
+                        currentData
+                            .child("turnEndsAt")
+                            .getValue(
+                                Long::class.java
+                            )
+                            ?: 0L
+
+                    /*
+                     * Another action may have already reset
+                     * the timer. Do not process this old timer.
+                     */
+                    if (
+                        secondsPerTurn > 0 &&
+                        firebaseTurnEndsAt > 0 &&
+                        firebaseTurnEndsAt >
+                        System.currentTimeMillis()
+                    ) {
+
                         return Transaction.abort()
                     }
 
@@ -2569,30 +3066,50 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
-    private fun startSynchronizedTimer() {
-
-        timer?.cancel()
+    private fun startSynchronizedTimer(
+        forceRestart: Boolean = false
+    ) {
 
         if (
             roundFinished ||
-            phase != "normal"
+            phase != "normal" ||
+            status != "playing"
         ) {
+
+            if (
+                timer != null
+            ) {
+                timer?.cancel()
+                timer = null
+            }
+
+            timerStateUid = ""
+            timerStateEndsAt = -1L
+            timerStatePhase = ""
+            timerStateRound = -1
+
             return
         }
 
+        /*
+         * The local active state is now authoritative from the
+         * latest Firebase snapshot.
+         */
         if (
             !isMyPlayerActive()
         ) {
 
-            wholeWordButton.isEnabled =
+            setWholeWordButtonEnabled(
                 false
+            )
 
         } else if (
             currentPlayerUid != myUid
         ) {
 
-            wholeWordButton.isEnabled =
+            setWholeWordButtonEnabled(
                 false
+            )
 
         } else {
 
@@ -2600,6 +3117,40 @@ class OnlineGameRoundActivity : Activity() {
                 !wholeWordAttemptUsed
             )
         }
+
+        val sameTimerState =
+            timerStateUid ==
+                currentPlayerUid &&
+                timerStateEndsAt ==
+                turnEndsAt &&
+                timerStatePhase ==
+                phase &&
+                timerStateRound ==
+                roundNumber
+
+        if (
+            !forceRestart &&
+            sameTimerState &&
+            timer != null
+        ) {
+
+            return
+        }
+
+        timer?.cancel()
+        timer = null
+
+        timerStateUid =
+            currentPlayerUid
+
+        timerStateEndsAt =
+            turnEndsAt
+
+        timerStatePhase =
+            phase
+
+        timerStateRound =
+            roundNumber
 
         if (
             secondsPerTurn <= 0
@@ -2609,7 +3160,11 @@ class OnlineGameRoundActivity : Activity() {
                 "Time: Unlimited"
 
             timerText.setTextColor(
-                Color.rgb(0, 100, 0)
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
             )
 
             return
@@ -2618,16 +3173,48 @@ class OnlineGameRoundActivity : Activity() {
         if (
             turnEndsAt <= 0
         ) {
+
+            timerText.text =
+                "Time: --"
+
             return
         }
 
+        val timerUid =
+            currentPlayerUid
+
+        val timerEndsAt =
+            turnEndsAt
+
+        val timerRound =
+            roundNumber
+
         val remaining =
             (
-                turnEndsAt -
+                timerEndsAt -
                     System.currentTimeMillis()
             ).coerceAtLeast(
                 0L
             )
+
+        if (
+            remaining <= 0L
+        ) {
+
+            if (
+                timerUid == myUid &&
+                isMyPlayerActive() &&
+                currentPlayerUid ==
+                timerUid &&
+                roundNumber ==
+                timerRound
+            ) {
+
+                handleMissedTurn()
+            }
+
+            return
+        }
 
         timer =
             object : CountDownTimer(
@@ -2638,6 +3225,28 @@ class OnlineGameRoundActivity : Activity() {
                 override fun onTick(
                     millisUntilFinished: Long
                 ) {
+
+                    /*
+                     * If Firebase already changed the turn,
+                     * this old timer should no longer update
+                     * the screen.
+                     */
+                    if (
+                        currentPlayerUid !=
+                        timerUid ||
+                        turnEndsAt !=
+                        timerEndsAt ||
+                        roundNumber !=
+                        timerRound ||
+                        phase !=
+                        "normal" ||
+                        roundFinished
+                    ) {
+
+                        cancel()
+
+                        return
+                    }
 
                     val seconds =
                         (
@@ -2670,10 +3279,27 @@ class OnlineGameRoundActivity : Activity() {
                         Color.RED
                     )
 
+                    /*
+                     * Only the phone whose turn expired can
+                     * submit the timeout.
+                     *
+                     * Also verify the state has not changed
+                     * since this timer was created.
+                     */
                     if (
-                        currentPlayerUid == myUid &&
+                        currentPlayerUid ==
+                        timerUid &&
+                        turnEndsAt ==
+                        timerEndsAt &&
+                        roundNumber ==
+                        timerRound &&
+                        phase ==
+                        "normal" &&
+                        !roundFinished &&
+                        timerUid == myUid &&
                         isMyPlayerActive()
                     ) {
+
                         handleMissedTurn()
                     }
                 }
@@ -2690,7 +3316,11 @@ class OnlineGameRoundActivity : Activity() {
                 "You are waiting for an active player to finish the round."
 
             statusText.setTextColor(
-                Color.rgb(0, 70, 140)
+                Color.rgb(
+                    0,
+                    70,
+                    140
+                )
             )
 
             setWholeWordButtonEnabled(
@@ -2701,14 +3331,19 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         if (
-            currentPlayerUid == myUid
+            currentPlayerUid ==
+            myUid
         ) {
 
             statusText.text =
                 "Choose a letter or guess the whole word."
 
             statusText.setTextColor(
-                Color.rgb(0, 100, 0)
+                Color.rgb(
+                    0,
+                    100,
+                    0
+                )
             )
 
         } else {
@@ -2726,9 +3361,11 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         setWholeWordButtonEnabled(
-            currentPlayerUid == myUid &&
+            currentPlayerUid ==
+                myUid &&
                 !wholeWordAttemptUsed &&
-                phase == "normal" &&
+                phase ==
+                "normal" &&
                 !roundFinished
         )
     }
@@ -2747,7 +3384,11 @@ class OnlineGameRoundActivity : Activity() {
             )
 
             wholeWordButton.setBackgroundColor(
-                Color.rgb(0, 70, 140)
+                Color.rgb(
+                    0,
+                    70,
+                    140
+                )
             )
 
         } else {
@@ -2790,6 +3431,7 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         timer?.cancel()
+        timer = null
 
         val input =
             EditText(this)
@@ -2967,7 +3609,8 @@ class OnlineGameRoundActivity : Activity() {
     private fun resumeNormalTimer() {
 
         if (
-            roundFinished
+            roundFinished ||
+            phase != "normal"
         ) {
             return
         }
@@ -3000,7 +3643,13 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
-        startSynchronizedTimer()
+        /*
+         * Force restart because the original normal timer was
+         * deliberately cancelled while the dialog was open.
+         */
+        startSynchronizedTimer(
+            forceRestart = true
+        )
     }
 
     private fun submitWholeWordGuess(
@@ -3027,6 +3676,7 @@ class OnlineGameRoundActivity : Activity() {
                     if (
                         currentUid != myUid
                     ) {
+
                         return Transaction.abort()
                     }
 
@@ -3036,6 +3686,18 @@ class OnlineGameRoundActivity : Activity() {
                             myUid
                         )
                     ) {
+
+                        return Transaction.abort()
+                    }
+
+                    if (
+                        currentData
+                            .child("status")
+                            .getValue(
+                                String::class.java
+                            ) != "playing"
+                    ) {
+
                         return Transaction.abort()
                     }
 
@@ -3046,6 +3708,25 @@ class OnlineGameRoundActivity : Activity() {
                                 String::class.java
                             ) != "normal"
                     ) {
+
+                        return Transaction.abort()
+                    }
+
+                    val firebaseTurnEndsAt =
+                        currentData
+                            .child("turnEndsAt")
+                            .getValue(
+                                Long::class.java
+                            )
+                            ?: 0L
+
+                    if (
+                        secondsPerTurn > 0 &&
+                        firebaseTurnEndsAt > 0 &&
+                        firebaseTurnEndsAt <=
+                        System.currentTimeMillis()
+                    ) {
+
                         return Transaction.abort()
                     }
 
@@ -3111,12 +3792,18 @@ class OnlineGameRoundActivity : Activity() {
 
                     if (!committed) {
 
+                        wholeWordAttemptUsed =
+                            false
+
                         showStatus(
-                            "That guess could not be submitted.",
+                            "That guess could not be submitted. The turn may have changed.",
                             Color.RED
                         )
 
-                    } else if (
+                        return
+                    }
+
+                    if (
                         guess.isEmpty()
                     ) {
 
@@ -3142,7 +3829,11 @@ class OnlineGameRoundActivity : Activity() {
 
                             showStatus(
                                 "Correct! You win the round!",
-                                Color.rgb(0, 100, 0)
+                                Color.rgb(
+                                    0,
+                                    100,
+                                    0
+                                )
                             )
 
                         } else {
@@ -3164,6 +3855,7 @@ class OnlineGameRoundActivity : Activity() {
     private fun handleFinalChallenge() {
 
         timer?.cancel()
+        timer = null
 
         setWholeWordButtonEnabled(
             false
@@ -3186,6 +3878,7 @@ class OnlineGameRoundActivity : Activity() {
             if (
                 isHostFromCurrentData()
             ) {
+
                 finishWithoutWinner()
             }
 
@@ -3205,7 +3898,8 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         if (
-            currentFinalUid != myUid
+            currentFinalUid !=
+            myUid
         ) {
             return
         }
@@ -3225,7 +3919,8 @@ class OnlineGameRoundActivity : Activity() {
         )
     }
 
-    private fun getFinalPlayers(): List<String> {
+    private fun getFinalPlayers():
+        List<String> {
 
         return playerOrder.filter {
             isPlayerCurrentlyActive(it) &&
@@ -3372,6 +4067,16 @@ class OnlineGameRoundActivity : Activity() {
 
                         timerDisplay.text =
                             "Time: $seconds"
+
+                        timerDisplay.setTextColor(
+                            if (
+                                seconds <= 3
+                            ) {
+                                Color.RED
+                            } else {
+                                Color.BLACK
+                            }
+                        )
                     }
 
                     override fun onFinish() {
@@ -3411,6 +4116,7 @@ class OnlineGameRoundActivity : Activity() {
                     if (
                         currentUid != myUid
                     ) {
+
                         return Transaction.abort()
                     }
 
@@ -3420,6 +4126,7 @@ class OnlineGameRoundActivity : Activity() {
                             myUid
                         )
                     ) {
+
                         return Transaction.abort()
                     }
 
@@ -3430,6 +4137,7 @@ class OnlineGameRoundActivity : Activity() {
                             )
                             != "final"
                     ) {
+
                         return Transaction.abort()
                     }
 
@@ -3464,6 +4172,11 @@ class OnlineGameRoundActivity : Activity() {
                             playerNames[
                                 myUid
                             ] ?: "Player"
+
+                        data.child(
+                            "turnEndsAt"
+                        ).value =
+                            0L
 
                         return Transaction.success(
                             data
@@ -3520,6 +4233,11 @@ class OnlineGameRoundActivity : Activity() {
                             "roundWinnerName"
                         ).value =
                             ""
+
+                        data.child(
+                            "turnEndsAt"
+                        ).value =
+                            0L
 
                     } else {
 
@@ -3679,26 +4397,7 @@ class OnlineGameRoundActivity : Activity() {
                         currentStatus !=
                         "roundFinished"
                     ) {
-                        return Transaction.abort()
-                    }
 
-                    val players =
-                        mutableListOf<String>()
-
-                    for (
-                        child in data.child(
-                            "players"
-                        ).children
-                    ) {
-
-                        child.key?.let {
-                            players.add(it)
-                        }
-                    }
-
-                    if (
-                        players.isEmpty()
-                    ) {
                         return Transaction.abort()
                     }
 
@@ -3722,6 +4421,7 @@ class OnlineGameRoundActivity : Activity() {
                     if (
                         activePlayers.isEmpty()
                     ) {
+
                         return Transaction.abort()
                     }
 
@@ -3799,7 +4499,8 @@ class OnlineGameRoundActivity : Activity() {
                         } else {
 
                             System.currentTimeMillis() +
-                                secondsPerTurn * 1000L
+                                secondsPerTurn *
+                                1000L
                         }
 
                     data.child(
@@ -3856,9 +4557,16 @@ class OnlineGameRoundActivity : Activity() {
                     singlePlayerDialogShown =
                         false
 
+                    lastShownFinalIndex =
+                        -1
+
                     showStatus(
                         "New round started!",
-                        Color.rgb(0, 100, 0)
+                        Color.rgb(
+                            0,
+                            100,
+                            0
+                        )
                     )
                 }
             }
@@ -3875,6 +4583,7 @@ class OnlineGameRoundActivity : Activity() {
         for (
             uid in ids
         ) {
+
             map[uid] = 0
         }
 
@@ -3898,10 +4607,15 @@ class OnlineGameRoundActivity : Activity() {
             mapOf(
                 "status" to
                     "roundFinished",
+
                 "roundWinnerUid" to
                     "",
+
                 "roundWinnerName" to
-                    ""
+                    "",
+
+                "turnEndsAt" to
+                    0L
             )
         )
     }
@@ -3936,6 +4650,7 @@ class OnlineGameRoundActivity : Activity() {
         for (
             uid in playerOrder
         ) {
+
             map[uid] = 0
         }
 
@@ -4322,6 +5037,28 @@ class OnlineGameRoundActivity : Activity() {
         newMasterUid: String
     ) {
 
+        if (
+            newMasterUid != myUid
+        ) {
+            return
+        }
+
+        if (
+            !isMyPlayerActive()
+        ) {
+
+            showStatus(
+                "You are no longer an active player.",
+                Color.RED
+            )
+
+            return
+        }
+
+        /*
+         * Use the currently known active state rather than
+         * guessing from player position.
+         */
         val startingPlayer =
             playerOrder.firstOrNull {
                 isPlayerCurrentlyActive(it) &&
@@ -4329,40 +5066,68 @@ class OnlineGameRoundActivity : Activity() {
                     !eliminatedPlayers.contains(it)
             } ?: ""
 
+        if (
+            startingPlayer.isEmpty()
+        ) {
+
+            showStatus(
+                "There is no active player available to start the round.",
+                Color.RED
+            )
+
+            return
+        }
+
         val updates =
             hashMapOf<String, Any>(
                 "status" to
                     "playing",
+
                 "roundNumber" to
                     roundNumber + 1,
+
                 "phase" to
                     "normal",
+
                 "secretWord" to
                     word,
+
                 "actualCategory" to
                     selectedCategory,
+
                 "wordMasterUid" to
                     newMasterUid,
+
                 "currentPlayerUid" to
                     startingPlayer,
+
                 "completedTurns" to
                     0,
+
                 "roundWinnerUid" to
                     "",
+
                 "roundWinnerName" to
                     "",
+
                 "turnEndsAt" to
                     getNewTurnEndTime(),
+
                 "guessedLetters" to
                     emptyMap<String, Any>(),
+
                 "scores" to
                     scores,
+
                 "missedTurns" to
                     createEmptyPlayerMap(),
+
                 "eliminatedPlayers" to
                     emptyMap<String, Any>(),
+
                 "finalChallengePlayers" to
                     emptyList<String>(),
+
                 "finalChallengeIndex" to
                     0
             )
@@ -4462,11 +5227,17 @@ class OnlineGameRoundActivity : Activity() {
                             .child(uid)
                             .value == null
                     ) {
+
                         return Transaction.success(
                             data
                         )
                     }
 
+                    /*
+                     * Removing the player completely means the
+                     * remaining clients will detect the departure
+                     * through their Firebase listener.
+                     */
                     playersNode
                         .child(uid)
                         .value =
@@ -4493,10 +5264,32 @@ class OnlineGameRoundActivity : Activity() {
                         ).value =
                             "ended"
 
+                        data.child(
+                            "currentPlayerUid"
+                        ).value =
+                            ""
+
+                        data.child(
+                            "wordMasterUid"
+                        ).value =
+                            ""
+
+                        data.child(
+                            "turnEndsAt"
+                        ).value =
+                            0L
+
                         return Transaction.success(
                             data
                         )
                     }
+
+                    val activeRemaining =
+                        getActivePlayerIds(
+                            data
+                        ).filter {
+                            remaining.contains(it)
+                        }
 
                     val currentUid =
                         data.child(
@@ -4525,96 +5318,220 @@ class OnlineGameRoundActivity : Activity() {
                             )
                             ?: ""
 
+                    /*
+                     * Transfer host if the host left.
+                     *
+                     * Prefer an active remaining player, but if
+                     * there are only waiting players, use the first
+                     * remaining player so the room does not lose
+                     * its host.
+                     */
                     if (
                         oldHost == uid
                     ) {
 
+                        val newHost =
+                            activeRemaining.firstOrNull()
+                                ?: remaining.first()
+
                         data.child(
                             "hostUid"
                         ).value =
-                            remaining.first()
+                            newHost
+
+                        /*
+                         * Keep the host flag in sync if the player
+                         * nodes use it.
+                         */
+                        data.child(
+                            "players"
+                        )
+                            .child(newHost)
+                            .child("isHost")
+                            .value =
+                            true
                     }
 
+                    /*
+                     * If the Word Master left, transfer the role
+                     * to a remaining active player when possible.
+                     */
                     if (
                         oldMaster == uid
                     ) {
 
+                        val newMaster =
+                            activeRemaining.firstOrNull()
+
                         data.child(
                             "wordMasterUid"
                         ).value =
-                            if (
-                                remaining.size == 1
-                            ) {
-                                ""
-                            } else {
-                                remaining.first()
-                            }
+                            newMaster ?: ""
                     }
 
+                    /*
+                     * If the current player left, choose the next
+                     * active non-eliminated player.
+                     */
                     if (
-                        remaining.size == 1
+                        currentUid == uid
                     ) {
 
+                        val candidates =
+                            activeRemaining.filter {
+                                data.child(
+                                    "eliminatedPlayers"
+                                )
+                                    .child(it)
+                                    .getValue(
+                                        Boolean::class.java
+                                    ) != true &&
+                                    it !=
+                                    data.child(
+                                        "wordMasterUid"
+                                    )
+                                        .getValue(
+                                            String::class.java
+                                        )
+                            }
+
+                        if (
+                            candidates.isNotEmpty()
+                        ) {
+
+                            val oldIndex =
+                                remaining.indexOf(uid)
+
+                            var chosen =
+                                candidates.first()
+
+                            if (
+                                oldIndex >= 0
+                            ) {
+
+                                for (
+                                    step in 1..remaining.size
+                                ) {
+
+                                    val index =
+                                        (
+                                            oldIndex +
+                                                step
+                                        ) %
+                                            remaining.size
+
+                                    val candidate =
+                                        remaining[
+                                            index
+                                        ]
+
+                                    if (
+                                        candidates.contains(
+                                            candidate
+                                        )
+                                    ) {
+
+                                        chosen =
+                                            candidate
+
+                                        break
+                                    }
+                                }
+                            }
+
+                            data.child(
+                                "currentPlayerUid"
+                            ).value =
+                                chosen
+
+                            data.child(
+                                "turnEndsAt"
+                            ).value =
+                                if (
+                                    secondsPerTurn <= 0
+                                ) {
+
+                                    0L
+
+                                } else {
+
+                                    System.currentTimeMillis() +
+                                        secondsPerTurn *
+                                        1000L
+                                }
+
+                        } else if (
+                            activeRemaining.isNotEmpty()
+                        ) {
+
+                            data.child(
+                                "currentPlayerUid"
+                            ).value =
+                                activeRemaining.first()
+
+                            data.child(
+                                "turnEndsAt"
+                            ).value =
+                                if (
+                                    secondsPerTurn <= 0
+                                ) {
+
+                                    0L
+
+                                } else {
+
+                                    System.currentTimeMillis() +
+                                        secondsPerTurn *
+                                        1000L
+                                }
+
+                        } else {
+
+                            data.child(
+                                "currentPlayerUid"
+                            ).value =
+                                ""
+
+                            data.child(
+                                "turnEndsAt"
+                            ).value =
+                                0L
+                        }
+                    }
+
+                    /*
+                     * If exactly one active player remains,
+                     * make sure that player is the current player.
+                     * This lets the remaining player continue
+                     * rather than getting stuck on a departed UID.
+                     */
+                    if (
+                        activeRemaining.size == 1
+                    ) {
+
+                        val onlyPlayer =
+                            activeRemaining.first()
+
+                        data.child(
+                            "currentPlayerUid"
+                        ).value =
+                            onlyPlayer
+
+                        /*
+                         * Once only one active player remains,
+                         * there should not be a separate Word Master
+                         * blocking that player's turn.
+                         */
                         data.child(
                             "wordMasterUid"
                         ).value =
                             ""
 
                         data.child(
-                            "currentPlayerUid"
-                        ).value =
-                            remaining.first()
-
-                        data.child(
-                            "turnEndsAt"
-                        ).value =
-                            if (
-                                secondsPerTurn <= 0
-                            ) {
-
-                                0L
-
-                            } else {
-
-                                System.currentTimeMillis() +
-                                    secondsPerTurn * 1000L
-                            }
-
-                        data.child(
                             "phase"
                         ).value =
                             "normal"
 
-                    } else if (
-                        currentUid == uid
-                    ) {
-
-                        val currentIndex =
-                            remaining.indexOf(
-                                currentUid
-                            )
-
-                        val nextIndex =
-                            if (
-                                currentIndex >= 0
-                            ) {
-
-                                (
-                                    currentIndex + 1
-                                ) % remaining.size
-
-                            } else {
-
-                                0
-                            }
-
-                        data.child(
-                            "currentPlayerUid"
-                        ).value =
-                            remaining[
-                                nextIndex
-                            ]
-
                         data.child(
                             "turnEndsAt"
                         ).value =
@@ -4627,7 +5544,8 @@ class OnlineGameRoundActivity : Activity() {
                             } else {
 
                                 System.currentTimeMillis() +
-                                    secondsPerTurn * 1000L
+                                    secondsPerTurn *
+                                    1000L
                             }
                     }
 
@@ -4680,6 +5598,11 @@ class OnlineGameRoundActivity : Activity() {
 
         timer = null
         wholeWordTimer = null
+
+        timerStateUid = ""
+        timerStateEndsAt = -1L
+        timerStatePhase = ""
+        timerStateRound = -1
     }
 
     private fun removeFirebaseListener() {
