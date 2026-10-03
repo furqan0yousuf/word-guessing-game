@@ -1,75 +1,69 @@
-package com.wordguessing.game
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-import android.app.Activity
-import android.os.Bundle
-import android.view.Gravity
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
+    <application
+        android:allowBackup="true"
+        android:label="Word Guessing Game"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.WordGuessingGame">
 
-class OnlineMultiplayerActivity : Activity() {
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
 
-        val layout = LinearLayout(this)
+        </activity>
 
-        layout.orientation = LinearLayout.VERTICAL
-        layout.gravity = Gravity.CENTER
-        layout.setPadding(24, 24, 24, 24)
+        <activity
+            android:name=".PlayerSetupActivity"
+            android:exported="false" />
 
-        val title = TextView(this)
+        <activity
+            android:name=".GameSetupActivity"
+            android:exported="false" />
 
-        title.text = "Online Multiplayer"
-        title.textSize = 28f
-        title.gravity = Gravity.CENTER
+        <activity
+            android:name=".GameActivity"
+            android:exported="false" />
 
-        layout.addView(title)
+        <activity
+            android:name=".OnlineMultiplayerActivity"
+            android:exported="false" />
 
-        val createButton = Button(this)
+        <activity
+            android:name=".SinglePlayerActivity"
+            android:exported="false" />
 
-        createButton.text = "Create a Game"
+        <activity
+            android:name=".SinglePlayerSetupActivity"
+            android:exported="false" />
 
-        createButton.setOnClickListener {
-            startActivity(
-                android.content.Intent(
-                    this,
-                    OnlineGameActivity::class.java
-                )
-            )
-        }
+        <!-- Online Game screens -->
 
-        layout.addView(createButton)
+        <activity
+            android:name=".OnlineGameActivity"
+            android:exported="false" />
 
-        val joinButton = Button(this)
+        <activity
+            android:name=".CreateGameActivity"
+            android:exported="false" />
 
-        joinButton.text = "Join a Game"
+        <activity
+            android:name=".JoinGameActivity"
+            android:exported="false" />
 
-        joinButton.setOnClickListener {
-            startActivity(
-                android.content.Intent(
-                    this,
-                    JoinGameActivity::class.java
-                )
-            )
-        }
+        <activity
+            android:name=".GameWaitingActivity"
+            android:exported="false" />
 
-        layout.addView(joinButton)
+        <activity
+            android:name=".OnlineGameRoundActivity"
+            android:exported="false" />
 
-        val publicButton = Button(this)
+    </application>
 
-        publicButton.text = "Browse Public Games"
-
-        publicButton.setOnClickListener {
-            android.widget.Toast.makeText(
-                this,
-                "Public games will be available in a future update.",
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-        }
-
-        layout.addView(publicButton)
-
-        setContentView(layout)
-    }
-}
+</manifest>
