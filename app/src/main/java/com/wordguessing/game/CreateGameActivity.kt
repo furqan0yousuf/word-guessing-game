@@ -6,10 +6,13 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
@@ -98,6 +101,131 @@ class CreateGameActivity : Activity() {
 
         layout.addView(nameInput)
 
+        // ROOM TYPE
+        val roomTypeTitle =
+            TextView(this)
+
+        roomTypeTitle.text =
+            "Game Visibility"
+
+        roomTypeTitle.textSize =
+            20f
+
+        roomTypeTitle.setPadding(
+            0,
+            30,
+            0,
+            10
+        )
+
+        layout.addView(roomTypeTitle)
+
+        val roomTypeGroup =
+            RadioGroup(this)
+
+        roomTypeGroup.orientation =
+            RadioGroup.VERTICAL
+
+        val publicRadio =
+            RadioButton(this)
+
+        publicRadio.text =
+            "Public Game"
+
+        publicRadio.textSize =
+            18f
+
+        val privateRadio =
+            RadioButton(this)
+
+        privateRadio.text =
+            "Private Game"
+
+        privateRadio.textSize =
+            18f
+
+        roomTypeGroup.addView(
+            publicRadio
+        )
+
+        roomTypeGroup.addView(
+            privateRadio
+        )
+
+        /*
+         * Default = Public Game.
+         */
+        publicRadio.isChecked =
+            true
+
+        layout.addView(
+            roomTypeGroup
+        )
+
+        // PRIVATE PASSWORD
+        val passwordLayout =
+            LinearLayout(this)
+
+        passwordLayout.orientation =
+            LinearLayout.VERTICAL
+
+        passwordLayout.visibility =
+            View.GONE
+
+        layout.addView(
+            passwordLayout
+        )
+
+        val passwordTitle =
+            TextView(this)
+
+        passwordTitle.text =
+            "Private Game Password"
+
+        passwordTitle.textSize =
+            20f
+
+        passwordTitle.setPadding(
+            0,
+            15,
+            0,
+            10
+        )
+
+        passwordLayout.addView(
+            passwordTitle
+        )
+
+        val passwordInput =
+            EditText(this)
+
+        passwordInput.hint =
+            "Enter password"
+
+        passwordInput.textSize =
+            20f
+
+        passwordInput.setSingleLine(true)
+
+        passwordLayout.addView(
+            passwordInput
+        )
+
+        roomTypeGroup.setOnCheckedChangeListener {
+                _,
+                checkedId ->
+
+            passwordLayout.visibility =
+                if (
+                    checkedId ==
+                    privateRadio.id
+                ) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+        }
+
         // MAXIMUM ACTIVE PLAYERS
         val playersTitle =
             TextView(this)
@@ -178,14 +306,12 @@ class CreateGameActivity : Activity() {
 
         /*
          * Default room capacity is 4.
-         *
-         * This keeps the current behavior
-         * unchanged unless the host chooses
-         * a larger room.
          */
         roomCapacitySpinner.setSelection(0)
 
-        layout.addView(roomCapacitySpinner)
+        layout.addView(
+            roomCapacitySpinner
+        )
 
         // WAITING PLAYER GUESSES
         val waitingGuessesTitle =
@@ -204,7 +330,9 @@ class CreateGameActivity : Activity() {
             10
         )
 
-        layout.addView(waitingGuessesTitle)
+        layout.addView(
+            waitingGuessesTitle
+        )
 
         val waitingGuessesSpinner =
             Spinner(this)
@@ -230,7 +358,9 @@ class CreateGameActivity : Activity() {
          */
         waitingGuessesSpinner.setSelection(1)
 
-        layout.addView(waitingGuessesSpinner)
+        layout.addView(
+            waitingGuessesSpinner
+        )
 
         // WORD SELECTION
         val wordSelectionTitle =
@@ -254,7 +384,9 @@ class CreateGameActivity : Activity() {
             10
         )
 
-        layout.addView(wordSelectionTitle)
+        layout.addView(
+            wordSelectionTitle
+        )
 
         val wordSelectionSpinner =
             Spinner(this)
@@ -272,7 +404,9 @@ class CreateGameActivity : Activity() {
                 wordSelectionOptions
             )
 
-        layout.addView(wordSelectionSpinner)
+        layout.addView(
+            wordSelectionSpinner
+        )
 
         // MANUAL WORD
         val manualWordInput =
@@ -295,10 +429,10 @@ class CreateGameActivity : Activity() {
 
         wordSelectionSpinner.onItemSelectedListener =
             object :
-                android.widget.AdapterView.OnItemSelectedListener {
+                AdapterView.OnItemSelectedListener {
 
                 override fun onItemSelected(
-                    parent: android.widget.AdapterView<*>?,
+                    parent: AdapterView<*>?,
                     view: View?,
                     position: Int,
                     id: Long
@@ -313,7 +447,7 @@ class CreateGameActivity : Activity() {
                 }
 
                 override fun onNothingSelected(
-                    parent: android.widget.AdapterView<*>?
+                    parent: AdapterView<*>?
                 ) {
                 }
             }
@@ -340,7 +474,9 @@ class CreateGameActivity : Activity() {
             10
         )
 
-        layout.addView(categoryTitle)
+        layout.addView(
+            categoryTitle
+        )
 
         val categorySpinner =
             Spinner(this)
@@ -363,7 +499,9 @@ class CreateGameActivity : Activity() {
                 categoryOptions
             )
 
-        layout.addView(categorySpinner)
+        layout.addView(
+            categorySpinner
+        )
 
         // ADVANCED SETTINGS BUTTON
         val advancedButton =
@@ -524,42 +662,6 @@ class CreateGameActivity : Activity() {
             nextMasterSpinner
         )
 
-        // PASSWORD
-        val passwordTitle =
-            TextView(this)
-
-        passwordTitle.text =
-            "Password (Optional)"
-
-        passwordTitle.textSize =
-            20f
-
-        passwordTitle.setPadding(
-            0,
-            20,
-            0,
-            10
-        )
-
-        advancedLayout.addView(
-            passwordTitle
-        )
-
-        val passwordInput =
-            EditText(this)
-
-        passwordInput.hint =
-            "Leave blank for no password"
-
-        passwordInput.textSize =
-            20f
-
-        passwordInput.setSingleLine(true)
-
-        advancedLayout.addView(
-            passwordInput
-        )
-
         // DEFAULT SETTINGS BUTTON
         val defaultButton =
             Button(this)
@@ -604,8 +706,6 @@ class CreateGameActivity : Activity() {
             turnsSpinner.setSelection(0)
 
             nextMasterSpinner.setSelection(1)
-
-            passwordInput.setText("")
 
             Toast.makeText(
                 this,
@@ -665,6 +765,46 @@ class CreateGameActivity : Activity() {
                 Toast.makeText(
                     this,
                     "Please enter your name.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                return@setOnClickListener
+            }
+
+            /*
+             * Determine whether this is
+             * a public or private room.
+             */
+            val isPublic =
+                publicRadio.isChecked
+
+            val roomType =
+                if (isPublic) {
+                    "public"
+                } else {
+                    "private"
+                }
+
+            val password =
+                if (isPublic) {
+                    ""
+                } else {
+                    passwordInput.text
+                        .toString()
+                        .trim()
+                }
+
+            /*
+             * A private room must have a password.
+             */
+            if (
+                !isPublic &&
+                password.isEmpty()
+            ) {
+
+                Toast.makeText(
+                    this,
+                    "Please enter a password for the private game.",
                     Toast.LENGTH_SHORT
                 ).show()
 
@@ -761,11 +901,6 @@ class CreateGameActivity : Activity() {
                     .selectedItem
                     .toString()
 
-            val password =
-                passwordInput.text
-                    .toString()
-                    .trim()
-
             createButton.isEnabled =
                 false
 
@@ -792,7 +927,9 @@ class CreateGameActivity : Activity() {
                         selectedTotalTurns,
                     selectedNextMaster =
                         selectedNextMaster,
-                    password = password
+                    password = password,
+                    roomType = roomType,
+                    isPublic = isPublic
                 )
 
             } else {
@@ -840,7 +977,11 @@ class CreateGameActivity : Activity() {
                             selectedNextMaster =
                                 selectedNextMaster,
                             password =
-                                password
+                                password,
+                            roomType =
+                                roomType,
+                            isPublic =
+                                isPublic
                         )
                     }
                     .addOnFailureListener {
@@ -872,7 +1013,9 @@ class CreateGameActivity : Activity() {
         selectedTime: Int,
         selectedTotalTurns: Int,
         selectedNextMaster: String,
-        password: String
+        password: String,
+        roomType: String,
+        isPublic: Boolean
     ) {
 
         val gamesReference =
@@ -880,16 +1023,21 @@ class CreateGameActivity : Activity() {
                 .getReference("games")
 
         findAvailableGameCode(
-            gamesReference = gamesReference,
+            gamesReference =
+                gamesReference,
             uid = uid,
-            playerName = playerName,
-            playerCount = playerCount,
-            roomCapacity = roomCapacity,
+            playerName =
+                playerName,
+            playerCount =
+                playerCount,
+            roomCapacity =
+                roomCapacity,
             waitingPlayerGuesses =
                 waitingPlayerGuesses,
             selectedWordSelection =
                 selectedWordSelection,
-            manualWord = manualWord,
+            manualWord =
+                manualWord,
             selectedCategory =
                 selectedCategory,
             selectedTime =
@@ -898,7 +1046,12 @@ class CreateGameActivity : Activity() {
                 selectedTotalTurns,
             selectedNextMaster =
                 selectedNextMaster,
-            password = password
+            password =
+                password,
+            roomType =
+                roomType,
+            isPublic =
+                isPublic
         )
     }
 
@@ -916,7 +1069,9 @@ class CreateGameActivity : Activity() {
         selectedTime: Int,
         selectedTotalTurns: Int,
         selectedNextMaster: String,
-        password: String
+        password: String,
+        roomType: String,
+        isPublic: Boolean
     ) {
 
         val gameCode =
@@ -936,7 +1091,8 @@ class CreateGameActivity : Activity() {
                     findAvailableGameCode(
                         gamesReference =
                             gamesReference,
-                        uid = uid,
+                        uid =
+                            uid,
                         playerName =
                             playerName,
                         playerCount =
@@ -958,11 +1114,18 @@ class CreateGameActivity : Activity() {
                         selectedNextMaster =
                             selectedNextMaster,
                         password =
-                            password
+                            password,
+                        roomType =
+                            roomType,
+                        isPublic =
+                            isPublic
                     )
 
                     return@addOnSuccessListener
                 }
+
+                val currentTime =
+                    System.currentTimeMillis()
 
                 val hostPlayer =
                     hashMapOf<String, Any>(
@@ -970,39 +1133,41 @@ class CreateGameActivity : Activity() {
                         "name" to playerName,
                         "isHost" to true,
                         "isActive" to true,
-                        "joinedAt" to
-                            System.currentTimeMillis()
+                        "joinedAt" to currentTime
                     )
 
                 val gameData =
                     hashMapOf<String, Any>(
                         "gameCode" to gameCode,
+
                         "hostUid" to uid,
+
                         "hostName" to playerName,
+
+                        /*
+                         * PUBLIC / PRIVATE
+                         */
+                        "roomType" to roomType,
+
+                        "isPublic" to isPublic,
 
                         /*
                          * Existing field.
                          *
-                         * This now represents the
-                         * maximum ACTIVE players.
+                         * This represents the maximum
+                         * ACTIVE players.
                          */
                         "maxPlayers" to playerCount,
 
                         /*
-                         * New Game Room setting.
-                         *
-                         * This represents everyone who
-                         * can join the room, including
-                         * waiting players.
+                         * Maximum number of people
+                         * who can be inside the room.
                          */
                         "roomCapacity" to roomCapacity,
 
                         /*
-                         * New Game Room setting.
-                         *
                          * Number of whole-word guesses
-                         * allowed for each waiting player
-                         * per round.
+                         * allowed for waiting players.
                          */
                         "waitingPlayerGuesses" to
                             waitingPlayerGuesses,
@@ -1010,7 +1175,8 @@ class CreateGameActivity : Activity() {
                         "wordSelection" to
                             selectedWordSelection,
 
-                        "manualWord" to manualWord,
+                        "manualWord" to
+                            manualWord,
 
                         "category" to
                             selectedCategory,
@@ -1024,12 +1190,20 @@ class CreateGameActivity : Activity() {
                         "nextWordMaster" to
                             selectedNextMaster,
 
+                        /*
+                         * Password is blank for public rooms.
+                         */
                         "password" to password,
 
                         "status" to "waiting",
 
-                        "createdAt" to
-                            System.currentTimeMillis(),
+                        "createdAt" to currentTime,
+
+                        /*
+                         * This will be used later for
+                         * private-room expiration.
+                         */
+                        "lastPlayedAt" to currentTime,
 
                         "players" to
                             mapOf(
@@ -1100,6 +1274,16 @@ class CreateGameActivity : Activity() {
                         intent.putExtra(
                             "password",
                             password
+                        )
+
+                        intent.putExtra(
+                            "roomType",
+                            roomType
+                        )
+
+                        intent.putExtra(
+                            "isPublic",
+                            isPublic
                         )
 
                         intent.putExtra(
