@@ -2187,23 +2187,26 @@ class OnlineGameRoundActivity : Activity() {
             builder.toString().trim()
     }
 
+    
     private fun updateLetterButtons() {
 
-        for (
-            i in 0 until
-                letterBoard.childCount
-        ) {
+        val canPlay =
+            !roundFinished &&
+            phase == "normal" &&
+            currentPlayerUid == myUid &&
+            isMyPlayerActive()
 
+        for (
+            i in 0 until letterBoard.childCount
+        ) {
             val row =
                 letterBoard.getChildAt(i)
                     as? LinearLayout
                     ?: continue
 
             for (
-                j in 0 until
-                    row.childCount
+                j in 0 until row.childCount
             ) {
-
                 val button =
                     row.getChildAt(j)
                         as? Button
@@ -2213,35 +2216,26 @@ class OnlineGameRoundActivity : Activity() {
                     button.tag as? Char
                         ?: continue
 
-                if (
-                    guessedLetters.contains(
-                        letter
-                    )
-                ) {
+                val isGuessed =
+                    guessedLetters.contains(letter)
 
+                if (button.isSelected != isGuessed) {
                     button.setBackgroundColor(
-                        Color.RED
+                        if (isGuessed) {
+                            Color.RED
+                        } else {
+                            Color.rgb(0, 100, 0)
+                        }
                     )
 
-                    button.isEnabled =
-                        false
+                    button.isSelected = isGuessed
+                }
 
-                } else {
+                val shouldEnable =
+                    canPlay && !isGuessed
 
-                    button.setBackgroundColor(
-                        Color.rgb(
-                            0,
-                            100,
-                            0
-                        )
-                    )
-
-                    button.isEnabled =
-                        !roundFinished &&
-                            phase == "normal" &&
-                            currentPlayerUid ==
-                            myUid &&
-                            isMyPlayerActive()
+                if (button.isEnabled != shouldEnable) {
+                    button.isEnabled = shouldEnable
                 }
             }
         }
