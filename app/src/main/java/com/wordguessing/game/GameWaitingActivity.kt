@@ -1,3 +1,4 @@
+
 package com.wordguessing.game
 
 import android.app.Activity
@@ -21,284 +22,155 @@ import com.google.firebase.database.ValueEventListener
 
 class GameWaitingActivity : Activity() {
 
-    private val database =
-        FirebaseDatabase.getInstance()
+    private val database = FirebaseDatabase.getInstance()
 
-    private var gameCode =
-        "------"
+    private var gameCode = "------"
 
-    /*
-     * Existing setting:
-     * maximum ACTIVE players.
-     */
-    private var playerCount =
-        2
+    // Maximum active players.
+    private var playerCount = 2
 
-    /*
-     * New setting:
-     * maximum TOTAL people in the room.
-     */
-    private var roomCapacity =
-        2
+    // Maximum total people in the room.
+    private var roomCapacity = 2
 
-    /*
-     * New setting:
-     * whole-word guesses for waiting players.
-     */
-    private var waitingPlayerGuesses =
-        2
+    // Whole-word guesses for waiting players.
+    private var waitingPlayerGuesses = 2
 
-    private var wordSelection =
-        "Random Word"
-
-    private var manualWord =
-        ""
-
-    private var category =
-        "Random"
-
-    private var secondsPerTurn =
-        20
-
-    private var totalTurns =
-        0
+    private var wordSelection = "Random Word"
+    private var manualWord = ""
+    private var category = "Random"
+    private var secondsPerTurn = 20
+    private var totalTurns = 0
 
     private var nextWordMaster =
         "Winner becomes Word Master"
 
-    private var playerName =
-        "Player 1"
+    private var playerName = "Player 1"
+    private var password = ""
+    private var isHost = true
 
-    private var password =
-        ""
+    private lateinit var playersText: TextView
+    private lateinit var joinedTitle: TextView
+    private lateinit var activeTitle: TextView
+    private lateinit var waitingTitle: TextView
+    private lateinit var statusText: TextView
+    private lateinit var startButton: Button
 
-    private var isHost =
-        true
+    private var gameListener: ValueEventListener? = null
 
-    private lateinit var playersText:
-        TextView
+    // Prevent duplicate navigation to the game screen.
+    private var openingOnlineGame = false
 
-    private lateinit var joinedTitle:
-        TextView
+    // Prevent repeated start requests while Firebase is checked.
+    private var checkingStart = false
 
-    private lateinit var activeTitle:
-        TextView
-
-    private lateinit var waitingTitle:
-        TextView
-
-    private lateinit var statusText:
-        TextView
-
-    private lateinit var startButton:
-        Button
-
-    private var gameListener:
-        ValueEventListener? = null
-
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-        super.onCreate(
-            savedInstanceState
-        )
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
         readIntentData()
-
         buildScreen()
-
         listenToGame()
     }
 
     private fun readIntentData() {
+        gameCode = intent.getStringExtra("gameCode") ?: "------"
 
-        gameCode =
-            intent.getStringExtra(
-                "gameCode"
-            ) ?: "------"
+        playerCount = intent.getIntExtra("playerCount", 2)
 
-        playerCount =
-            intent.getIntExtra(
-                "playerCount",
-                2
-            )
+        roomCapacity = intent.getIntExtra(
+            "roomCapacity",
+            playerCount
+        )
 
-        roomCapacity =
-            intent.getIntExtra(
-                "roomCapacity",
-                playerCount
-            )
-
-        waitingPlayerGuesses =
-            intent.getIntExtra(
-                "waitingPlayerGuesses",
-                2
-            )
+        waitingPlayerGuesses = intent.getIntExtra(
+            "waitingPlayerGuesses",
+            2
+        )
 
         wordSelection =
-            intent.getStringExtra(
-                "wordSelection"
-            ) ?: "Random Word"
+            intent.getStringExtra("wordSelection") ?: "Random Word"
 
         manualWord =
-            intent.getStringExtra(
-                "manualWord"
-            ) ?: ""
+            intent.getStringExtra("manualWord") ?: ""
 
         category =
-            intent.getStringExtra(
-                "category"
-            ) ?: "Random"
+            intent.getStringExtra("category") ?: "Random"
 
         secondsPerTurn =
-            intent.getIntExtra(
-                "secondsPerTurn",
-                20
-            )
+            intent.getIntExtra("secondsPerTurn", 20)
 
         totalTurns =
-            intent.getIntExtra(
-                "totalTurns",
-                0
-            )
+            intent.getIntExtra("totalTurns", 0)
 
         nextWordMaster =
-            intent.getStringExtra(
-                "nextWordMaster"
-            ) ?: "Winner becomes Word Master"
+            intent.getStringExtra("nextWordMaster")
+                ?: "Winner becomes Word Master"
 
         playerName =
-            intent.getStringExtra(
-                "playerName"
-            ) ?: "Player 1"
+            intent.getStringExtra("playerName") ?: "Player 1"
 
         password =
-            intent.getStringExtra(
-                "password"
-            ) ?: ""
+            intent.getStringExtra("password") ?: ""
 
         isHost =
-            intent.getBooleanExtra(
-                "isHost",
-                true
-            )
+            intent.getBooleanExtra("isHost", true)
     }
 
     private fun buildScreen() {
+        val scrollView = ScrollView(this)
 
-        val scrollView =
-            ScrollView(this)
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
 
-        val layout =
-            LinearLayout(this)
-
-        layout.orientation =
-            LinearLayout.VERTICAL
-
-        layout.setPadding(
-            24,
-            24,
-            24,
-            40
-        )
-
-        scrollView.addView(
-            layout
-        )
+        layout.setPadding(24, 24, 24, 40)
+        scrollView.addView(layout)
 
         // TITLE
-        val title =
-            TextView(this)
+        val title = TextView(this)
+        title.text = "Game Waiting Room"
+        title.textSize = 28f
+        title.gravity = Gravity.CENTER
+        title.setTextColor(Color.BLACK)
 
-        title.text =
-            "Game Waiting Room"
-
-        title.textSize =
-            28f
-
-        title.gravity =
-            Gravity.CENTER
-
-        title.setTextColor(
-            Color.BLACK
-        )
-
-        layout.addView(
-            title
-        )
+        layout.addView(title)
 
         // GAME CODE
-        val codeTitle =
-            TextView(this)
+        val codeTitle = TextView(this)
+        codeTitle.text = "Game Code"
+        codeTitle.textSize = 20f
+        codeTitle.setPadding(0, 30, 0, 5)
 
-        codeTitle.text =
-            "Game Code"
+        layout.addView(codeTitle)
 
-        codeTitle.textSize =
-            20f
-
-        codeTitle.setPadding(
-            0,
-            30,
-            0,
-            5
-        )
-
-        layout.addView(
-            codeTitle
-        )
-
-        val codeText =
-            TextView(this)
-
-        codeText.text =
-            gameCode
-
-        codeText.textSize =
-            30f
-
-        codeText.gravity =
-            Gravity.CENTER
+        val codeText = TextView(this)
+        codeText.text = gameCode
+        codeText.textSize = 30f
+        codeText.gravity = Gravity.CENTER
 
         codeText.setTypeface(
             null,
             android.graphics.Typeface.BOLD
         )
 
-        layout.addView(
-            codeText
-        )
+        layout.addView(codeText)
 
         // COPY BUTTON
-        val copyButton =
-            Button(this)
+        val copyButton = Button(this)
+        copyButton.text = "COPY GAME CODE"
+        copyButton.textSize = 16f
 
-        copyButton.text =
-            "COPY GAME CODE"
-
-        copyButton.textSize =
-            16f
-
-        layout.addView(
-            copyButton
-        )
+        layout.addView(copyButton)
 
         copyButton.setOnClickListener {
+            val clipboard = getSystemService(
+                CLIPBOARD_SERVICE
+            ) as ClipboardManager
 
-            val clipboard =
-                getSystemService(
-                    CLIPBOARD_SERVICE
-                ) as ClipboardManager
-
-            val clip =
-                ClipData.newPlainText(
-                    "Game Code",
-                    gameCode
-                )
-
-            clipboard.setPrimaryClip(
-                clip
+            val clip = ClipData.newPlainText(
+                "Game Code",
+                gameCode
             )
+
+            clipboard.setPrimaryClip(clip)
 
             Toast.makeText(
                 this,
@@ -308,252 +180,126 @@ class GameWaitingActivity : Activity() {
         }
 
         // GAME ROOM SUMMARY
-        val roomTitle =
-            TextView(this)
-
-        roomTitle.text =
-            "GAME ROOM"
-
-        roomTitle.textSize =
-            20f
+        val roomTitle = TextView(this)
+        roomTitle.text = "GAME ROOM"
+        roomTitle.textSize = 20f
 
         roomTitle.setTypeface(
             null,
             android.graphics.Typeface.BOLD
         )
 
-        roomTitle.setPadding(
-            0,
-            30,
-            0,
-            10
-        )
+        roomTitle.setPadding(0, 30, 0, 10)
+        layout.addView(roomTitle)
 
-        layout.addView(
-            roomTitle
-        )
-
-        joinedTitle =
-            TextView(this)
-
-        joinedTitle.textSize =
-            19f
+        joinedTitle = TextView(this)
+        joinedTitle.textSize = 19f
 
         joinedTitle.setTypeface(
             null,
             android.graphics.Typeface.BOLD
         )
 
-        layout.addView(
-            joinedTitle
-        )
+        layout.addView(joinedTitle)
 
-        activeTitle =
-            TextView(this)
+        activeTitle = TextView(this)
+        activeTitle.textSize = 18f
+        activeTitle.setPadding(0, 5, 0, 0)
 
-        activeTitle.textSize =
-            18f
+        layout.addView(activeTitle)
 
-        activeTitle.setPadding(
-            0,
-            5,
-            0,
-            0
-        )
+        waitingTitle = TextView(this)
+        waitingTitle.textSize = 18f
+        waitingTitle.setPadding(0, 5, 0, 10)
 
-        layout.addView(
-            activeTitle
-        )
-
-        waitingTitle =
-            TextView(this)
-
-        waitingTitle.textSize =
-            18f
-
-        waitingTitle.setPadding(
-            0,
-            5,
-            0,
-            10
-        )
-
-        layout.addView(
-            waitingTitle
-        )
+        layout.addView(waitingTitle)
 
         // PLAYERS
-        val playersHeading =
-            TextView(this)
-
-        playersHeading.text =
-            "Players"
-
-        playersHeading.textSize =
-            20f
+        val playersHeading = TextView(this)
+        playersHeading.text = "Players"
+        playersHeading.textSize = 20f
 
         playersHeading.setTypeface(
             null,
             android.graphics.Typeface.BOLD
         )
 
-        playersHeading.setPadding(
-            0,
-            20,
-            0,
-            10
-        )
+        playersHeading.setPadding(0, 20, 0, 10)
+        layout.addView(playersHeading)
 
-        layout.addView(
-            playersHeading
-        )
+        playersText = TextView(this)
+        playersText.textSize = 18f
 
-        playersText =
-            TextView(this)
-
-        playersText.textSize =
-            18f
-
-        layout.addView(
-            playersText
-        )
+        layout.addView(playersText)
 
         // GAME SETTINGS
-        val settingsTitle =
-            TextView(this)
-
-        settingsTitle.text =
-            "Game Settings"
-
-        settingsTitle.textSize =
-            20f
+        val settingsTitle = TextView(this)
+        settingsTitle.text = "Game Settings"
+        settingsTitle.textSize = 20f
 
         settingsTitle.setTypeface(
             null,
             android.graphics.Typeface.BOLD
         )
 
-        settingsTitle.setPadding(
-            0,
-            30,
-            0,
-            10
-        )
+        settingsTitle.setPadding(0, 30, 0, 10)
+        layout.addView(settingsTitle)
 
-        layout.addView(
-            settingsTitle
-        )
+        val settingsText = TextView(this)
+        settingsText.textSize = 17f
+        settingsText.text = buildSettingsText()
 
-        val settingsText =
-            TextView(this)
-
-        settingsText.textSize =
-            17f
-
-        settingsText.text =
-            buildSettingsText()
-
-        layout.addView(
-            settingsText
-        )
+        layout.addView(settingsText)
 
         // RULE TEXT
-        val ruleText =
-            TextView(this)
-
-        ruleText.textSize =
-            16f
-
-        ruleText.setPadding(
-            0,
-            25,
-            0,
-            15
-        )
+        val ruleText = TextView(this)
+        ruleText.textSize = 16f
+        ruleText.setPadding(0, 25, 0, 15)
 
         ruleText.text =
             "Players marked Active participate in the current game. " +
             "Players marked Waiting are in the Game Room and will " +
             "be able to participate in future rounds."
 
-        layout.addView(
-            ruleText
-        )
+        layout.addView(ruleText)
 
         // STATUS
-        statusText =
-            TextView(this)
+        statusText = TextView(this)
+        statusText.textSize = 18f
+        statusText.gravity = Gravity.CENTER
+        statusText.setPadding(0, 15, 0, 15)
 
-        statusText.textSize =
-            18f
-
-        statusText.gravity =
-            Gravity.CENTER
-
-        statusText.setPadding(
-            0,
-            15,
-            0,
-            15
-        )
-
-        layout.addView(
-            statusText
-        )
+        layout.addView(statusText)
 
         // START BUTTON
-        startButton =
-            Button(this)
-
-        startButton.text =
-            "START GAME"
-
-        startButton.textSize =
-            18f
+        startButton = Button(this)
+        startButton.text = "START GAME"
+        startButton.textSize = 18f
 
         startButton.visibility =
-            if (isHost) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            if (isHost) View.VISIBLE else View.GONE
 
-        layout.addView(
-            startButton
-        )
+        layout.addView(startButton)
 
         startButton.setOnClickListener {
-
             startGame()
         }
 
         // LEAVE BUTTON
-        val leaveButton =
-            Button(this)
+        val leaveButton = Button(this)
+        leaveButton.text = "LEAVE GAME"
+        leaveButton.textSize = 18f
 
-        leaveButton.text =
-            "LEAVE GAME"
-
-        leaveButton.textSize =
-            18f
-
-        layout.addView(
-            leaveButton
-        )
+        layout.addView(leaveButton)
 
         leaveButton.setOnClickListener {
-
             leaveGame()
         }
 
-        setContentView(
-            scrollView
-        )
+        setContentView(scrollView)
     }
 
-    private fun buildSettingsText():
-        String {
-
+    private fun buildSettingsText(): String {
         val timeText =
             if (secondsPerTurn == 0) {
                 "Unlimited"
@@ -581,222 +327,133 @@ class GameWaitingActivity : Activity() {
     }
 
     private fun listenToGame() {
+        val gameReference = database
+            .getReference("games")
+            .child(gameCode)
 
-        val gameReference =
-            database
-                .getReference("games")
-                .child(gameCode)
+        gameListener = object : ValueEventListener {
 
-        gameListener =
-            object : ValueEventListener {
-
-                override fun onDataChange(
-                    snapshot: DataSnapshot
+            override fun onDataChange(snapshot: DataSnapshot) {
+                // Ignore callbacks after navigation has started.
+                if (
+                    openingOnlineGame ||
+                    isFinishing ||
+                    isDestroyed
                 ) {
-
-                    if (!snapshot.exists()) {
-
-                        Toast.makeText(
-                            this@GameWaitingActivity,
-                            "Game no longer exists.",
-                            Toast.LENGTH_LONG
-                        ).show()
-
-                        finish()
-
-                        return
-                    }
-
-                    val status =
-                        snapshot
-                            .child("status")
-                            .getValue(
-                                String::class.java
-                            )
-                            ?: "waiting"
-
-                    if (
-                        status ==
-                        "playing"
-                    ) {
-
-                        openOnlineGame(
-                            snapshot
-                        )
-
-                        return
-                    }
-
-                    /*
-                     * Refresh settings from Firebase.
-                     */
-                    playerCount =
-                        snapshot
-                            .child("maxPlayers")
-                            .getValue(
-                                Int::class.java
-                            )
-                            ?: playerCount
-
-                    roomCapacity =
-                        snapshot
-                            .child(
-                                "roomCapacity"
-                            )
-                            .getValue(
-                                Int::class.java
-                            )
-                            ?: playerCount
-
-                    waitingPlayerGuesses =
-                        snapshot
-                            .child(
-                                "waitingPlayerGuesses"
-                            )
-                            .getValue(
-                                Int::class.java
-                            )
-                            ?: 2
-
-                    updatePlayerDisplay(
-                        snapshot
-                    )
-
-                    updateStatus(
-                        snapshot
-                    )
+                    return
                 }
 
-                override fun onCancelled(
-                    error: DatabaseError
-                ) {
+                if (!snapshot.exists()) {
+                    Toast.makeText(
+                        this@GameWaitingActivity,
+                        "Game no longer exists.",
+                        Toast.LENGTH_LONG
+                    ).show()
 
-                    statusText.text =
-                        "Unable to read game room."
+                    finish()
+                    return
                 }
+
+                val status = snapshot
+                    .child("status")
+                    .getValue(String::class.java)
+                    ?: "waiting"
+
+                if (status == "playing") {
+                    openOnlineGame(snapshot)
+                    return
+                }
+
+                // Refresh settings from Firebase.
+                playerCount = snapshot
+                    .child("maxPlayers")
+                    .getValue(Int::class.java)
+                    ?: playerCount
+
+                roomCapacity = snapshot
+                    .child("roomCapacity")
+                    .getValue(Int::class.java)
+                    ?: playerCount
+
+                waitingPlayerGuesses = snapshot
+                    .child("waitingPlayerGuesses")
+                    .getValue(Int::class.java)
+                    ?: 2
+
+                updatePlayerDisplay(snapshot)
+                updateStatus(snapshot)
             }
 
-        gameReference.addValueEventListener(
-            gameListener!!
-        )
+            override fun onCancelled(error: DatabaseError) {
+                if (!openingOnlineGame && !isFinishing) {
+                    statusText.text = "Unable to read game room."
+                }
+            }
+        }
+
+        gameReference.addValueEventListener(gameListener!!)
     }
 
-    private fun updatePlayerDisplay(
-        snapshot: DataSnapshot
-    ) {
+    private fun updatePlayerDisplay(snapshot: DataSnapshot) {
+        val players = snapshot.child("players")
 
-        val players =
-            snapshot
-                .child("players")
+        var totalPlayers = 0
+        var activePlayers = 0
+        var waitingPlayers = 0
 
-        var totalPlayers =
-            0
+        val text = StringBuilder()
 
-        var activePlayers =
-            0
-
-        var waitingPlayers =
-            0
-
-        val text =
-            StringBuilder()
-
-        /*
-         * Sort players by joinedAt so
-         * the display follows join order.
-         */
-        val playerList =
-            players.children
-                .toList()
-                .sortedBy {
-                    it.child("joinedAt")
-                        .getValue(
-                            Long::class.java
-                        )
-                        ?: 0L
-                }
-
-        for (
-            player in playerList
-        ) {
-
-            totalPlayers++
-
-            val name =
-                player
-                    .child("name")
-                    .getValue(
-                        String::class.java
-                    )
-                    ?: "Player"
-
-            val isHost =
-                player
-                    .child("isHost")
-                    .getValue(
-                        Boolean::class.java
-                    )
-                    ?: false
-
-            val isActive =
-                player
-                    .child("isActive")
-                    .getValue(
-                        Boolean::class.java
-                    )
-                    ?: (
-                        activePlayers <
-                            playerCount
-                        )
-
-            if (isActive) {
-
-                activePlayers++
-
-                text.append(
-                    "🟢 "
-                )
-
-                text.append(
-                    name
-                )
-
-                if (isHost) {
-                    text.append(
-                        " (Host)"
-                    )
-                }
-
-                text.append(
-                    " — Active"
-                )
-
-            } else {
-
-                waitingPlayers++
-
-                text.append(
-                    "🟡 "
-                )
-
-                text.append(
-                    name
-                )
-
-                if (isHost) {
-                    text.append(
-                        " (Host)"
-                    )
-                }
-
-                text.append(
-                    " — Waiting"
-                )
+        // Sort players by joinedAt so the display follows join order.
+        val playerList = players.children
+            .toList()
+            .sortedBy {
+                it.child("joinedAt")
+                    .getValue(Long::class.java) ?: 0L
             }
 
-            text.append(
-                "\n"
-            )
+        for (player in playerList) {
+            totalPlayers++
+
+            val name = player
+                .child("name")
+                .getValue(String::class.java)
+                ?: "Player"
+
+            val playerIsHost = player
+                .child("isHost")
+                .getValue(Boolean::class.java)
+                ?: false
+
+            val isActive = player
+                .child("isActive")
+                .getValue(Boolean::class.java)
+                ?: (activePlayers < playerCount)
+
+            if (isActive) {
+                activePlayers++
+
+                text.append("🟢 ")
+                text.append(name)
+
+                if (playerIsHost) {
+                    text.append(" (Host)")
+                }
+
+                text.append(" — Active")
+            } else {
+                waitingPlayers++
+
+                text.append("🟡 ")
+                text.append(name)
+
+                if (playerIsHost) {
+                    text.append(" (Host)")
+                }
+
+                text.append(" — Waiting")
+            }
+
+            text.append("\n")
         }
 
         joinedTitle.text =
@@ -807,47 +464,24 @@ class GameWaitingActivity : Activity() {
 
         waitingTitle.text =
             "Waiting Players: $waitingPlayers / " +
-                "${roomCapacity - playerCount}"
+            "${roomCapacity - playerCount}"
 
-        if (text.isEmpty()) {
-
-            playersText.text =
+        playersText.text =
+            if (text.isEmpty()) {
                 "No players yet."
+            } else {
+                text.toString().trim()
+            }
 
-        } else {
-
-            playersText.text =
-                text.toString()
-                    .trim()
-        }
-
-        /*
-         * Refresh displayed settings.
-         */
-        val settingsText =
-            findSettingsTextView()
-
-        settingsText?.text =
-            buildSettingsText()
+        // Refresh displayed settings.
+        findSettingsTextView()?.text = buildSettingsText()
     }
 
-    private fun findSettingsTextView():
-        TextView? {
-
-        /*
-         * The settings TextView is the
-         * TextView immediately after the
-         * "Game Settings" heading.
-         *
-         * Instead of depending on a generated
-         * resource ID, locate it from the
-         * screen hierarchy.
-         */
-        val root =
-            window.decorView
-                .findViewById<
-                    android.view.ViewGroup
-                    >(android.R.id.content)
+    private fun findSettingsTextView(): TextView? {
+        val root = window.decorView
+            .findViewById<android.view.ViewGroup>(
+                android.R.id.content
+            )
 
         return findTextViewContaining(
             root,
@@ -859,36 +493,21 @@ class GameWaitingActivity : Activity() {
         parent: android.view.ViewGroup,
         textStart: String
     ): TextView? {
-
-        for (
-            i in 0 until parent.childCount
-        ) {
-
-            val child =
-                parent.getChildAt(i)
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChildAt(i)
 
             if (
                 child is TextView &&
-                child.text
-                    .toString()
-                    .startsWith(
-                        textStart
-                    )
+                child.text.toString().startsWith(textStart)
             ) {
-
                 return child
             }
 
-            if (
-                child is
-                android.view.ViewGroup
-            ) {
-
-                val result =
-                    findTextViewContaining(
-                        child,
-                        textStart
-                    )
+            if (child is android.view.ViewGroup) {
+                val result = findTextViewContaining(
+                    child,
+                    textStart
+                )
 
                 if (result != null) {
                     return result
@@ -899,69 +518,60 @@ class GameWaitingActivity : Activity() {
         return null
     }
 
-    private fun updateStatus(
-        snapshot: DataSnapshot
-    ) {
-
-        val players =
-            snapshot
-                .child("players")
-
-        var count =
-            0
-
-        for (
-            ignored in players.children
-        ) {
-            count++
-        }
+    private fun updateStatus(snapshot: DataSnapshot) {
+        val players = snapshot.child("players")
+        val count = players.children.count()
 
         if (isHost) {
-
             if (count >= 2) {
-
                 startButton.isEnabled =
-                    true
+                    !openingOnlineGame && !checkingStart
 
-                statusText.text =
-                    "You can start the game."
-
+                statusText.text = "You can start the game."
             } else {
-
-                startButton.isEnabled =
-                    false
+                startButton.isEnabled = false
 
                 statusText.text =
                     "Waiting for at least 2 players..."
             }
-
         } else {
-
             statusText.text =
                 "Waiting for the host to start the game..."
         }
     }
 
     private fun startGame() {
-
-        if (!isHost) {
+        if (
+            !isHost ||
+            openingOnlineGame ||
+            checkingStart ||
+            isFinishing ||
+            isDestroyed
+        ) {
             return
         }
 
-        val gameReference =
-            database
-                .getReference("games")
-                .child(gameCode)
+        checkingStart = true
+        startButton.isEnabled = false
 
-        /*
-         * Re-read the room before starting
-         * so the host cannot accidentally
-         * start with fewer than 2 people.
-         */
+        val gameReference = database
+            .getReference("games")
+            .child(gameCode)
+
         gameReference.get()
             .addOnSuccessListener { snapshot ->
 
+                if (
+                    openingOnlineGame ||
+                    isFinishing ||
+                    isDestroyed
+                ) {
+                    return@addOnSuccessListener
+                }
+
                 if (!snapshot.exists()) {
+                    checkingStart = false
+                    startButton.isEnabled = true
 
                     Toast.makeText(
                         this,
@@ -972,20 +582,14 @@ class GameWaitingActivity : Activity() {
                     return@addOnSuccessListener
                 }
 
-                val players =
-                    snapshot
-                        .child("players")
-
-                var count =
-                    0
-
-                for (
-                    ignored in players.children
-                ) {
-                    count++
-                }
+                val count = snapshot
+                    .child("players")
+                    .children
+                    .count()
 
                 if (count < 2) {
+                    checkingStart = false
+                    startButton.isEnabled = true
 
                     Toast.makeText(
                         this,
@@ -998,156 +602,137 @@ class GameWaitingActivity : Activity() {
 
                 /*
                  * Do not change status here.
-                 *
-                 * OnlineGameRoundActivity will
-                 * initialize the first round.
+                 * OnlineGameRoundActivity initializes
+                 * the first round.
                  */
-                openOnlineGame(
-                    snapshot
-                )
+                openOnlineGame(snapshot)
             }
             .addOnFailureListener {
+                if (
+                    !isFinishing &&
+                    !isDestroyed &&
+                    !openingOnlineGame
+                ) {
+                    checkingStart = false
+                    startButton.isEnabled = true
 
-                Toast.makeText(
-                    this,
-                    "Could not start the game.",
-                    Toast.LENGTH_LONG
-                ).show()
+                    Toast.makeText(
+                        this,
+                        "Could not start the game.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
     }
 
-    private fun openOnlineGame(
-        snapshot: DataSnapshot
-    ) {
+    private fun openOnlineGame(snapshot: DataSnapshot) {
+        if (
+            openingOnlineGame ||
+            isFinishing ||
+            isDestroyed
+        ) {
+            return
+        }
 
-        val intent =
-            Intent(
-                this,
-                OnlineGameRoundActivity::class.java
-            )
+        // Set the guard before any navigation work.
+        openingOnlineGame = true
+        checkingStart = false
+        startButton.isEnabled = false
 
-        intent.putExtra(
-            "gameCode",
-            gameCode
+        // Detach Firebase listener before navigating.
+        val listener = gameListener
+
+        if (listener != null) {
+            database
+                .getReference("games")
+                .child(gameCode)
+                .removeEventListener(listener)
+
+            gameListener = null
+        }
+
+        val gameIntent = Intent(
+            this,
+            OnlineGameRoundActivity::class.java
         )
 
-        intent.putExtra(
-            "playerCount",
-            playerCount
-        )
+        gameIntent.putExtra("gameCode", gameCode)
+        gameIntent.putExtra("playerCount", playerCount)
+        gameIntent.putExtra("roomCapacity", roomCapacity)
 
-        intent.putExtra(
-            "roomCapacity",
-            roomCapacity
-        )
-
-        intent.putExtra(
+        gameIntent.putExtra(
             "waitingPlayerGuesses",
             waitingPlayerGuesses
         )
 
-        intent.putExtra(
+        gameIntent.putExtra(
             "wordSelection",
-            snapshot
-                .child("wordSelection")
-                .getValue(
-                    String::class.java
-                )
+            snapshot.child("wordSelection")
+                .getValue(String::class.java)
                 ?: wordSelection
         )
 
-        intent.putExtra(
+        gameIntent.putExtra(
             "manualWord",
-            snapshot
-                .child("manualWord")
-                .getValue(
-                    String::class.java
-                )
+            snapshot.child("manualWord")
+                .getValue(String::class.java)
                 ?: manualWord
         )
 
-        intent.putExtra(
+        gameIntent.putExtra(
             "category",
-            snapshot
-                .child("category")
-                .getValue(
-                    String::class.java
-                )
+            snapshot.child("category")
+                .getValue(String::class.java)
                 ?: category
         )
 
-        intent.putExtra(
+        gameIntent.putExtra(
             "secondsPerTurn",
-            snapshot
-                .child("secondsPerTurn")
-                .getValue(
-                    Int::class.java
-                )
+            snapshot.child("secondsPerTurn")
+                .getValue(Int::class.java)
                 ?: secondsPerTurn
         )
 
-        intent.putExtra(
+        gameIntent.putExtra(
             "totalTurns",
-            snapshot
-                .child("totalTurns")
-                .getValue(
-                    Int::class.java
-                )
+            snapshot.child("totalTurns")
+                .getValue(Int::class.java)
                 ?: totalTurns
         )
 
-        intent.putExtra(
+        gameIntent.putExtra(
             "nextWordMaster",
-            snapshot
-                .child("nextWordMaster")
-                .getValue(
-                    String::class.java
-                )
+            snapshot.child("nextWordMaster")
+                .getValue(String::class.java)
                 ?: nextWordMaster
         )
 
-        intent.putExtra(
-            "playerName",
-            playerName
-        )
+        gameIntent.putExtra("playerName", playerName)
+        gameIntent.putExtra("password", password)
+        gameIntent.putExtra("isHost", isHost)
 
-        intent.putExtra(
-            "password",
-            password
-        )
+        startActivity(gameIntent)
 
-        intent.putExtra(
-            "isHost",
-            isHost
-        )
-
-        startActivity(
-            intent
-        )
+        // Close the waiting room after navigation.
+        finish()
     }
 
     private fun leaveGame() {
-
         val currentUser =
-            com.google.firebase.auth
-                .FirebaseAuth
+            com.google.firebase.auth.FirebaseAuth
                 .getInstance()
                 .currentUser
 
         if (currentUser == null) {
-
             finish()
-
             return
         }
 
-        val uid =
-            currentUser.uid
+        val uid = currentUser.uid
 
-        val gameReference =
-            database
-                .getReference("games")
-                .child(gameCode)
+        val gameReference = database
+            .getReference("games")
+            .child(gameCode)
 
         gameReference
             .child("players")
@@ -1156,95 +741,68 @@ class GameWaitingActivity : Activity() {
             .addOnSuccessListener {
 
                 /*
-                 * If the host leaves, transfer
-                 * host status to the first remaining
-                 * player.
+                 * If the host leaves, transfer host status
+                 * to the first remaining player.
                  */
                 if (isHost) {
-
                     gameReference.get()
-                        .addOnSuccessListener {
-                            snapshot ->
+                        .addOnSuccessListener { snapshot ->
 
-                            val players =
-                                snapshot
-                                    .child("players")
-                                    .children
-                                    .toList()
-                                    .sortedBy {
-                                        it.child(
-                                            "joinedAt"
-                                        ).getValue(
-                                            Long::class.java
-                                        ) ?: 0L
-                                    }
+                            if (!snapshot.exists()) {
+                                finish()
+                                return@addOnSuccessListener
+                            }
 
-                            if (
-                                players.isNotEmpty()
-                            ) {
-
-                                val newHost =
-                                    players.first()
-
-                                val newHostUid =
-                                    newHost.key
-
-                                if (
-                                    newHostUid !=
-                                    null
-                                ) {
-
-                                    gameReference
-                                        .child(
-                                            "hostUid"
-                                        )
-                                        .setValue(
-                                            newHostUid
-                                        )
-
-                                    gameReference
-                                        .child(
-                                            "hostName"
-                                        )
-                                        .setValue(
-                                            newHost.child(
-                                                "name"
-                                            ).getValue(
-                                                String::class.java
-                                            ) ?: "Player"
-                                        )
-
-                                    gameReference
-                                        .child(
-                                            "players"
-                                        )
-                                        .child(
-                                            newHostUid
-                                        )
-                                        .child(
-                                            "isHost"
-                                        )
-                                        .setValue(
-                                            true
-                                        )
+                            val players = snapshot
+                                .child("players")
+                                .children
+                                .toList()
+                                .sortedBy {
+                                    it.child("joinedAt")
+                                        .getValue(Long::class.java)
+                                        ?: 0L
                                 }
 
+                            if (players.isNotEmpty()) {
+                                val newHost = players.first()
+                                val newHostUid = newHost.key
+
+                                if (newHostUid != null) {
+                                    val newHostName =
+                                        newHost.child("name")
+                                            .getValue(String::class.java)
+                                            ?: "Player"
+
+                                    val updates =
+                                        hashMapOf<String, Any>(
+                                            "hostUid" to newHostUid,
+                                            "hostName" to newHostName,
+                                            "players/$newHostUid/isHost" to true
+                                        )
+
+                                    gameReference.updateChildren(updates)
+                                }
                             } else {
-
-                                /*
-                                 * Nobody remains.
-                                 * Remove the empty game.
-                                 */
-                                gameReference
-                                    .removeValue()
+                                // Nobody remains. Remove the empty game.
+                                gameReference.removeValue()
                             }
-                        }
-                }
 
-                finish()
+                            finish()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(
+                                this,
+                                "Could not update the game host.",
+                                Toast.LENGTH_LONG
+                            ).show()
+
+                            finish()
+                        }
+                } else {
+                    finish()
+                }
             }
             .addOnFailureListener {
-
                 Toast.makeText(
                     this,
                     "Could not leave the game.",
@@ -1254,20 +812,17 @@ class GameWaitingActivity : Activity() {
     }
 
     override fun onDestroy() {
-
-        super.onDestroy()
-
-        val listener =
-            gameListener
+        val listener = gameListener
 
         if (listener != null) {
-
             database
                 .getReference("games")
                 .child(gameCode)
-                .removeEventListener(
-                    listener
-                )
+                .removeEventListener(listener)
+
+            gameListener = null
         }
+
+        super.onDestroy()
     }
 }
