@@ -125,13 +125,12 @@ class SinglePlayerActivity : Activity() {
 
         layout.addView(attemptsText)
 
+
         wordText = TextView(this)
 
-        // Normal words stay large.
+        // Keep normal words large and shrink longer words.
         wordText.textSize = 30f
-
         wordText.gravity = Gravity.CENTER
-
         wordText.setTypeface(
             null,
             Typeface.BOLD
@@ -144,20 +143,26 @@ class SinglePlayerActivity : Activity() {
             20
         )
 
-        // Keep the word on ONE line.
-        // Longer words automatically shrink to fit.
+        // Keep the word on one line and fit it to the
+        // full available screen width.
         wordText.maxLines = 1
         wordText.isSingleLine = true
 
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
             wordText,
-            16,
+            10,
             30,
             1,
             TypedValue.COMPLEX_UNIT_SP
         )
 
-        layout.addView(wordText)
+        layout.addView(
+            wordText,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         statusText = TextView(this)
         statusText.text = "Guess a letter."
