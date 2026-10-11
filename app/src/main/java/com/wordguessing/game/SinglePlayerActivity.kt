@@ -193,7 +193,7 @@ class SinglePlayerActivity : Activity() {
                     if (guessedLetters.contains(letter)) {
                         letter.toString()
                     } else {
-                        "_"
+                        "-"
                     }
                 }.joinToString("")
             }
