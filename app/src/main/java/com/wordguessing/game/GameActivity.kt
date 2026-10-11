@@ -617,6 +617,7 @@ class GameActivity : Activity() {
 
         layout.addView(scoresText)
 
+
         wordText =
             TextView(this)
 
@@ -632,22 +633,20 @@ class GameActivity : Activity() {
         )
 
         wordText.setPadding(
-            0,
-            20,
-            0,
-            20
+            4,
+            16,
+            4,
+            16
         )
 
-        // Keep the word on ONE line.
-        // Normal words remain at 30sp, while longer
-        // words automatically shrink to fit.
-        wordText.maxLines = 1
-        wordText.isSingleLine = true
+        // Use the same word display as single-player.
+        wordText.maxLines = 3
+        wordText.isSingleLine = false
+        wordText.ellipsize = null
 
-        
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
             wordText,
-            10,
+            12,
             30,
             1,
             TypedValue.COMPLEX_UNIT_SP
