@@ -131,10 +131,12 @@ class SinglePlayerActivity : Activity() {
         // Keep normal words large and shrink longer words.
         wordText.textSize = 30f
         wordText.gravity = Gravity.CENTER
-        wordText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
+
+        
+wordText.setTypeface(
+    Typeface.MONOSPACE,
+    Typeface.BOLD
+)
 
         wordText.setPadding(
             0,
