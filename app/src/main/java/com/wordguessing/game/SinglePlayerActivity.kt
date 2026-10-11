@@ -596,14 +596,14 @@ class SinglePlayerActivity : Activity() {
             paint.color = Color.rgb(30, 41, 59)
             paint.style = Paint.Style.FILL
 
-            canvas.drawText(
-                word,
-                0,
-                word.length,
-                x + horizontalPadding,
-                y,
-                paint
-            )
+canvas.drawText(
+    word,
+    0,
+    word.length,
+    x + horizontalPadding,
+    y,
+    paint
+)
 
             paint.color = originalColor
             paint.style = originalStyle
