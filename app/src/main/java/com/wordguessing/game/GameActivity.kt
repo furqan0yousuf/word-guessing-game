@@ -1488,9 +1488,7 @@ class GameActivity : Activity() {
         wholeWordGuessInProgress =
             false
 
-        wordText.text =
-            testWord
-
+setWordDisplayText(testWord.uppercase())
 
         lettersLayout.removeAllViews()
 
@@ -1595,8 +1593,7 @@ class GameActivity : Activity() {
         wholeWordGuessInProgress =
             false
 
-        wordText.text =
-            testWord
+        setWordDisplayText(testWord.uppercase())
 
         lettersLayout.removeAllViews()
 
@@ -1948,6 +1945,91 @@ private fun setWordDisplayText(displayText: String) {
             scoreDisplay
     }
 
+
+private inner class WordBoxSpan(
+    private val boxColor: Int
+) : ReplacementSpan() {
+
+    private val density = resources.displayMetrics.density
+    private val horizontalPadding = 4f * density
+    private val verticalPadding = 3f * density
+    private val cornerRadius = 6f * density
+
+    private val backgroundPaint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = boxColor
+            style = Paint.Style.FILL
+        }
+
+    override fun getSize(
+        paint: Paint,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        fm: Paint.FontMetricsInt?
+    ): Int {
+        val word = text.subSequence(start, end).toString()
+
+        if (fm != null) {
+            val metrics = paint.fontMetricsInt
+            fm.ascent = metrics.ascent
+            fm.descent = metrics.descent
+            fm.top = metrics.top
+            fm.bottom = metrics.bottom
+        }
+
+        return (
+            paint.measureText(word) + horizontalPadding * 2
+        ).toInt()
+    }
+
+    override fun draw(
+        canvas: Canvas,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        x: Float,
+        top: Int,
+        y: Int,
+        bottom: Int,
+        paint: Paint
+    ) {
+        val word = text.subSequence(start, end).toString()
+        val textWidth = paint.measureText(word)
+        val metrics = paint.fontMetrics
+
+        val box = RectF(
+            x,
+            y + metrics.ascent - verticalPadding,
+            x + textWidth + horizontalPadding * 2,
+            y + metrics.descent + verticalPadding
+        )
+
+        canvas.drawRoundRect(
+            box,
+            cornerRadius,
+            cornerRadius,
+            backgroundPaint
+        )
+
+        val originalColor = paint.color
+        val originalStyle = paint.style
+
+        paint.color = Color.rgb(30, 41, 59)
+        paint.style = Paint.Style.FILL
+
+        canvas.drawText(
+            word,
+            x + horizontalPadding,
+            y.toFloat(),
+            paint
+        )
+
+        paint.color = originalColor
+        paint.style = originalStyle
+    }
+}
+    
     override fun onBackPressed() {
 
         if (
