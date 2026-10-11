@@ -200,17 +200,18 @@ class SinglePlayerActivity : Activity() {
     }
 
 
+
     private fun updateWordDisplay() {
         val display = secretWord
             .split(' ')
             .joinToString(" ") { word ->
                 word.map { letter ->
                     if (guessedLetters.contains(letter)) {
-                        letter
+                        letter.toString()
                     } else {
-                        '_'
+                        "-"
                     }
-                }.joinToString("\u00A0")
+                }.joinToString("")
             }
 
         setWordDisplayText(display)
