@@ -128,31 +128,30 @@ class SinglePlayerActivity : Activity() {
 
         wordText = TextView(this)
 
-        // Keep normal words large and shrink longer words.
         wordText.textSize = 30f
         wordText.gravity = Gravity.CENTER
 
-        
-wordText.setTypeface(
-    Typeface.MONOSPACE,
-    Typeface.BOLD
-)
-
-        wordText.setPadding(
-            0,
-            20,
-            0,
-            20
+        wordText.setTypeface(
+            null,
+            Typeface.BOLD
         )
 
-        // Keep the word on one line and fit it to the
-        // full available screen width.
-        wordText.maxLines = 1
-        wordText.isSingleLine = true
+        wordText.setPadding(
+            4,
+            16,
+            4,
+            16
+        )
 
+        // Allow long words and phrases to wrap.
+        wordText.maxLines = 3
+        wordText.isSingleLine = false
+        wordText.ellipsize = null
+
+        // Automatically adjust the font size.
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
             wordText,
-            10,
+            12,
             30,
             1,
             TypedValue.COMPLEX_UNIT_SP
