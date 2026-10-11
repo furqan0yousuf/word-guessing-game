@@ -597,9 +597,7 @@ class SinglePlayerActivity : Activity() {
             paint.style = Paint.Style.FILL
 
 canvas.drawText(
-    word,
-    0,
-    word.length,
+    word.toString(),
     x + horizontalPadding,
     y,
     paint
