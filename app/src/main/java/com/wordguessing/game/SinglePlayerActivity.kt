@@ -1,26 +1,26 @@
+
 package com.wordguessing.game
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ReplacementSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.widget.TextViewCompat
-
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.RectF
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.style.ReplacementSpan
 
 class SinglePlayerActivity : Activity() {
 
@@ -56,22 +56,15 @@ class SinglePlayerActivity : Activity() {
 
         selectedDifficulties =
             intent.getStringArrayListExtra("selectedDifficulties")?.toList()
-                ?: listOf(
-                    "Easy",
-                    "Intermediate"
-                )
+                ?: listOf("Easy", "Intermediate")
 
         maxWrongAttempts =
-            intent.getIntExtra(
-                "maxWrongAttempts",
-                10
-            )
+            intent.getIntExtra("maxWrongAttempts", 10)
 
         startNewRound()
     }
 
     private fun startNewRound() {
-
         wholeWordTimer?.cancel()
 
         val result = WordBank.getRandomWord(
@@ -91,7 +84,6 @@ class SinglePlayerActivity : Activity() {
     }
 
     private fun createScreen() {
-
         val scrollView = ScrollView(this)
 
         val layout = LinearLayout(this)
@@ -103,7 +95,6 @@ class SinglePlayerActivity : Activity() {
         title.textSize = 28f
         title.gravity = Gravity.CENTER
         title.setTypeface(null, Typeface.BOLD)
-
         layout.addView(title)
 
         categoryText = TextView(this)
@@ -112,7 +103,6 @@ class SinglePlayerActivity : Activity() {
         categoryText.gravity = Gravity.CENTER
         categoryText.setTypeface(null, Typeface.BOLD)
         categoryText.setPadding(0, 20, 0, 10)
-
         layout.addView(categoryText)
 
         difficultyText = TextView(this)
@@ -120,7 +110,6 @@ class SinglePlayerActivity : Activity() {
             "Difficulty: ${selectedDifficulties.joinToString(" + ")}"
         difficultyText.textSize = 17f
         difficultyText.gravity = Gravity.CENTER
-
         layout.addView(difficultyText)
 
         attemptsText = TextView(this)
@@ -129,19 +118,16 @@ class SinglePlayerActivity : Activity() {
         attemptsText.textSize = 19f
         attemptsText.gravity = Gravity.CENTER
         attemptsText.setPadding(0, 18, 0, 10)
-
         layout.addView(attemptsText)
-
-
 
         wordText = TextView(this)
         wordText.textSize = 30f
         wordText.gravity = Gravity.CENTER
         wordText.setTypeface(null, Typeface.BOLD)
         wordText.setPadding(4, 16, 4, 16)
-        wordText.isSingleLine = true
-        wordText.maxLines = 1
-        wordText.ellipsize = null
+        wordText.isSingleLine = false
+        wordText.maxLines = 10
+        wordText.includeFontPadding = true
 
         layout.addView(
             wordText,
@@ -156,7 +142,6 @@ class SinglePlayerActivity : Activity() {
         statusText.textSize = 18f
         statusText.gravity = Gravity.CENTER
         statusText.setPadding(0, 5, 0, 15)
-
         layout.addView(statusText)
 
         val wholeWordButton = Button(this)
@@ -164,7 +149,6 @@ class SinglePlayerActivity : Activity() {
         wholeWordButton.textSize = 18f
 
         wholeWordButton.setOnClickListener {
-
             if (!roundFinished) {
                 showWholeWordDialog()
             }
@@ -175,37 +159,31 @@ class SinglePlayerActivity : Activity() {
         lettersLayout = LinearLayout(this)
         lettersLayout.orientation = LinearLayout.VERTICAL
         lettersLayout.setPadding(0, 15, 0, 15)
-
         layout.addView(lettersLayout)
 
         val newGameButton = Button(this)
         newGameButton.text = "New Word"
         newGameButton.textSize = 18f
-
         newGameButton.setOnClickListener {
             startNewRound()
         }
-
         layout.addView(newGameButton)
 
         val backButton = Button(this)
         backButton.text = "Back"
         backButton.textSize = 18f
-
         backButton.setOnClickListener {
+            wholeWordTimer?.cancel()
             finish()
         }
-
         layout.addView(backButton)
 
         scrollView.addView(layout)
-
         setContentView(scrollView)
 
         updateWordDisplay()
         createLetterButtons()
     }
-
 
     private fun updateWordDisplay() {
         val display = secretWord
@@ -226,10 +204,13 @@ class SinglePlayerActivity : Activity() {
             "Wrong letters: $wrongAttempts / $maxWrongAttempts"
     }
 
-
     private fun setWordDisplayText(displayText: String) {
         val formatted = SpannableStringBuilder()
-        val words = displayText.split(Regex("\\s+"))
+
+        val words = displayText
+            .trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotEmpty() }
 
         words.forEachIndexed { index, word ->
             if (index > 0) {
@@ -240,29 +221,21 @@ class SinglePlayerActivity : Activity() {
             formatted.append(word)
             val end = formatted.length
 
-            if (word.isNotEmpty()) {
-                val boxColor = if (index % 2 == 0) {
-                    Color.argb(24, 59, 130, 246)
-                } else {
-                    Color.argb(24, 34, 197, 94)
-                }
-
-                formatted.setSpan(
-                    WordBoxSpan(boxColor),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
+            val boxColor = if (index % 2 == 0) {
+                Color.rgb(234, 241, 252) // Pale blue
+            } else {
+                Color.rgb(233, 245, 237) // Pale green
             }
+
+            formatted.setSpan(
+                WordBoxSpan(boxColor),
+                start,
+                end,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
         }
 
         wordText.text = formatted
-        wordText.isSingleLine = true
-        wordText.maxLines = 1
-        wordText.setTextSize(
-            TypedValue.COMPLEX_UNIT_SP,
-            30f
-        )
 
         wordText.post {
             if (wordText.text.toString() != formatted.toString()) {
@@ -273,11 +246,15 @@ class SinglePlayerActivity : Activity() {
                 wordText.width -
                     wordText.paddingLeft -
                     wordText.paddingRight
-                ).coerceAtLeast(1)
+                ).coerceAtLeast(1).toFloat()
 
-            val displayWords = displayText.trim()
-                .split(Regex("\\s+"))
-                .filter { it.isNotEmpty() }
+            val density = resources.displayMetrics.density
+            val paddingPerWord = 8f * density
+
+            fun measureFullLine(): Float {
+                return wordText.paint.measureText(displayText) +
+                    words.size * paddingPerWord
+            }
 
             var size = 30f
 
@@ -286,7 +263,7 @@ class SinglePlayerActivity : Activity() {
                 size
             )
 
-            if (wordText.paint.measureText(displayText) > availableWidth) {
+            if (measureFullLine() > availableWidth) {
                 size *= 0.75f
                 wordText.setTextSize(
                     TypedValue.COMPLEX_UNIT_SP,
@@ -294,7 +271,7 @@ class SinglePlayerActivity : Activity() {
                 )
             }
 
-            if (wordText.paint.measureText(displayText) > availableWidth) {
+            if (measureFullLine() > availableWidth) {
                 size *= 0.75f
                 wordText.setTextSize(
                     TypedValue.COMPLEX_UNIT_SP,
@@ -304,11 +281,13 @@ class SinglePlayerActivity : Activity() {
 
             while (
                 size > 10f &&
-                displayWords.any {
-                    wordText.paint.measureText(it) > availableWidth
+                words.any {
+                    wordText.paint.measureText(it) +
+                        paddingPerWord > availableWidth
                 }
             ) {
                 size = (size * 0.75f).coerceAtLeast(10f)
+
                 wordText.setTextSize(
                     TypedValue.COMPLEX_UNIT_SP,
                     size
@@ -316,40 +295,33 @@ class SinglePlayerActivity : Activity() {
             }
 
             val fitsOneLine =
-                wordText.paint.measureText(displayText) <= availableWidth
+                measureFullLine() <= availableWidth
 
             wordText.isSingleLine = fitsOneLine
             wordText.maxLines =
-                if (fitsOneLine) 1 else maxOf(3, displayWords.size)
+                if (fitsOneLine) 1 else maxOf(3, words.size)
         }
     }
-    
-    private fun createLetterButtons() {
 
+    private fun createLetterButtons() {
         lettersLayout.removeAllViews()
 
         val alphabet = ('A'..'Z').toList()
-
         var row: LinearLayout? = null
 
         for (index in alphabet.indices) {
-
             if (index % 6 == 0) {
-
                 row = LinearLayout(this)
                 row.orientation = LinearLayout.HORIZONTAL
                 row.gravity = Gravity.CENTER
-
                 lettersLayout.addView(row)
             }
 
             val letter = alphabet[index]
-
             val button = Button(this)
+
             button.text = letter.toString()
             button.textSize = 16f
-
-            // Unselected letters = green
             button.setTextColor(Color.WHITE)
             button.setBackgroundColor(Color.rgb(46, 125, 50))
 
@@ -363,49 +335,38 @@ class SinglePlayerActivity : Activity() {
             )
 
             button.setOnClickListener {
-
                 if (roundFinished || finalGuessMode) {
                     return@setOnClickListener
                 }
 
                 if (guessedLetters.contains(letter)) {
-
                     Toast.makeText(
                         this,
                         "Already guessed.",
                         Toast.LENGTH_SHORT
                     ).show()
-
                     return@setOnClickListener
                 }
 
                 guessedLetters.add(letter)
 
-                // Selected letters = red
                 button.isEnabled = false
                 button.setTextColor(Color.WHITE)
                 button.setBackgroundColor(Color.RED)
 
                 if (secretWord.contains(letter)) {
-
                     statusText.text = "Correct!"
-
                     updateWordDisplay()
 
                     if (isWordComplete()) {
                         finishWin()
                     }
-
                 } else {
-
                     wrongAttempts++
-
                     statusText.text = "Wrong letter."
-
                     updateWordDisplay()
 
                     if (wrongAttempts >= maxWrongAttempts) {
-
                         finalGuessMode = true
 
                         statusText.text =
@@ -419,12 +380,8 @@ class SinglePlayerActivity : Activity() {
     }
 
     private fun isWordComplete(): Boolean {
-
         for (char in secretWord) {
-
-            if (char != ' ' &&
-                !guessedLetters.contains(char)
-            ) {
+            if (char != ' ' && !guessedLetters.contains(char)) {
                 return false
             }
         }
@@ -433,13 +390,11 @@ class SinglePlayerActivity : Activity() {
     }
 
     private fun showWholeWordDialog() {
-
         if (roundFinished) {
             return
         }
 
-        val input = android.widget.EditText(this)
-
+        val input = EditText(this)
         input.hint = "Enter the whole word"
         input.setSingleLine(true)
         input.textSize = 18f
@@ -448,46 +403,34 @@ class SinglePlayerActivity : Activity() {
             .setTitle("Guess Whole Word")
             .setMessage("You have 20 seconds.")
             .setView(input)
-            .setNegativeButton(
-                "Cancel",
-                null
-            )
+            .setNegativeButton("Cancel", null)
             .setPositiveButton("Guess", null)
             .create()
 
         dialog.setOnShowListener {
-
             val guessButton =
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE)
 
             guessButton.setOnClickListener {
-
-                val guess =
-                    input.text
-                        .toString()
-                        .trim()
-                        .uppercase()
+                val guess = input.text
+                    .toString()
+                    .trim()
+                    .uppercase()
 
                 if (guess.isEmpty()) {
-
                     input.error = "Enter a word."
                     return@setOnClickListener
                 }
 
                 wholeWordTimer?.cancel()
-
                 dialog.dismiss()
 
                 if (guess == secretWord) {
-
                     finishWin()
-
                 } else {
-
                     if (finalGuessMode) {
                         finishLoss()
                     } else {
-
                         statusText.text =
                             "Incorrect whole-word guess."
 
@@ -503,69 +446,49 @@ class SinglePlayerActivity : Activity() {
 
         dialog.show()
 
-        wholeWordTimer =
-            object : CountDownTimer(
-                20_000,
-                1_000
-            ) {
+        wholeWordTimer = object : CountDownTimer(20_000, 1_000) {
+            override fun onTick(millisUntilFinished: Long) {
+                dialog.setMessage(
+                    "Time remaining: " +
+                        "${(millisUntilFinished + 999) / 1000} seconds"
+                )
+            }
 
-                override fun onTick(
-                    millisUntilFinished: Long
-                ) {
+            override fun onFinish() {
+                if (dialog.isShowing) {
+                    dialog.dismiss()
 
-                    dialog.setMessage(
-                        "Time remaining: " +
-                                "${(millisUntilFinished + 999) / 1000} seconds"
-                    )
-                }
+                    if (finalGuessMode) {
+                        finishLoss()
+                    } else {
+                        statusText.text =
+                            "Whole-word guess timed out."
 
-                override fun onFinish() {
-
-                    if (dialog.isShowing) {
-
-                        dialog.dismiss()
-
-                        if (finalGuessMode) {
-                            finishLoss()
-                        } else {
-
-                            statusText.text =
-                                "Whole-word guess timed out."
-
-                            finalGuessMode = false
-                        }
+                        finalGuessMode = false
                     }
                 }
-
-            }.start()
+            }
+        }.start()
     }
 
     private fun finishWin() {
-
         if (roundFinished) {
             return
         }
 
         roundFinished = true
         finalGuessMode = false
-
         wholeWordTimer?.cancel()
 
         setWordDisplayText(secretWord)
 
         AlertDialog.Builder(this)
             .setTitle("🏆 YOU WIN!")
-            .setMessage(
-                "You guessed $secretWord!"
-            )
-            .setPositiveButton(
-                "Play Again"
-            ) { _, _ ->
+            .setMessage("You guessed $secretWord!")
+            .setPositiveButton("Play Again") { _, _ ->
                 startNewRound()
             }
-            .setNegativeButton(
-                "Exit"
-            ) { _, _ ->
+            .setNegativeButton("Exit") { _, _ ->
                 finish()
             }
             .setCancelable(false)
@@ -573,37 +496,28 @@ class SinglePlayerActivity : Activity() {
     }
 
     private fun finishLoss() {
-
         if (roundFinished) {
             return
         }
 
         roundFinished = true
         finalGuessMode = false
-
         wholeWordTimer?.cancel()
 
         setWordDisplayText(secretWord)
 
         AlertDialog.Builder(this)
             .setTitle("Game Over")
-            .setMessage(
-                "The word was:\n\n$secretWord"
-            )
-            .setPositiveButton(
-                "Play Again"
-            ) { _, _ ->
+            .setMessage("The word was:\n\n$secretWord")
+            .setPositiveButton("Play Again") { _, _ ->
                 startNewRound()
             }
-            .setNegativeButton(
-                "Exit"
-            ) { _, _ ->
+            .setNegativeButton("Exit") { _, _ ->
                 finish()
             }
             .setCancelable(false)
             .show()
     }
-
 
     private inner class WordBoxSpan(
         private val boxColor: Int
@@ -613,7 +527,7 @@ class SinglePlayerActivity : Activity() {
             resources.displayMetrics.density
 
         private val horizontalPadding = 4f * density
-        private val verticalPadding = 2f * density
+        private val verticalPadding = 3f * density
         private val cornerRadius = 6f * density
 
         private val backgroundPaint =
@@ -629,6 +543,9 @@ class SinglePlayerActivity : Activity() {
             end: Int,
             fm: Paint.FontMetricsInt?
         ): Int {
+            val word = text.subSequence(start, end).toString()
+            val textWidth = paint.measureText(word)
+
             if (fm != null) {
                 val metrics = paint.fontMetricsInt
                 fm.ascent = metrics.ascent
@@ -638,9 +555,8 @@ class SinglePlayerActivity : Activity() {
             }
 
             return (
-                paint.measureText(text, start, end) +
-                    horizontalPadding * 2
-                ).toInt()
+                textWidth + horizontalPadding * 2
+            ).toInt()
         }
 
         override fun draw(
@@ -654,9 +570,8 @@ class SinglePlayerActivity : Activity() {
             bottom: Int,
             paint: Paint
         ) {
-            val textWidth =
-                paint.measureText(text, start, end)
-
+            val word = text.subSequence(start, end).toString()
+            val textWidth = paint.measureText(word)
             val metrics = paint.fontMetrics
 
             val box = RectF(
@@ -666,32 +581,32 @@ class SinglePlayerActivity : Activity() {
                 y + metrics.descent + verticalPadding
             )
 
-
-            val wordTextToDraw = text.subSequence(start, end).toString()
-
-            canvas.drawText(
-                wordTextToDraw,
-                0,
-                wordTextToDraw.length,
-                x + horizontalPadding,
-                y,
-                paint
+            // Draw the rounded background first.
+            canvas.drawRoundRect(
+                box,
+                cornerRadius,
+                cornerRadius,
+                backgroundPaint
             )
 
+            // Draw the word once, centered within its box.
             val originalColor = paint.color
+            val originalStyle = paint.style
+
             paint.color = Color.rgb(30, 41, 59)
+            paint.style = Paint.Style.FILL
 
             canvas.drawText(
-                text,
-                start,
-                end,
+                word,
+                0,
+                word.length,
                 x + horizontalPadding,
                 y,
                 paint
             )
 
             paint.color = originalColor
+            paint.style = originalStyle
         }
     }
-    
 }
