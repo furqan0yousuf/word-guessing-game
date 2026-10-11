@@ -126,36 +126,15 @@ class SinglePlayerActivity : Activity() {
         layout.addView(attemptsText)
 
 
-        wordText = TextView(this)
 
+        wordText = TextView(this)
         wordText.textSize = 30f
         wordText.gravity = Gravity.CENTER
-
-        wordText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        wordText.setPadding(
-            4,
-            16,
-            4,
-            16
-        )
-
-        // Allow long words and phrases to wrap.
-        wordText.maxLines = 3
-        wordText.isSingleLine = false
+        wordText.setTypeface(null, Typeface.BOLD)
+        wordText.setPadding(4, 16, 4, 16)
+        wordText.isSingleLine = true
+        wordText.maxLines = 1
         wordText.ellipsize = null
-
-        // Automatically adjust the font size.
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-            wordText,
-            12,
-            30,
-            1,
-            TypedValue.COMPLEX_UNIT_SP
-        )
 
         layout.addView(
             wordText,
@@ -220,28 +199,103 @@ class SinglePlayerActivity : Activity() {
         createLetterButtons()
     }
 
+
     private fun updateWordDisplay() {
-
-        val builder = StringBuilder()
-
-        for (char in secretWord) {
-
-            if (char == ' ') {
-                builder.append("   ")
-            } else if (guessedLetters.contains(char)) {
-                builder.append(char)
-                builder.append(' ')
-            } else {
-                builder.append("_ ")
+        val display = secretWord
+            .split(' ')
+            .joinToString(" ") { word ->
+                word.map { letter ->
+                    if (guessedLetters.contains(letter)) {
+                        letter
+                    } else {
+                        '_'
+                    }
+                }.joinToString("\u00A0")
             }
-        }
 
-        wordText.text = builder.toString().trim()
+        setWordDisplayText(display)
 
         attemptsText.text =
             "Wrong letters: $wrongAttempts / $maxWrongAttempts"
     }
 
+    
+    private fun setWordDisplayText(displayText: String) {
+        wordText.text = displayText
+        wordText.isSingleLine = true
+        wordText.maxLines = 1
+        wordText.setTextSize(
+            TypedValue.COMPLEX_UNIT_SP,
+            30f
+        )
+
+        wordText.post {
+            if (wordText.text.toString() != displayText) {
+                return@post
+            }
+
+            val availableWidth =
+                (wordText.width -
+                    wordText.paddingLeft -
+                    wordText.paddingRight).coerceAtLeast(1)
+
+            val words = displayText.trim()
+                .split(Regex("\\s+"))
+                .filter { it.isNotEmpty() }
+
+            var size = 30f
+
+            wordText.setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                size
+            )
+
+            // First 25% reduction.
+            if (wordText.paint.measureText(displayText) > availableWidth) {
+                size *= 0.75f
+                wordText.setTextSize(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    size
+                )
+            }
+
+            // Second 25% reduction.
+            if (wordText.paint.measureText(displayText) > availableWidth) {
+                size *= 0.75f
+                wordText.setTextSize(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    size
+                )
+            }
+
+            // Keep each individual word on one line.
+            while (
+                size > 10f &&
+                words.any {
+                    wordText.paint.measureText(it) > availableWidth
+                }
+            ) {
+                size = (size * 0.75f).coerceAtLeast(10f)
+
+                wordText.setTextSize(
+                    TypedValue.COMPLEX_UNIT_SP,
+                    size
+                )
+            }
+
+            val fitsOneLine =
+                wordText.paint.measureText(displayText) <= availableWidth
+
+            if (fitsOneLine) {
+                wordText.isSingleLine = true
+                wordText.maxLines = 1
+            } else {
+                wordText.isSingleLine = false
+                wordText.maxLines = maxOf(3, words.size)
+            }
+        }
+    }
+    
     private fun createLetterButtons() {
 
         lettersLayout.removeAllViews()
@@ -469,7 +523,7 @@ class SinglePlayerActivity : Activity() {
 
         wholeWordTimer?.cancel()
 
-        wordText.text = secretWord
+        setWordDisplayText(secretWord)
 
         AlertDialog.Builder(this)
             .setTitle("🏆 YOU WIN!")
@@ -501,7 +555,7 @@ class SinglePlayerActivity : Activity() {
 
         wholeWordTimer?.cancel()
 
-        wordText.text = secretWord
+        setWordDisplayText(secretWord)
 
         AlertDialog.Builder(this)
             .setTitle("Game Over")
