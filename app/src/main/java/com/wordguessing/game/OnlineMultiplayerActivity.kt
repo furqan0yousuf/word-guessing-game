@@ -116,15 +116,16 @@ class OnlineMultiplayerActivity : Activity() {
         publicButton.textSize =
             18f
 
-        publicButton.setOnClickListener {
+publicButton.setOnClickListener {
 
-            Toast.makeText(
-                this,
-                "Public games will be available in a future update.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-
+    startActivity(
+        Intent(
+            this,
+            JoinGameActivity::class.java
+        )
+    )
+}
+        
         layout.addView(publicButton)
 
         setContentView(layout)
