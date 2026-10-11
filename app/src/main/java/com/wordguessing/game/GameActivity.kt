@@ -644,9 +644,10 @@ class GameActivity : Activity() {
         wordText.maxLines = 1
         wordText.isSingleLine = true
 
+        
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
             wordText,
-            16,
+            10,
             30,
             1,
             TypedValue.COMPLEX_UNIT_SP
