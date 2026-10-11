@@ -24,6 +24,13 @@ import com.google.firebase.database.Transaction
 import com.google.firebase.database.ValueEventListener
 import kotlin.random.Random
 
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ReplacementSpan
+
 class OnlineGameRoundActivity : Activity() {
 
     private lateinit var timerText: TextView
@@ -2138,58 +2145,71 @@ class OnlineGameRoundActivity : Activity() {
         ] ?: false
     }
 
-    private fun updateWordDisplay() {
 
-        if (
-            secretWord.isEmpty()
-        ) {
+private fun updateWordDisplay() {
 
-            wordText.text =
-                "Waiting for word..."
-
-            return
-        }
-
-        val builder =
-            StringBuilder()
-
-        for (
-            letter in secretWord
-        ) {
-
-            if (
-                letter == ' '
-            ) {
-
-                builder.append(
-                    "   "
-                )
-
-            } else if (
-                guessedLetters.contains(
-                    letter
-                )
-            ) {
-
-                builder.append(
-                    letter
-                )
-
-                builder.append(
-                    " "
-                )
-
-            } else {
-
-                builder.append(
-                    "_ "
-                )
-            }
-        }
-
-        wordText.text =
-            builder.toString().trim()
+    if (secretWord.isEmpty()) {
+        wordText.text = "Waiting for word..."
+        return
     }
+
+    val displayText = if (roundFinished) {
+        secretWord.uppercase()
+    } else {
+        secretWord.uppercase()
+            .split(' ')
+            .joinToString(" ") { word ->
+                word.map { letter ->
+                    if (
+                        guessedLetters.contains(letter) ||
+                        !letter.isLetter()
+                    ) {
+                        letter.toString()
+                    } else {
+                        "-"
+                    }
+                }.joinToString("")
+            }
+    }
+
+    setWordDisplayText(displayText)
+}
+
+private fun setWordDisplayText(displayText: String) {
+
+    val formatted = SpannableStringBuilder()
+
+    val words = displayText
+        .trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotEmpty() }
+
+    words.forEachIndexed { index, word ->
+
+        if (index > 0) {
+            formatted.append(" ")
+        }
+
+        val start = formatted.length
+        formatted.append(word)
+        val end = formatted.length
+
+        val boxColor = if (index % 2 == 0) {
+            Color.rgb(234, 241, 252)
+        } else {
+            Color.rgb(233, 245, 237)
+        }
+
+        formatted.setSpan(
+            WordBoxSpan(boxColor),
+            start,
+            end,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+
+    wordText.text = formatted
+}
 
     
     private fun updateLetterButtons() {
@@ -5617,6 +5637,98 @@ class OnlineGameRoundActivity : Activity() {
             null
     }
 
+    
+private inner class WordBoxSpan(
+    private val boxColor: Int
+) : ReplacementSpan() {
+
+    private val density =
+        resources.displayMetrics.density
+
+    private val horizontalPadding = 4f * density
+    private val verticalPadding = 3f * density
+    private val cornerRadius = 6f * density
+
+    private val backgroundPaint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = boxColor
+            style = Paint.Style.FILL
+        }
+
+    override fun getSize(
+        paint: Paint,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        fm: Paint.FontMetricsInt?
+    ): Int {
+
+        val word =
+            text.subSequence(start, end).toString()
+
+        if (fm != null) {
+            val metrics = paint.fontMetricsInt
+            fm.ascent = metrics.ascent
+            fm.descent = metrics.descent
+            fm.top = metrics.top
+            fm.bottom = metrics.bottom
+        }
+
+        return (
+            paint.measureText(word) +
+                horizontalPadding * 2
+        ).toInt()
+    }
+
+    override fun draw(
+        canvas: Canvas,
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        x: Float,
+        top: Int,
+        y: Int,
+        bottom: Int,
+        paint: Paint
+    ) {
+
+        val word =
+            text.subSequence(start, end).toString()
+
+        val textWidth = paint.measureText(word)
+        val metrics = paint.fontMetrics
+
+        val box = RectF(
+            x,
+            y + metrics.ascent - verticalPadding,
+            x + textWidth + horizontalPadding * 2,
+            y + metrics.descent + verticalPadding
+        )
+
+        canvas.drawRoundRect(
+            box,
+            cornerRadius,
+            cornerRadius,
+            backgroundPaint
+        )
+
+        val originalColor = paint.color
+        val originalStyle = paint.style
+
+        paint.color = Color.rgb(30, 41, 59)
+        paint.style = Paint.Style.FILL
+
+        canvas.drawText(
+            word,
+            x + horizontalPadding,
+            y.toFloat(),
+            paint
+        )
+
+        paint.color = originalColor
+        paint.style = originalStyle
+    }
+}
 
     override fun onBackPressed() {
         confirmLeaveGame()
