@@ -1485,9 +1485,6 @@ class GameActivity : Activity() {
         wordText.text =
             testWord
 
-        // Keep the final word on one line too.
-        wordText.textSize =
-            30f
 
         lettersLayout.removeAllViews()
 
