@@ -415,6 +415,7 @@ class OnlineGameRoundActivity : Activity() {
 
         layout.addView(wordMasterText)
 
+
         wordText =
             TextView(this)
 
@@ -424,15 +425,17 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         wordText.setAutoSizeTextTypeUniformWithConfiguration(
-            16,
+            12,
             30,
             1,
             TypedValue.COMPLEX_UNIT_SP
         )
 
-        wordText.maxLines = 1
-        wordText.isSingleLine = true
+        // Allow long words and phrases to wrap.
+        wordText.maxLines = 3
+        wordText.isSingleLine = false
         wordText.ellipsize = null
+
         wordText.gravity =
             Gravity.CENTER
 
@@ -442,10 +445,10 @@ class OnlineGameRoundActivity : Activity() {
         )
 
         wordText.setPadding(
-            0,
-            10,
-            0,
-            10
+            4,
+            16,
+            4,
+            16
         )
 
         layout.addView(
@@ -455,6 +458,7 @@ class OnlineGameRoundActivity : Activity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
+
 
         wordText.text =
             "Waiting for game..."
