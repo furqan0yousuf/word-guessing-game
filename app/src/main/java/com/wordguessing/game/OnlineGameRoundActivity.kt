@@ -5613,6 +5613,11 @@ class OnlineGameRoundActivity : Activity() {
             null
     }
 
+
+    override fun onBackPressed() {
+        confirmLeaveGame()
+    }
+    
     override fun onDestroy() {
 
         stopTimers()
