@@ -226,9 +226,10 @@ class SinglePlayerActivity : Activity() {
             "Wrong letters: $wrongAttempts / $maxWrongAttempts"
     }
 
+
     private fun setWordDisplayText(displayText: String) {
         val formatted = SpannableStringBuilder()
-        val words = displayText.split(' ')
+        val words = displayText.split(Regex("\\s+"))
 
         words.forEachIndexed { index, word ->
             if (index > 0) {
@@ -240,12 +241,11 @@ class SinglePlayerActivity : Activity() {
             val end = formatted.length
 
             if (word.isNotEmpty()) {
-                val boxColor =
-                    if (index % 2 == 0) {
-                        Color.argb(24, 59, 130, 246)
-                    } else {
-                        Color.argb(24, 34, 197, 94)
-                    }
+                val boxColor = if (index % 2 == 0) {
+                    Color.argb(24, 59, 130, 246)
+                } else {
+                    Color.argb(24, 34, 197, 94)
+                }
 
                 formatted.setSpan(
                     WordBoxSpan(boxColor),
@@ -257,10 +257,6 @@ class SinglePlayerActivity : Activity() {
         }
 
         wordText.text = formatted
-    }
-    
-    private fun setWordDisplayText(displayText: String) {
-        wordText.text = displayText
         wordText.isSingleLine = true
         wordText.maxLines = 1
         wordText.setTextSize(
@@ -269,16 +265,17 @@ class SinglePlayerActivity : Activity() {
         )
 
         wordText.post {
-            if (wordText.text.toString() != displayText) {
+            if (wordText.text.toString() != formatted.toString()) {
                 return@post
             }
 
-            val availableWidth =
-                (wordText.width -
+            val availableWidth = (
+                wordText.width -
                     wordText.paddingLeft -
-                    wordText.paddingRight).coerceAtLeast(1)
+                    wordText.paddingRight
+                ).coerceAtLeast(1)
 
-            val words = displayText.trim()
+            val displayWords = displayText.trim()
                 .split(Regex("\\s+"))
                 .filter { it.isNotEmpty() }
 
@@ -289,7 +286,6 @@ class SinglePlayerActivity : Activity() {
                 size
             )
 
-            // First 25% reduction.
             if (wordText.paint.measureText(displayText) > availableWidth) {
                 size *= 0.75f
                 wordText.setTextSize(
@@ -298,7 +294,6 @@ class SinglePlayerActivity : Activity() {
                 )
             }
 
-            // Second 25% reduction.
             if (wordText.paint.measureText(displayText) > availableWidth) {
                 size *= 0.75f
                 wordText.setTextSize(
@@ -307,15 +302,13 @@ class SinglePlayerActivity : Activity() {
                 )
             }
 
-            // Keep each individual word on one line.
             while (
                 size > 10f &&
-                words.any {
+                displayWords.any {
                     wordText.paint.measureText(it) > availableWidth
                 }
             ) {
                 size = (size * 0.75f).coerceAtLeast(10f)
-
                 wordText.setTextSize(
                     TypedValue.COMPLEX_UNIT_SP,
                     size
@@ -325,13 +318,9 @@ class SinglePlayerActivity : Activity() {
             val fitsOneLine =
                 wordText.paint.measureText(displayText) <= availableWidth
 
-            if (fitsOneLine) {
-                wordText.isSingleLine = true
-                wordText.maxLines = 1
-            } else {
-                wordText.isSingleLine = false
-                wordText.maxLines = maxOf(3, words.size)
-            }
+            wordText.isSingleLine = fitsOneLine
+            wordText.maxLines =
+                if (fitsOneLine) 1 else maxOf(3, displayWords.size)
         }
     }
     
@@ -677,11 +666,16 @@ class SinglePlayerActivity : Activity() {
                 y + metrics.descent + verticalPadding
             )
 
-            canvas.drawRoundRect(
-                box,
-                cornerRadius,
-                cornerRadius,
-                backgroundPaint
+
+            val wordTextToDraw = text.subSequence(start, end).toString()
+
+            canvas.drawText(
+                wordTextToDraw,
+                0,
+                wordTextToDraw.length,
+                x + horizontalPadding,
+                y,
+                paint
             )
 
             val originalColor = paint.color
