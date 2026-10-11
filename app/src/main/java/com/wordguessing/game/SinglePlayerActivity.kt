@@ -599,7 +599,7 @@ class SinglePlayerActivity : Activity() {
 canvas.drawText(
     word.toString(),
     x + horizontalPadding,
-    y,
+    y.toFloat(),
     paint
 )
 
