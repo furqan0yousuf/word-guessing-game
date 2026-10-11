@@ -16,6 +16,13 @@ import android.widget.Toast
 import android.app.AlertDialog
 import androidx.core.widget.TextViewCompat
 
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ReplacementSpan
+
 class GameActivity : Activity() {
 
     private var testWord = ""
@@ -1794,50 +1801,57 @@ class GameActivity : Activity() {
         return -1
     }
 
-    private fun updateWordDisplay() {
 
-        val display =
-            StringBuilder()
-
-        for (
-            letter in testWord
-        ) {
-
-            if (
-                letter == ' '
-            ) {
-
-                display.append(
-                    "   "
-                )
-
-            } else if (
-                selectedLetters.contains(
-                    letter
-                )
-            ) {
-
-                display.append(
-                    letter
-                )
-
-                display.append(
-                    " "
-                )
-
-            } else {
-
-                display.append(
-                    "_ "
-                )
-            }
+private fun updateWordDisplay() {
+    val display = testWord
+        .uppercase()
+        .split(' ')
+        .joinToString(" ") { word ->
+            word.map { letter ->
+                if (selectedLetters.contains(letter)) {
+                    letter.toString()
+                } else {
+                    "-"
+                }
+            }.joinToString("")
         }
 
-        wordText.text =
-            display
-                .toString()
-                .trim()
+    setWordDisplayText(display)
+}
+
+private fun setWordDisplayText(displayText: String) {
+    val formatted = SpannableStringBuilder()
+
+    val words = displayText
+        .trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotEmpty() }
+
+    words.forEachIndexed { index, word ->
+        if (index > 0) {
+            formatted.append(" ")
+        }
+
+        val start = formatted.length
+        formatted.append(word)
+        val end = formatted.length
+
+        val boxColor = if (index % 2 == 0) {
+            Color.rgb(234, 241, 252)
+        } else {
+            Color.rgb(233, 245, 237)
+        }
+
+        formatted.setSpan(
+            WordBoxSpan(boxColor),
+            start,
+            end,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
     }
+
+    wordText.text = formatted
+}
 
     private fun updateTurnAndScores() {
 
