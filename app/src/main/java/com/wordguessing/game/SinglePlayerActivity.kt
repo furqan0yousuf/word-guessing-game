@@ -15,6 +15,13 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.widget.TextViewCompat
 
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ReplacementSpan
+
 class SinglePlayerActivity : Activity() {
 
     private lateinit var categoryText: TextView
@@ -200,16 +207,15 @@ class SinglePlayerActivity : Activity() {
     }
 
 
-
     private fun updateWordDisplay() {
         val display = secretWord
             .split(' ')
-            .joinToString(" ") { word ->
+            .joinToString("  ") { word ->
                 word.map { letter ->
                     if (guessedLetters.contains(letter)) {
                         letter.toString()
                     } else {
-                        "-"
+                        "_"
                     }
                 }.joinToString("")
             }
@@ -220,6 +226,38 @@ class SinglePlayerActivity : Activity() {
             "Wrong letters: $wrongAttempts / $maxWrongAttempts"
     }
 
+    private fun setWordDisplayText(displayText: String) {
+        val formatted = SpannableStringBuilder()
+        val words = displayText.split(' ')
+
+        words.forEachIndexed { index, word ->
+            if (index > 0) {
+                formatted.append(" ")
+            }
+
+            val start = formatted.length
+            formatted.append(word)
+            val end = formatted.length
+
+            if (word.isNotEmpty()) {
+                val boxColor =
+                    if (index % 2 == 0) {
+                        Color.argb(24, 59, 130, 246)
+                    } else {
+                        Color.argb(24, 34, 197, 94)
+                    }
+
+                formatted.setSpan(
+                    WordBoxSpan(boxColor),
+                    start,
+                    end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+        }
+
+        wordText.text = formatted
+    }
     
     private fun setWordDisplayText(displayText: String) {
         wordText.text = displayText
@@ -576,4 +614,90 @@ class SinglePlayerActivity : Activity() {
             .setCancelable(false)
             .show()
     }
+
+
+    private inner class WordBoxSpan(
+        private val boxColor: Int
+    ) : ReplacementSpan() {
+
+        private val density =
+            resources.displayMetrics.density
+
+        private val horizontalPadding = 4f * density
+        private val verticalPadding = 2f * density
+        private val cornerRadius = 6f * density
+
+        private val backgroundPaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = boxColor
+                style = Paint.Style.FILL
+            }
+
+        override fun getSize(
+            paint: Paint,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            fm: Paint.FontMetricsInt?
+        ): Int {
+            if (fm != null) {
+                val metrics = paint.fontMetricsInt
+                fm.ascent = metrics.ascent
+                fm.descent = metrics.descent
+                fm.top = metrics.top
+                fm.bottom = metrics.bottom
+            }
+
+            return (
+                paint.measureText(text, start, end) +
+                    horizontalPadding * 2
+                ).toInt()
+        }
+
+        override fun draw(
+            canvas: Canvas,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            x: Float,
+            top: Int,
+            y: Int,
+            bottom: Int,
+            paint: Paint
+        ) {
+            val textWidth =
+                paint.measureText(text, start, end)
+
+            val metrics = paint.fontMetrics
+
+            val box = RectF(
+                x,
+                y + metrics.ascent - verticalPadding,
+                x + textWidth + horizontalPadding * 2,
+                y + metrics.descent + verticalPadding
+            )
+
+            canvas.drawRoundRect(
+                box,
+                cornerRadius,
+                cornerRadius,
+                backgroundPaint
+            )
+
+            val originalColor = paint.color
+            paint.color = Color.rgb(30, 41, 59)
+
+            canvas.drawText(
+                text,
+                start,
+                end,
+                x + horizontalPadding,
+                y,
+                paint
+            )
+
+            paint.color = originalColor
+        }
+    }
+    
 }
