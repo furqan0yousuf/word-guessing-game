@@ -1,4 +1,3 @@
-
 package com.wordguessing.game
 
 import android.app.Activity
