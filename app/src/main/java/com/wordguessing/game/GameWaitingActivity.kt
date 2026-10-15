@@ -745,7 +745,7 @@ private fun leaveGame() {
                 currentData: com.google.firebase.database.MutableData
             ): com.google.firebase.database.Transaction.Result {
 
-                if (!currentData.exists()) {
+                if (currentData.value == null) {
                     return com.google.firebase.database.Transaction.success(
                         currentData
                     )
