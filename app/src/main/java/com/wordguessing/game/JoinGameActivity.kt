@@ -1,9 +1,11 @@
+
 package com.wordguessing.game
 
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -52,16 +54,12 @@ class JoinGameActivity : Activity() {
     }
 
     override fun onResume() {
-
         super.onResume()
-
         listenToPublicGames()
     }
 
     override fun onPause() {
-
         super.onPause()
-
         removePublicGamesListener()
     }
 
@@ -83,9 +81,7 @@ class JoinGameActivity : Activity() {
             40
         )
 
-        scrollView.addView(
-            layout
-        )
+        scrollView.addView(layout)
 
         // TITLE
         val title =
@@ -104,14 +100,9 @@ class JoinGameActivity : Activity() {
             Color.BLACK
         )
 
-        layout.addView(
-            title
-        )
+        layout.addView(title)
 
-        // ==========================================
         // ENTER GAME CODE SECTION
-        // ==========================================
-
         val codeSectionTitle =
             TextView(this)
 
@@ -133,9 +124,7 @@ class JoinGameActivity : Activity() {
             10
         )
 
-        layout.addView(
-            codeSectionTitle
-        )
+        layout.addView(codeSectionTitle)
 
         // GAME CODE
         val codeTitle =
@@ -154,9 +143,7 @@ class JoinGameActivity : Activity() {
             10
         )
 
-        layout.addView(
-            codeTitle
-        )
+        layout.addView(codeTitle)
 
         val codeInput =
             EditText(this)
@@ -167,16 +154,15 @@ class JoinGameActivity : Activity() {
         codeInput.textSize =
             20f
 
-        codeInput.setSingleLine(
-            true
-        )
+        codeInput.setSingleLine(true)
 
         codeInput.inputType =
             InputType.TYPE_CLASS_NUMBER
 
-        layout.addView(
-            codeInput
-        )
+        codeInput.filters =
+            arrayOf(InputFilter.LengthFilter(6))
+
+        layout.addView(codeInput)
 
         // PASSWORD
         val passwordTitle =
@@ -195,9 +181,7 @@ class JoinGameActivity : Activity() {
             10
         )
 
-        layout.addView(
-            passwordTitle
-        )
+        layout.addView(passwordTitle)
 
         val passwordInput =
             EditText(this)
@@ -208,24 +192,20 @@ class JoinGameActivity : Activity() {
         passwordInput.textSize =
             20f
 
-        passwordInput.setSingleLine(
-            true
-        )
+        passwordInput.setSingleLine(true)
 
         passwordInput.inputType =
             InputType.TYPE_CLASS_TEXT or
                 InputType.TYPE_TEXT_VARIATION_PASSWORD
 
-        layout.addView(
-            passwordInput
-        )
+        layout.addView(passwordInput)
 
         // PLAYER NAME
         val nameTitle =
             TextView(this)
 
         nameTitle.text =
-            "Your Name"
+            "Your Name (maximum 10 characters)"
 
         nameTitle.textSize =
             20f
@@ -237,26 +217,23 @@ class JoinGameActivity : Activity() {
             10
         )
 
-        layout.addView(
-            nameTitle
-        )
+        layout.addView(nameTitle)
 
         val nameInput =
             EditText(this)
 
         nameInput.hint =
-            "Enter your name"
+            "Enter your name (max 10 characters)"
 
         nameInput.textSize =
             20f
 
-        nameInput.setSingleLine(
-            true
-        )
+        nameInput.setSingleLine(true)
 
-        layout.addView(
-            nameInput
-        )
+        nameInput.filters =
+            arrayOf(InputFilter.LengthFilter(10))
+
+        layout.addView(nameInput)
 
         // JOIN BUTTON
         val joinButton =
@@ -294,21 +271,14 @@ class JoinGameActivity : Activity() {
                     .trim()
 
             joinByCode(
-                gameCode =
-                    gameCode,
-                enteredPassword =
-                    enteredPassword,
-                playerName =
-                    playerName,
-                joinButton =
-                    joinButton
+                gameCode = gameCode,
+                enteredPassword = enteredPassword,
+                playerName = playerName,
+                joinButton = joinButton
             )
         }
 
-        // ==========================================
         // PUBLIC GAMES SECTION
-        // ==========================================
-
         val publicTitle =
             TextView(this)
 
@@ -330,9 +300,7 @@ class JoinGameActivity : Activity() {
             5
         )
 
-        layout.addView(
-            publicTitle
-        )
+        layout.addView(publicTitle)
 
         val publicDescription =
             TextView(this)
@@ -350,9 +318,7 @@ class JoinGameActivity : Activity() {
             10
         )
 
-        layout.addView(
-            publicDescription
-        )
+        layout.addView(publicDescription)
 
         refreshButton =
             Button(this)
@@ -363,12 +329,9 @@ class JoinGameActivity : Activity() {
         refreshButton.textSize =
             16f
 
-        layout.addView(
-            refreshButton
-        )
+        layout.addView(refreshButton)
 
         refreshButton.setOnClickListener {
-
             listenToPublicGames()
         }
 
@@ -385,13 +348,9 @@ class JoinGameActivity : Activity() {
             20
         )
 
-        layout.addView(
-            publicGamesContainer
-        )
+        layout.addView(publicGamesContainer)
 
-        setContentView(
-            scrollView
-        )
+        setContentView(scrollView)
     }
 
     private fun joinByCode(
@@ -402,55 +361,51 @@ class JoinGameActivity : Activity() {
     ) {
 
         if (gameCode.isEmpty()) {
-
             Toast.makeText(
                 this,
                 "Please enter the game code.",
                 Toast.LENGTH_SHORT
             ).show()
-
             return
         }
 
         if (
             gameCode.length != 6 ||
-            !gameCode.all {
-                it.isDigit()
-            }
+            !gameCode.all { it.isDigit() }
         ) {
-
             Toast.makeText(
                 this,
                 "Game code must be 6 digits.",
                 Toast.LENGTH_SHORT
             ).show()
-
             return
         }
 
         if (playerName.isEmpty()) {
-
             Toast.makeText(
                 this,
                 "Please enter your name.",
                 Toast.LENGTH_SHORT
             ).show()
-
             return
         }
 
-        joinButton.isEnabled =
-            false
+        if (playerName.length > 10) {
+            Toast.makeText(
+                this,
+                "Your name cannot exceed 10 characters.",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        joinButton.isEnabled = false
 
         authenticateAndJoin(
-            gameCode =
-                gameCode,
-            playerName =
-                playerName,
-            enteredPassword =
-                enteredPassword,
-            joinButton =
-                joinButton
+            gameCode = gameCode,
+            playerName = playerName,
+            enteredPassword = enteredPassword,
+            joinButton = joinButton
         )
     }
 
@@ -467,16 +422,11 @@ class JoinGameActivity : Activity() {
         if (currentUser != null) {
 
             joinFirebaseGame(
-                gameCode =
-                    gameCode,
-                playerName =
-                    playerName,
-                enteredPassword =
-                    enteredPassword,
-                uid =
-                    currentUser.uid,
-                joinButton =
-                    joinButton
+                gameCode = gameCode,
+                playerName = playerName,
+                enteredPassword = enteredPassword,
+                uid = currentUser.uid,
+                joinButton = joinButton
             )
 
         } else {
@@ -488,9 +438,7 @@ class JoinGameActivity : Activity() {
                         result.user?.uid
 
                     if (uid == null) {
-
-                        joinButton.isEnabled =
-                            true
+                        joinButton.isEnabled = true
 
                         Toast.makeText(
                             this,
@@ -502,22 +450,16 @@ class JoinGameActivity : Activity() {
                     }
 
                     joinFirebaseGame(
-                        gameCode =
-                            gameCode,
-                        playerName =
-                            playerName,
-                        enteredPassword =
-                            enteredPassword,
-                        uid =
-                            uid,
-                        joinButton =
-                            joinButton
+                        gameCode = gameCode,
+                        playerName = playerName,
+                        enteredPassword = enteredPassword,
+                        uid = uid,
+                        joinButton = joinButton
                     )
                 }
                 .addOnFailureListener {
 
-                    joinButton.isEnabled =
-                        true
+                    joinButton.isEnabled = true
 
                     Toast.makeText(
                         this,
@@ -528,10 +470,7 @@ class JoinGameActivity : Activity() {
         }
     }
 
-    // ==========================================
     // PUBLIC GAME BROWSER
-    // ==========================================
-
     private fun listenToPublicGames() {
 
         removePublicGamesListener()
@@ -557,13 +496,10 @@ class JoinGameActivity : Activity() {
             15
         )
 
-        publicGamesContainer.addView(
-            loadingText
-        )
+        publicGamesContainer.addView(loadingText)
 
         val gamesReference =
-            database
-                .getReference("games")
+            database.getReference("games")
 
         gamesListener =
             object : ValueEventListener {
@@ -572,125 +508,81 @@ class JoinGameActivity : Activity() {
                     snapshot: DataSnapshot
                 ) {
 
-                    publicGamesContainer
-                        .removeAllViews()
+                    publicGamesContainer.removeAllViews()
 
-                    var foundGames =
-                        0
+                    var foundGames = 0
 
-                    /*
-                     * Sort by creation time when
-                     * available.
-                     */
                     val gameList =
                         snapshot.children
                             .toList()
                             .sortedByDescending {
-                                it.child(
-                                    "createdAt"
-                                ).getValue(
-                                    Long::class.java
-                                ) ?: 0L
+                                it.child("createdAt")
+                                    .getValue(Long::class.java)
+                                    ?: 0L
                             }
 
-                    for (
-                        game in gameList
-                    ) {
+                    for (game in gameList) {
 
                         val status =
-                            game.child(
-                                "status"
-                            ).getValue(
-                                String::class.java
-                            ) ?: "waiting"
+                            game.child("status")
+                                .getValue(String::class.java)
+                                ?: "waiting"
 
-                        if (
-                            status !=
-                            "waiting"
-                        ) {
+                        if (status != "waiting") {
                             continue
                         }
 
                         val isPublic =
-                            game.child(
-                                "isPublic"
-                            ).getValue(
-                                Boolean::class.java
-                            ) ?: (
-                                game.child(
-                                    "roomType"
-                                ).getValue(
-                                    String::class.java
-                                ) == "Public"
-                            )
+                            game.child("isPublic")
+                                .getValue(Boolean::class.java)
+                                ?: (
+                                    game.child("roomType")
+                                        .getValue(String::class.java)
+                                        ?.lowercase() == "public"
+                                )
 
                         if (!isPublic) {
                             continue
                         }
 
                         val gameCode =
-                            game.key
-                                ?: continue
+                            game.key ?: continue
 
                         val maxPlayers =
-                            game.child(
-                                "maxPlayers"
-                            ).getValue(
-                                Int::class.java
-                            ) ?: 2
+                            game.child("maxPlayers")
+                                .getValue(Int::class.java)
+                                ?: 2
 
                         val roomCapacity =
-                            game.child(
-                                "roomCapacity"
-                            ).getValue(
-                                Int::class.java
-                            ) ?: maxPlayers
+                            game.child("roomCapacity")
+                                .getValue(Int::class.java)
+                                ?: maxPlayers
 
                         val players =
-                            game.child(
-                                "players"
-                            )
+                            game.child("players")
 
-                        var totalPlayers =
-                            0
+                        var totalPlayers = 0
 
-                        for (
-                            ignored in
-                            players.children
-                        ) {
+                        for (ignored in players.children) {
                             totalPlayers++
                         }
 
-                        /*
-                         * Do not display a room that
-                         * is already full.
-                         */
-                        if (
-                            totalPlayers >=
-                            roomCapacity
-                        ) {
+                        if (totalPlayers >= roomCapacity) {
                             continue
                         }
 
                         foundGames++
 
                         addPublicGameCard(
-                            game =
-                                game,
-                            gameCode =
-                                gameCode,
-                            totalPlayers =
-                                totalPlayers,
-                            maxPlayers =
-                                maxPlayers,
-                            roomCapacity =
-                                roomCapacity
+                            game = game,
+                            gameCode = gameCode,
+                            totalPlayers = totalPlayers,
+                            maxPlayers = maxPlayers,
+                            roomCapacity = roomCapacity
                         )
                     }
 
-                    if (
-                        foundGames == 0
-                    ) {
+                    if (foundGames == 0) {
 
                         val emptyText =
                             TextView(this@JoinGameActivity)
@@ -698,11 +590,8 @@ class JoinGameActivity : Activity() {
                         emptyText.text =
                             "No public games are currently available."
 
-                        emptyText.textSize =
-                            17f
-
-                        emptyText.gravity =
-                            Gravity.CENTER
+                        emptyText.textSize = 17f
+                        emptyText.gravity = Gravity.CENTER
 
                         emptyText.setPadding(
                             0,
@@ -711,10 +600,7 @@ class JoinGameActivity : Activity() {
                             20
                         )
 
-                        publicGamesContainer
-                            .addView(
-                                emptyText
-                            )
+                        publicGamesContainer.addView(emptyText)
                     }
                 }
 
@@ -722,27 +608,18 @@ class JoinGameActivity : Activity() {
                     error: DatabaseError
                 ) {
 
-                    publicGamesContainer
-                        .removeAllViews()
+                    publicGamesContainer.removeAllViews()
 
                     val errorText =
-                        TextView(
-                            this@JoinGameActivity
-                        )
+                        TextView(this@JoinGameActivity)
 
                     errorText.text =
                         "Unable to load public games."
 
-                    errorText.textSize =
-                        17f
+                    errorText.textSize = 17f
+                    errorText.gravity = Gravity.CENTER
 
-                    errorText.gravity =
-                        Gravity.CENTER
-
-                    publicGamesContainer
-                        .addView(
-                            errorText
-                        )
+                    publicGamesContainer.addView(errorText)
                 }
             }
 
@@ -772,19 +649,11 @@ class JoinGameActivity : Activity() {
             20
         )
 
-        /*
-         * Simple border/background using
-         * a GradientDrawable.
-         */
         val background =
             android.graphics.drawable.GradientDrawable()
 
         background.setColor(
-            Color.rgb(
-                245,
-                245,
-                245
-            )
+            Color.rgb(245, 245, 245)
         )
 
         background.setStroke(
@@ -792,11 +661,9 @@ class JoinGameActivity : Activity() {
             Color.LTGRAY
         )
 
-        background.cornerRadius =
-            18f
+        background.cornerRadius = 18f
 
-        card.background =
-            background
+        card.background = background
 
         val cardParams =
             LinearLayout.LayoutParams(
@@ -804,12 +671,7 @@ class JoinGameActivity : Activity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
 
-        cardParams.setMargins(
-            0,
-            0,
-            0,
-            18
-        )
+        cardParams.setMargins(0, 0, 0, 18)
 
         publicGamesContainer.addView(
             card,
@@ -817,51 +679,41 @@ class JoinGameActivity : Activity() {
         )
 
         val hostName =
-            game.child(
-                "hostName"
-            ).getValue(
-                String::class.java
-            ) ?: "Unknown Host"
+            game.child("hostName")
+                .getValue(String::class.java)
+                ?: "Unknown Host"
 
         val category =
-            game.child(
-                "category"
-            ).getValue(
-                String::class.java
-            ) ?: "Random"
+            game.child("category")
+                .getValue(String::class.java)
+                ?: "Random"
 
         val wordSelection =
-            game.child(
-                "wordSelection"
-            ).getValue(
-                String::class.java
-            ) ?: "Random Word"
+            game.child("wordSelection")
+                .getValue(String::class.java)
+                ?: "Random Word"
 
         val secondsPerTurn =
-            game.child(
-                "secondsPerTurn"
-            ).getValue(
-                Int::class.java
-            ) ?: 20
+            game.child("secondsPerTurn")
+                .getValue(Int::class.java)
+                ?: 20
 
         val totalTurns =
-            game.child(
-                "totalTurns"
-            ).getValue(
-                Int::class.java
-            ) ?: 0
+            game.child("totalTurns")
+                .getValue(Int::class.java)
+                ?: 0
 
-        val password =
-            game.child(
-                "password"
-            ).getValue(
-                String::class.java
-            ) ?: ""
-
+        /*
+         * Avoid reading the private password merely to
+         * decide whether a room requires one.
+         */
         val hasPassword =
-            password.isNotEmpty()
+            game.child("roomType")
+                .getValue(String::class.java)
+                ?.lowercase() == "private" ||
+            game.child("isPublic")
+                .getValue(Boolean::class.java) == false
 
-        // GAME CODE
         val codeText =
             TextView(this)
 
@@ -872,40 +724,25 @@ class JoinGameActivity : Activity() {
                 "🎮 $gameCode"
             }
 
-        codeText.textSize =
-            23f
+        codeText.textSize = 23f
 
         codeText.setTypeface(
             null,
             android.graphics.Typeface.BOLD
         )
 
-        card.addView(
-            codeText
-        )
+        card.addView(codeText)
 
-        // HOST
         val hostText =
             TextView(this)
 
-        hostText.text =
-            "Host: $hostName"
+        hostText.text = "Host: $hostName"
+        hostText.textSize = 18f
 
-        hostText.textSize =
-            18f
+        hostText.setPadding(0, 8, 0, 0)
 
-        hostText.setPadding(
-            0,
-            8,
-            0,
-            0
-        )
+        card.addView(hostText)
 
-        card.addView(
-            hostText
-        )
-
-        // PLAYERS
         val playersText =
             TextView(this)
 
@@ -913,63 +750,31 @@ class JoinGameActivity : Activity() {
             "Players: $totalPlayers / $roomCapacity " +
                 "(Active limit: $maxPlayers)"
 
-        playersText.textSize =
-            17f
+        playersText.textSize = 17f
+        playersText.setPadding(0, 5, 0, 0)
 
-        playersText.setPadding(
-            0,
-            5,
-            0,
-            0
-        )
+        card.addView(playersText)
 
-        card.addView(
-            playersText
-        )
-
-        // CATEGORY
         val categoryText =
             TextView(this)
 
-        categoryText.text =
-            "Category: $category"
+        categoryText.text = "Category: $category"
+        categoryText.textSize = 17f
+        categoryText.setPadding(0, 5, 0, 0)
 
-        categoryText.textSize =
-            17f
+        card.addView(categoryText)
 
-        categoryText.setPadding(
-            0,
-            5,
-            0,
-            0
-        )
-
-        card.addView(
-            categoryText
-        )
-
-        // WORD SELECTION
         val wordText =
             TextView(this)
 
         wordText.text =
             "Word Selection: $wordSelection"
 
-        wordText.textSize =
-            17f
+        wordText.textSize = 17f
+        wordText.setPadding(0, 5, 0, 0)
 
-        wordText.setPadding(
-            0,
-            5,
-            0,
-            0
-        )
+        card.addView(wordText)
 
-        card.addView(
-            wordText
-        )
-
-        // TIME
         val timeText =
             TextView(this)
 
@@ -980,21 +785,11 @@ class JoinGameActivity : Activity() {
                 "Time per Turn: $secondsPerTurn seconds"
             }
 
-        timeText.textSize =
-            17f
+        timeText.textSize = 17f
+        timeText.setPadding(0, 5, 0, 0)
 
-        timeText.setPadding(
-            0,
-            5,
-            0,
-            0
-        )
+        card.addView(timeText)
 
-        card.addView(
-            timeText
-        )
-
-        // TOTAL TURNS
         val turnsText =
             TextView(this)
 
@@ -1005,21 +800,11 @@ class JoinGameActivity : Activity() {
                 "Total Turns: $totalTurns"
             }
 
-        turnsText.textSize =
-            17f
+        turnsText.textSize = 17f
+        turnsText.setPadding(0, 5, 0, 10)
 
-        turnsText.setPadding(
-            0,
-            5,
-            0,
-            10
-        )
+        card.addView(turnsText)
 
-        card.addView(
-            turnsText
-        )
-
-        // JOIN BUTTON
         val joinButton =
             Button(this)
 
@@ -1030,20 +815,15 @@ class JoinGameActivity : Activity() {
                 "JOIN GAME"
             }
 
-        joinButton.textSize =
-            17f
+        joinButton.textSize = 17f
 
-        card.addView(
-            joinButton
-        )
+        card.addView(joinButton)
 
         joinButton.setOnClickListener {
 
             showPublicGameJoinDialog(
-                gameCode =
-                    gameCode,
-                requiresPassword =
-                    hasPassword
+                gameCode = gameCode,
+                requiresPassword = hasPassword
             )
         }
     }
@@ -1070,15 +850,14 @@ class JoinGameActivity : Activity() {
             EditText(this)
 
         nameInput.hint =
-            "Your name"
+            "Your name (max 10 characters)"
 
-        nameInput.setSingleLine(
-            true
-        )
+        nameInput.setSingleLine(true)
 
-        dialogLayout.addView(
-            nameInput
-        )
+        nameInput.filters =
+            arrayOf(InputFilter.LengthFilter(10))
+
+        dialogLayout.addView(nameInput)
 
         val passwordInput =
             EditText(this)
@@ -1090,9 +869,7 @@ class JoinGameActivity : Activity() {
                 "Password not required"
             }
 
-        passwordInput.setSingleLine(
-            true
-        )
+        passwordInput.setSingleLine(true)
 
         passwordInput.inputType =
             InputType.TYPE_CLASS_TEXT or
@@ -1121,20 +898,10 @@ class JoinGameActivity : Activity() {
 
         val dialog =
             AlertDialog.Builder(this)
-                .setTitle(
-                    "Join Public Game"
-                )
-                .setView(
-                    dialogLayout
-                )
-                .setNegativeButton(
-                    "CANCEL",
-                    null
-                )
-                .setPositiveButton(
-                    "JOIN",
-                    null
-                )
+                .setTitle("Join Public Game")
+                .setView(dialogLayout)
+                .setNegativeButton("CANCEL", null)
+                .setPositiveButton("JOIN", null)
                 .create()
 
         dialog.setOnShowListener {
@@ -1156,13 +923,14 @@ class JoinGameActivity : Activity() {
                         .toString()
                         .trim()
 
-                if (
-                    playerName.isEmpty()
-                ) {
+                if (playerName.isEmpty()) {
+                    nameInput.error = "Enter your name."
+                    return@setOnClickListener
+                }
 
+                if (playerName.length > 10) {
                     nameInput.error =
-                        "Enter your name."
-
+                        "Maximum 10 characters."
                     return@setOnClickListener
                 }
 
@@ -1170,27 +938,19 @@ class JoinGameActivity : Activity() {
                     requiresPassword &&
                     enteredPassword.isEmpty()
                 ) {
-
                     passwordInput.error =
                         "Enter the password."
-
                     return@setOnClickListener
                 }
 
-                positiveButton.isEnabled =
-                    false
+                positiveButton.isEnabled = false
 
                 authenticateAndJoinPublicGame(
-                    gameCode =
-                        gameCode,
-                    playerName =
-                        playerName,
-                    enteredPassword =
-                        enteredPassword,
-                    positiveButton =
-                        positiveButton,
-                    dialog =
-                        dialog
+                    gameCode = gameCode,
+                    playerName = playerName,
+                    enteredPassword = enteredPassword,
+                    positiveButton = positiveButton,
+                    dialog = dialog
                 )
             }
         }
@@ -1212,18 +972,12 @@ class JoinGameActivity : Activity() {
         if (currentUser != null) {
 
             joinFirebaseGame(
-                gameCode =
-                    gameCode,
-                playerName =
-                    playerName,
-                enteredPassword =
-                    enteredPassword,
-                uid =
-                    currentUser.uid,
-                joinButton =
-                    positiveButton,
-                dialogToClose =
-                    dialog
+                gameCode = gameCode,
+                playerName = playerName,
+                enteredPassword = enteredPassword,
+                uid = currentUser.uid,
+                joinButton = positiveButton,
+                dialogToClose = dialog
             )
 
         } else {
@@ -1235,9 +989,7 @@ class JoinGameActivity : Activity() {
                         result.user?.uid
 
                     if (uid == null) {
-
-                        positiveButton.isEnabled =
-                            true
+                        positiveButton.isEnabled = true
 
                         Toast.makeText(
                             this,
@@ -1249,24 +1001,17 @@ class JoinGameActivity : Activity() {
                     }
 
                     joinFirebaseGame(
-                        gameCode =
-                            gameCode,
-                        playerName =
-                            playerName,
-                        enteredPassword =
-                            enteredPassword,
-                        uid =
-                            uid,
-                        joinButton =
-                            positiveButton,
-                        dialogToClose =
-                            dialog
+                        gameCode = gameCode,
+                        playerName = playerName,
+                        enteredPassword = enteredPassword,
+                        uid = uid,
+                        joinButton = positiveButton,
+                        dialogToClose = dialog
                     )
                 }
                 .addOnFailureListener {
 
-                    positiveButton.isEnabled =
-                        true
+                    positiveButton.isEnabled = true
 
                     Toast.makeText(
                         this,
@@ -1277,10 +1022,7 @@ class JoinGameActivity : Activity() {
         }
     }
 
-    // ==========================================
     // FIREBASE JOIN
-    // ==========================================
-
     private fun joinFirebaseGame(
         gameCode: String,
         playerName: String,
@@ -1299,9 +1041,7 @@ class JoinGameActivity : Activity() {
             .addOnSuccessListener { snapshot ->
 
                 if (!snapshot.exists()) {
-
-                    joinButton.isEnabled =
-                        true
+                    joinButton.isEnabled = true
 
                     Toast.makeText(
                         this,
@@ -1313,19 +1053,12 @@ class JoinGameActivity : Activity() {
                 }
 
                 val status =
-                    snapshot
-                        .child("status")
-                        .getValue(
-                            String::class.java
-                        )
+                    snapshot.child("status")
+                        .getValue(String::class.java)
                         ?: "waiting"
 
-                if (
-                    status != "waiting"
-                ) {
-
-                    joinButton.isEnabled =
-                        true
+                if (status != "waiting") {
+                    joinButton.isEnabled = true
 
                     Toast.makeText(
                         this,
@@ -1337,20 +1070,15 @@ class JoinGameActivity : Activity() {
                 }
 
                 val gamePassword =
-                    snapshot
-                        .child("password")
-                        .getValue(
-                            String::class.java
-                        )
+                    snapshot.child("password")
+                        .getValue(String::class.java)
                         ?: ""
 
                 if (
                     gamePassword.isNotEmpty() &&
                     enteredPassword != gamePassword
                 ) {
-
-                    joinButton.isEnabled =
-                        true
+                    joinButton.isEnabled = true
 
                     Toast.makeText(
                         this,
@@ -1362,138 +1090,88 @@ class JoinGameActivity : Activity() {
                 }
 
                 val maxPlayers =
-                    snapshot
-                        .child("maxPlayers")
-                        .getValue(
-                            Int::class.java
-                        )
+                    snapshot.child("maxPlayers")
+                        .getValue(Int::class.java)
                         ?: 2
 
                 val roomCapacity =
-                    snapshot
-                        .child("roomCapacity")
-                        .getValue(
-                            Int::class.java
-                        )
+                    snapshot.child("roomCapacity")
+                        .getValue(Int::class.java)
                         ?: maxPlayers
-
-                val waitingPlayerGuesses =
-                    snapshot
-                        .child(
-                            "waitingPlayerGuesses"
-                        )
-                        .getValue(
-                            Int::class.java
-                        )
-                        ?: 2
 
                 gameReference.runTransaction(
                     object : Transaction.Handler {
 
                         override fun doTransaction(
-                            currentData:
-                                MutableData
+                            currentData: MutableData
                         ): Transaction.Result {
 
-                            val playersData =
-                                currentData
-                                    .child(
-                                        "players"
-                                    )
+                            val statusNow =
+                                currentData.child("status")
+                                    .getValue(String::class.java)
+                                    ?: "waiting"
 
-                            val existingPlayer =
-                                playersData
-                                    .child(uid)
-
-                            if (
-                                existingPlayer.value !=
-                                null
-                            ) {
-
-                                return Transaction.success(
-                                    currentData
-                                )
+                            if (statusNow != "waiting") {
+                                return Transaction.abort()
                             }
 
-                            var totalPlayers =
-                                0
+                            val playersData =
+                                currentData.child("players")
 
-                            var activePlayers =
-                                0
+                            val existingPlayer =
+                                playersData.child(uid)
 
-                            for (
-                                player in
-                                playersData.children
-                            ) {
+                            if (existingPlayer.value != null) {
+                                return Transaction.success(currentData)
+                            }
 
+                            var totalPlayers = 0
+                            var activePlayers = 0
+
+                            for (player in playersData.children) {
                                 totalPlayers++
 
                                 val isActive =
-                                    player
-                                        .child(
-                                            "isActive"
-                                        )
-                                        .getValue(
-                                            Boolean::class.java
-                                        )
-                                        ?: (
-                                            totalPlayers <=
-                                                maxPlayers
-                                            )
+                                    player.child("isActive")
+                                        .getValue(Boolean::class.java)
+                                        ?: (totalPlayers <= maxPlayers)
 
-                                if (
-                                    isActive
-                                ) {
+                                if (isActive) {
                                     activePlayers++
                                 }
                             }
 
-                            if (
-                                totalPlayers >=
-                                roomCapacity
-                            ) {
-
+                            if (totalPlayers >= roomCapacity) {
                                 return Transaction.abort()
                             }
 
                             val shouldBeActive =
-                                activePlayers <
-                                    maxPlayers
+                                activePlayers < maxPlayers
 
                             val playerData =
                                 hashMapOf<String, Any>(
                                     "uid" to uid,
                                     "name" to playerName,
                                     "isHost" to false,
-                                    "isActive" to
-                                        shouldBeActive,
+                                    "isActive" to shouldBeActive,
                                     "joinedAt" to
                                         System.currentTimeMillis()
                                 )
 
-                            playersData
-                                .child(uid)
-                                .value =
+                            playersData.child(uid).value =
                                 playerData
 
-                            return Transaction.success(
-                                currentData
-                            )
+                            return Transaction.success(currentData)
                         }
 
                         override fun onComplete(
                             error: DatabaseError?,
                             committed: Boolean,
-                            currentData:
-                                DataSnapshot?
+                            currentData: DataSnapshot?
                         ) {
 
-                            if (
-                                error != null
-                            ) {
-
-                                joinButton.isEnabled =
-                                    true
+                            if (error != null) {
+                                joinButton.isEnabled = true
 
                                 Toast.makeText(
                                     this@JoinGameActivity,
@@ -1504,16 +1182,12 @@ class JoinGameActivity : Activity() {
                                 return
                             }
 
-                            if (
-                                !committed
-                            ) {
-
-                                joinButton.isEnabled =
-                                    true
+                            if (!committed) {
+                                joinButton.isEnabled = true
 
                                 Toast.makeText(
                                     this@JoinGameActivity,
-                                    "The game room is full.",
+                                    "The game is full or has already started.",
                                     Toast.LENGTH_LONG
                                 ).show()
 
@@ -1523,18 +1197,13 @@ class JoinGameActivity : Activity() {
                             dialogToClose?.dismiss()
 
                             val gameSnapshot =
-                                currentData
-                                    ?: snapshot
+                                currentData ?: snapshot
 
                             openWaitingRoom(
-                                gameSnapshot =
-                                    gameSnapshot,
-                                gameCode =
-                                    gameCode,
-                                playerName =
-                                    playerName,
-                                enteredPassword =
-                                    enteredPassword
+                                gameSnapshot = gameSnapshot,
+                                gameCode = gameCode,
+                                playerName = playerName,
+                                enteredPassword = enteredPassword
                             )
                         }
                     }
@@ -1542,8 +1211,7 @@ class JoinGameActivity : Activity() {
             }
             .addOnFailureListener {
 
-                joinButton.isEnabled =
-                    true
+                joinButton.isEnabled = true
 
                 Toast.makeText(
                     this,
@@ -1553,90 +1221,57 @@ class JoinGameActivity : Activity() {
             }
     }
 
-    // ==========================================
     // WAITING ROOM
-    // ==========================================
-
     private fun openWaitingRoom(
-        gameSnapshot:
-            DataSnapshot,
+        gameSnapshot: DataSnapshot,
         gameCode: String,
         playerName: String,
         enteredPassword: String
     ) {
 
         val playerCount =
-            gameSnapshot
-                .child("maxPlayers")
-                .getValue(
-                    Int::class.java
-                )
+            gameSnapshot.child("maxPlayers")
+                .getValue(Int::class.java)
                 ?: 2
 
         val roomCapacity =
-            gameSnapshot
-                .child("roomCapacity")
-                .getValue(
-                    Int::class.java
-                )
+            gameSnapshot.child("roomCapacity")
+                .getValue(Int::class.java)
                 ?: playerCount
 
         val waitingPlayerGuesses =
-            gameSnapshot
-                .child(
-                    "waitingPlayerGuesses"
-                )
-                .getValue(
-                    Int::class.java
-                )
+            gameSnapshot.child("waitingPlayerGuesses")
+                .getValue(Int::class.java)
                 ?: 2
 
         val wordSelection =
-            gameSnapshot
-                .child("wordSelection")
-                .getValue(
-                    String::class.java
-                )
+            gameSnapshot.child("wordSelection")
+                .getValue(String::class.java)
                 ?: "Random Word"
 
         val manualWord =
-            gameSnapshot
-                .child("manualWord")
-                .getValue(
-                    String::class.java
-                )
+            gameSnapshot.child("manualWord")
+                .getValue(String::class.java)
                 ?: ""
 
         val category =
-            gameSnapshot
-                .child("category")
-                .getValue(
-                    String::class.java
-                )
+            gameSnapshot.child("category")
+                .getValue(String::class.java)
                 ?: "Random"
 
         val secondsPerTurn =
-            gameSnapshot
-                .child("secondsPerTurn")
-                .getValue(
-                    Int::class.java
-                )
+            gameSnapshot.child("secondsPerTurn")
+                .getValue(Int::class.java)
                 ?: 20
 
         val totalTurns =
-            gameSnapshot
-                .child("totalTurns")
-                .getValue(
-                    Int::class.java
-                )
+            gameSnapshot.child("totalTurns")
+                .getValue(Int::class.java)
                 ?: 0
 
         val nextWordMaster =
-            gameSnapshot
-                .child("nextWordMaster")
-                .getValue(
-                    String::class.java
-                )
+            gameSnapshot.child("nextWordMaster")
+                .getValue(String::class.java)
                 ?: "Winner becomes Word Master"
 
         val intent =
@@ -1645,104 +1280,43 @@ class JoinGameActivity : Activity() {
                 GameWaitingActivity::class.java
             )
 
-        intent.putExtra(
-            "gameCode",
-            gameCode
-        )
-
-        intent.putExtra(
-            "playerCount",
-            playerCount
-        )
-
-        intent.putExtra(
-            "roomCapacity",
-            roomCapacity
-        )
-
+        intent.putExtra("gameCode", gameCode)
+        intent.putExtra("playerCount", playerCount)
+        intent.putExtra("roomCapacity", roomCapacity)
         intent.putExtra(
             "waitingPlayerGuesses",
             waitingPlayerGuesses
         )
+        intent.putExtra("wordSelection", wordSelection)
+        intent.putExtra("manualWord", manualWord)
+        intent.putExtra("category", category)
+        intent.putExtra("secondsPerTurn", secondsPerTurn)
+        intent.putExtra("totalTurns", totalTurns)
+        intent.putExtra("nextWordMaster", nextWordMaster)
+        intent.putExtra("playerName", playerName)
+        intent.putExtra("password", enteredPassword)
+        intent.putExtra("isHost", false)
 
-        intent.putExtra(
-            "wordSelection",
-            wordSelection
-        )
-
-        intent.putExtra(
-            "manualWord",
-            manualWord
-        )
-
-        intent.putExtra(
-            "category",
-            category
-        )
-
-        intent.putExtra(
-            "secondsPerTurn",
-            secondsPerTurn
-        )
-
-        intent.putExtra(
-            "totalTurns",
-            totalTurns
-        )
-
-        intent.putExtra(
-            "nextWordMaster",
-            nextWordMaster
-        )
-
-        intent.putExtra(
-            "playerName",
-            playerName
-        )
-
-        intent.putExtra(
-            "password",
-            enteredPassword
-        )
-
-        intent.putExtra(
-            "isHost",
-            false
-        )
-
-        startActivity(
-            intent
-        )
+        startActivity(intent)
     }
 
-    // ==========================================
     // LISTENER CLEANUP
-    // ==========================================
-
     private fun removePublicGamesListener() {
 
         val listener =
             gamesListener
 
-        if (
-            listener != null
-        ) {
-
+        if (listener != null) {
             database
                 .getReference("games")
-                .removeEventListener(
-                    listener
-                )
+                .removeEventListener(listener)
 
-            gamesListener =
-                null
+            gamesListener = null
         }
     }
 
     override fun onDestroy() {
-
         removePublicGamesListener()
-
         super.onDestroy()
     }
 }
