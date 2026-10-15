@@ -1,4 +1,3 @@
-
 package com.wordguessing.game
 
 import android.app.Activity
@@ -717,100 +716,117 @@ class GameWaitingActivity : Activity() {
         finish()
     }
 
-    private fun leaveGame() {
-        val currentUser =
-            com.google.firebase.auth.FirebaseAuth
-                .getInstance()
-                .currentUser
 
-        if (currentUser == null) {
-            finish()
-            return
-        }
+private var leavingGame = false
 
-        val uid = currentUser.uid
+private fun leaveGame() {
+    if (leavingGame || isFinishing || isDestroyed) return
 
-        val gameReference = database
-            .getReference("games")
-            .child(gameCode)
+    val currentUser = com.google.firebase.auth.FirebaseAuth
+        .getInstance()
+        .currentUser
 
-        gameReference
-            .child("players")
-            .child(uid)
-            .removeValue()
-            .addOnSuccessListener {
-
-                /*
-                 * If the host leaves, transfer host status
-                 * to the first remaining player.
-                 */
-                if (isHost) {
-                    gameReference.get()
-                        .addOnSuccessListener { snapshot ->
-
-                            if (!snapshot.exists()) {
-                                finish()
-                                return@addOnSuccessListener
-                            }
-
-                            val players = snapshot
-                                .child("players")
-                                .children
-                                .toList()
-                                .sortedBy {
-                                    it.child("joinedAt")
-                                        .getValue(Long::class.java)
-                                        ?: 0L
-                                }
-
-                            if (players.isNotEmpty()) {
-                                val newHost = players.first()
-                                val newHostUid = newHost.key
-
-                                if (newHostUid != null) {
-                                    val newHostName =
-                                        newHost.child("name")
-                                            .getValue(String::class.java)
-                                            ?: "Player"
-
-                                    val updates =
-                                        hashMapOf<String, Any>(
-                                            "hostUid" to newHostUid,
-                                            "hostName" to newHostName,
-                                            "players/$newHostUid/isHost" to true
-                                        )
-
-                                    gameReference.updateChildren(updates)
-                                }
-                            } else {
-                                // Nobody remains. Remove the empty game.
-                                gameReference.removeValue()
-                            }
-
-                            finish()
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(
-                                this,
-                                "Could not update the game host.",
-                                Toast.LENGTH_LONG
-                            ).show()
-
-                            finish()
-                        }
-                } else {
-                    finish()
-                }
-            }
-            .addOnFailureListener {
-                Toast.makeText(
-                    this,
-                    "Could not leave the game.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+    if (currentUser == null) {
+        finish()
+        return
     }
 
+    leavingGame = true
+
+    val uid = currentUser.uid
+    val gameReference = database
+        .getReference("games")
+        .child(gameCode)
+
+    gameReference.runTransaction(
+        object : com.google.firebase.database.Transaction.Handler {
+
+            override fun doTransaction(
+                currentData: com.google.firebase.database.MutableData
+            ): com.google.firebase.database.Transaction.Result {
+
+                if (!currentData.exists()) {
+                    return com.google.firebase.database.Transaction.success(
+                        currentData
+                    )
+                }
+
+                val players = currentData.child("players")
+                val hostUid = currentData
+                    .child("hostUid")
+                    .getValue(String::class.java)
+
+                // Remove the departing player.
+                players.child(uid).value = null
+
+                val remainingPlayers = players.children
+                    .toList()
+                    .sortedBy {
+                        it.child("joinedAt")
+                            .getValue(Long::class.java) ?: 0L
+                    }
+
+                if (remainingPlayers.isEmpty()) {
+                    // Nobody remains: delete the entire game record.
+                    currentData.value = null
+
+                    return com.google.firebase.database.Transaction.success(
+                        currentData
+                    )
+                }
+
+                // If the host left, transfer hosting to the
+                // earliest remaining player.
+                if (hostUid == uid) {
+                    val newHost = remainingPlayers.first()
+                    val newHostUid = newHost.key
+                        ?: return com.google.firebase.database.Transaction.abort()
+
+                    val newHostName = newHost
+                        .child("name")
+                        .getValue(String::class.java)
+                        ?: "Player"
+
+                    currentData.child("hostUid").value = newHostUid
+                    currentData.child("hostName").value = newHostName
+
+                    for (player in remainingPlayers) {
+                        player.child("isHost").value =
+                            player.key == newHostUid
+                    }
+                }
+
+                return com.google.firebase.database.Transaction.success(
+                    currentData
+                )
+            }
+
+            override fun onComplete(
+                error: com.google.firebase.database.DatabaseError?,
+                committed: Boolean,
+                currentData: com.google.firebase.database.DataSnapshot?
+            ) {
+                if (error != null || !committed) {
+                    leavingGame = false
+
+                    if (!isFinishing && !isDestroyed) {
+                        Toast.makeText(
+                            this@GameWaitingActivity,
+                            "Could not leave the game. Please try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+
+                    return
+                }
+
+                finish()
+            }
+        },
+        false
+    )
+}
+    
     override fun onDestroy() {
         val listener = gameListener
 
