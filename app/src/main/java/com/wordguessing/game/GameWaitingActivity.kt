@@ -295,7 +295,6 @@ class GameWaitingActivity : Activity() {
 leaveButton.setOnClickListener {
     confirmLeaveGame()
 }
-        }
 
         setContentView(scrollView)
     }
