@@ -1,5 +1,6 @@
 package com.wordguessing.game
 
+import android.app.AlertDialog
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -291,8 +292,9 @@ class GameWaitingActivity : Activity() {
 
         layout.addView(leaveButton)
 
-        leaveButton.setOnClickListener {
-            leaveGame()
+leaveButton.setOnClickListener {
+    confirmLeaveGame()
+}
         }
 
         setContentView(scrollView)
@@ -716,7 +718,41 @@ class GameWaitingActivity : Activity() {
         finish()
     }
 
+private fun confirmLeaveGame() {
+    if (leavingGame || isFinishing || isDestroyed) return
 
+    database.getReference("games")
+        .child(gameCode)
+        .get()
+        .addOnSuccessListener { snapshot ->
+            if (isFinishing || isDestroyed) return@addOnSuccessListener
+
+            val playerCount = snapshot.child("players").children.count()
+
+            val message = if (playerCount <= 1) {
+                "You are the only player. Leaving will delete this game. Do you want to continue?"
+            } else {
+                "Are you sure you want to leave this game?"
+            }
+
+            AlertDialog.Builder(this)
+                .setTitle("Leave Game?")
+                .setMessage(message)
+                .setNegativeButton("Stay", null)
+                .setPositiveButton("Leave") { _, _ ->
+                    leaveGame()
+                }
+                .show()
+        }
+        .addOnFailureListener {
+            Toast.makeText(
+                this,
+                "Could not check the game. Please try again.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+}
+    
 private var leavingGame = false
 
 private fun leaveGame() {
@@ -825,6 +861,10 @@ private fun leaveGame() {
         },
         false
     )
+}
+
+override fun onBackPressed() {
+    confirmLeaveGame()
 }
     
     override fun onDestroy() {
