@@ -1,4 +1,3 @@
-
 package com.wordguessing.game
 
 import android.app.Activity
@@ -1118,12 +1117,22 @@ class JoinGameActivity : Activity() {
                             val playersData =
                                 currentData.child("players")
 
-                            val existingPlayer =
-                                playersData.child(uid)
+val existingPlayer =
+    playersData.child(uid)
 
-                            if (existingPlayer.value != null) {
-                                return Transaction.success(currentData)
-                            }
+if (existingPlayer.value != null) {
+    val hostUid =
+        currentData.child("hostUid")
+            .getValue(String::class.java)
+
+    existingPlayer.child("name").value =
+        playerName
+
+    existingPlayer.child("isHost").value =
+        hostUid == uid
+
+    return Transaction.success(currentData)
+}
 
                             var totalPlayers = 0
                             var activePlayers = 0
@@ -1199,12 +1208,28 @@ class JoinGameActivity : Activity() {
                             val gameSnapshot =
                                 currentData ?: snapshot
 
-                            openWaitingRoom(
-                                gameSnapshot = gameSnapshot,
-                                gameCode = gameCode,
-                                playerName = playerName,
-                                enteredPassword = enteredPassword
-                            )
+val hostUid =
+    gameSnapshot.child("hostUid")
+        .getValue(String::class.java)
+
+val isHost =
+    if (hostUid != null) {
+        hostUid == uid
+    } else {
+        gameSnapshot.child("players")
+            .child(uid)
+            .child("isHost")
+            .getValue(Boolean::class.java)
+            ?: false
+    }
+
+openWaitingRoom(
+    gameSnapshot = gameSnapshot,
+    gameCode = gameCode,
+    playerName = playerName,
+    enteredPassword = enteredPassword,
+    isHost = isHost
+)
                         }
                     }
                 )
@@ -1226,7 +1251,8 @@ class JoinGameActivity : Activity() {
         gameSnapshot: DataSnapshot,
         gameCode: String,
         playerName: String,
-        enteredPassword: String
+        enteredPassword: String,
+isHost: Boolean
     ) {
 
         val playerCount =
@@ -1295,7 +1321,7 @@ class JoinGameActivity : Activity() {
         intent.putExtra("nextWordMaster", nextWordMaster)
         intent.putExtra("playerName", playerName)
         intent.putExtra("password", enteredPassword)
-        intent.putExtra("isHost", false)
+        intent.putExtra("isHost", isHost)
 
         startActivity(intent)
     }
