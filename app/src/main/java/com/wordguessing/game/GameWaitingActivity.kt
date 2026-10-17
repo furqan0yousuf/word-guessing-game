@@ -1,8 +1,8 @@
 package com.wordguessing.game
 
-import android.app.AlertDialog
 import android.app.Activity
 import android.content.ClipData
+import android.app.AlertDialog
 import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Color
