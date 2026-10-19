@@ -1006,6 +1006,8 @@ class OnlineGameRoundActivity : Activity() {
             snapshot
         )
 
+                repairRoomAfterDeparture(snapshot)
+
         readGuessedLetters(
             snapshot
         )
@@ -1276,6 +1278,180 @@ class OnlineGameRoundActivity : Activity() {
             true
     }
 
+
+    private fun repairRoomAfterDeparture(
+        snapshot: DataSnapshot
+    ) {
+        val players =
+            snapshot.child("players")
+
+        val playerIds =
+            players.children.mapNotNull {
+                it.key
+            }
+
+        val hostUid =
+            snapshot.child("hostUid")
+                .getValue(String::class.java)
+                ?: ""
+
+        val currentUid =
+            snapshot.child("currentPlayerUid")
+                .getValue(String::class.java)
+                ?: ""
+
+        val masterUid =
+            snapshot.child("wordMasterUid")
+                .getValue(String::class.java)
+                ?: ""
+
+        val needsRepair =
+            playerIds.isEmpty() ||
+                !playerIds.contains(hostUid) ||
+                (
+                    masterUid.isNotEmpty() &&
+                        !playerIds.contains(masterUid)
+                ) ||
+                (
+                    currentUid.isNotEmpty() &&
+                        !playerIds.contains(currentUid)
+                ) ||
+                (
+                    status == "playing" &&
+                        currentUid.isEmpty()
+                )
+
+        if (!needsRepair) {
+            return
+        }
+
+        gameReference().runTransaction(
+            object : Transaction.Handler {
+
+                override fun doTransaction(
+                    data: MutableData
+                ): Transaction.Result {
+
+                    val remaining =
+                        data.child("players")
+                            .children
+                            .mapNotNull {
+                                it.key
+                            }
+
+                    if (remaining.isEmpty()) {
+                        data.value = null
+
+                        return Transaction.success(data)
+                    }
+
+                    val active =
+                        getActivePlayerIds(data)
+                            .filter {
+                                remaining.contains(it)
+                            }
+
+                    val oldHost =
+                        data.child("hostUid")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    if (!remaining.contains(oldHost)) {
+                        val newHost =
+                            active.firstOrNull()
+                                ?: remaining.first()
+
+                        data.child("hostUid").value =
+                            newHost
+
+                        data.child("players")
+                            .child(newHost)
+                            .child("isHost")
+                            .value = true
+                    }
+
+                    var master =
+                        data.child("wordMasterUid")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    if (
+                        !remaining.contains(master) &&
+                        (
+                            master.isNotEmpty() ||
+                                data.child("status")
+                                    .getValue(String::class.java)
+                                    == "playing"
+                        )
+                    ) {
+                        master =
+                            active.firstOrNull() ?: ""
+
+                        data.child("wordMasterUid").value =
+                            master
+                    }
+
+                    val current =
+                        data.child("currentPlayerUid")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    val gameStatus =
+                        data.child("status")
+                            .getValue(String::class.java)
+                            ?: ""
+
+                    if (
+                        gameStatus == "playing" &&
+                        (
+                            current.isEmpty() ||
+                                !remaining.contains(current)
+                        )
+                    ) {
+                        val candidates =
+                            active.filter {
+                                it != master &&
+                                    data.child(
+                                        "eliminatedPlayers"
+                                    ).child(it)
+                                        .getValue(Boolean::class.java)
+                                        != true
+                            }
+
+                        val nextPlayer =
+                            candidates.firstOrNull()
+                                ?: active.firstOrNull()
+                                ?: ""
+
+                        data.child("currentPlayerUid").value =
+                            nextPlayer
+
+                        data.child("turnEndsAt").value =
+                            if (
+                                nextPlayer.isEmpty() ||
+                                secondsPerTurn <= 0
+                            ) {
+                                0L
+                            } else {
+                                System.currentTimeMillis() +
+                                    secondsPerTurn * 1000L
+                            }
+                    }
+
+                    return Transaction.success(data)
+                }
+
+                override fun onComplete(
+                    error: DatabaseError?,
+                    committed: Boolean,
+                    currentData: DataSnapshot?
+                ) {
+                    // No additional action is needed here.
+                }
+            }
+        )
+    }
+    
     private fun isPlayerActive(
         player: DataSnapshot
     ): Boolean {
