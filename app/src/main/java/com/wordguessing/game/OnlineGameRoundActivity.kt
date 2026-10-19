@@ -226,6 +226,14 @@ class OnlineGameRoundActivity : Activity() {
             return
         }
 
+        
+        // Remove this player's entry if the Firebase connection is lost.
+        gameReference()
+            .child("players")
+            .child(myUid)
+            .onDisconnect()
+            .removeValue()
+
         startFirebaseListener()
     }
 
