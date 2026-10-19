@@ -42,6 +42,8 @@ class JoinGameActivity : Activity() {
     private var gamesListener:
         ValueEventListener? = null
 
+    private var authenticatingPublicGames = false
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
@@ -496,6 +498,44 @@ class JoinGameActivity : Activity() {
         )
 
         publicGamesContainer.addView(loadingText)
+
+        
+        // Ensure Firebase authentication before reading public games.
+        if (auth.currentUser == null) {
+            if (authenticatingPublicGames) {
+                return
+            }
+
+            authenticatingPublicGames = true
+
+            auth.signInAnonymously()
+                .addOnSuccessListener {
+                    authenticatingPublicGames = false
+
+                    if (!isFinishing && !isDestroyed) {
+                        listenToPublicGames()
+                    }
+                }
+                .addOnFailureListener { error ->
+                    authenticatingPublicGames = false
+
+                    publicGamesContainer.removeAllViews()
+
+                    val errorText =
+                        TextView(this@JoinGameActivity)
+
+                    errorText.text =
+                        "Firebase sign-in failed: " +
+                            (error.message ?: "Unknown error")
+
+                    errorText.textSize = 17f
+                    errorText.gravity = Gravity.CENTER
+
+                    publicGamesContainer.addView(errorText)
+                }
+
+            return
+        }
 
         val gamesReference =
             database.getReference("games")
