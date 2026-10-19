@@ -5273,33 +5273,13 @@ private fun setWordDisplayText(displayText: String) {
                         }
                     }
 
-                    if (
-                        remaining.isEmpty()
-                    ) {
+if (remaining.isEmpty()) {
+    // Nobody remains: delete the entire room.
+    data.value = null
 
-                        data.child(
-                            "status"
-                        ).value =
-                            "ended"
-
-                        data.child(
-                            "currentPlayerUid"
-                        ).value =
-                            ""
-
-                        data.child(
-                            "wordMasterUid"
-                        ).value =
-                            ""
-
-                        data.child(
-                            "turnEndsAt"
-                        ).value =
-                            0L
-
-                        return Transaction.success(
-                            data
-                        )
+    return Transaction.success(data)
+}
+                    
                     }
 
                     val activeRemaining =
