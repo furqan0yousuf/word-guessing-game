@@ -1408,14 +1408,17 @@ class OnlineGameRoundActivity : Activity() {
                                 !remaining.contains(current)
                         )
                     ) {
+                        
                         val candidates =
-                            active.filter {
-                                it != master &&
-                                    data.child(
-                                        "eliminatedPlayers"
-                                    ).child(it)
+                            active.filter { candidateUid ->
+                                val isEliminated =
+                                    data.child("eliminatedPlayers")
+                                        .child(candidateUid)
                                         .getValue(Boolean::class.java)
-                                        != true
+                                        ?: false
+
+                                candidateUid != master &&
+                                    !isEliminated
                             }
 
                         val nextPlayer =
@@ -1435,7 +1438,7 @@ class OnlineGameRoundActivity : Activity() {
                             } else {
                                 System.currentTimeMillis() +
                                     secondsPerTurn * 1000L
-                            }
+                            } 
                     }
 
                     return Transaction.success(data)
