@@ -5277,9 +5277,7 @@ if (remaining.isEmpty()) {
     // Nobody remains: delete the entire room.
     data.value = null
 
-    return Transaction.success(data)
-}
-                    
+    return Transaction.success(data)        
                     }
 
                     val activeRemaining =
