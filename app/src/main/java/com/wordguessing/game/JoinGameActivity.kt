@@ -858,13 +858,19 @@ class JoinGameActivity : Activity() {
 
         card.addView(joinButton)
 
-        joinButton.setOnClickListener {
 
-            showPublicGameJoinDialog(
-                gameCode = gameCode,
-                requiresPassword = hasPassword
-            )
-        }
+joinButton.setOnClickListener {
+    Toast.makeText(
+        this@JoinGameActivity,
+        "Join button tapped",
+        Toast.LENGTH_LONG
+    ).show()
+
+    showPublicGameJoinDialog(
+        gameCode = gameCode,
+        requiresPassword = hasPassword
+    )
+}
     }
 
     private fun showPublicGameJoinDialog(
