@@ -15,6 +15,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
+import com.google.firebase.database.ServerValue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -227,12 +228,15 @@ class OnlineGameRoundActivity : Activity() {
         }
 
         
-        // Remove this player's entry if the Firebase connection is lost.
-        gameReference()
-            .child("players")
-            .child(myUid)
-            .onDisconnect()
-            .removeValue()
+// Remove this player if the Firebase connection is lost.
+// The host disconnect timestamp is added after the host is identified.
+gameReference()
+    .onDisconnect()
+    .updateChildren(
+        mapOf<String, Any?>(
+            "players/$myUid" to null
+        )
+    )
 
         startFirebaseListener()
     }
@@ -944,6 +948,29 @@ class OnlineGameRoundActivity : Activity() {
                     String::class.java
                 )
                 ?: ""
+
+        val disconnectUpdates =
+    mutableMapOf<String, Any?>()
+
+disconnectUpdates["players/$myUid"] = null
+
+if (knownHostUid == myUid) {
+
+    if (
+        snapshot.child("hostDisconnectedAt").exists()
+    ) {
+        gameReference()
+            .child("hostDisconnectedAt")
+            .removeValue()
+    }
+
+    disconnectUpdates["hostDisconnectedAt"] =
+        ServerValue.TIMESTAMP
+}
+
+gameReference()
+    .onDisconnect()
+    .updateChildren(disconnectUpdates)
 
         turnEndsAt =
             snapshot.child("turnEndsAt")
