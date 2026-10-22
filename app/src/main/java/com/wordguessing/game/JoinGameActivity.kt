@@ -21,6 +21,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ServerValue
 import com.google.firebase.database.MutableData
 import com.google.firebase.database.Transaction
 import com.google.firebase.database.ValueEventListener
@@ -583,6 +584,46 @@ class JoinGameActivity : Activity() {
                         if (!isPublic) {
                             continue
                         }
+
+                        // Hide abandoned public rooms and start the
+// 10-minute grace period when needed.
+val players = game.child("players")
+val hostUid = game.child("hostUid")
+    .getValue(String::class.java) ?: ""
+
+val hostExistsByUid =
+    hostUid.isNotBlank() &&
+    players.child(hostUid).exists()
+
+val hostExistsByFlag =
+    players.children.any {
+        it.child("isHost")
+            .getValue(Boolean::class.java) == true
+    }
+
+val hostExists = hostExistsByUid || hostExistsByFlag
+
+if (!hostExists) {
+    val gameCode = game.key ?: continue
+
+    val disconnectedAt =
+        game.child("hostDisconnectedAt")
+            .getValue(Long::class.java)
+
+    if (disconnectedAt == null) {
+        database.getReference("games")
+            .child(gameCode)
+            .child("hostDisconnectedAt")
+            .setValue(ServerValue.TIMESTAMP)
+    } else if (
+        System.currentTimeMillis() - disconnectedAt >=
+        10 * 60 * 1000L
+    ) {
+        deleteAbandonedPublicGame(gameCode)
+    }
+
+    continue
+}
 
                         val gameCode =
                             game.key ?: continue
@@ -1371,6 +1412,95 @@ isHost: Boolean
 
         startActivity(intent)
     }
+
+private fun deleteAbandonedPublicGame(
+    gameCode: String
+) {
+    val gameReference =
+        database.getReference("games")
+            .child(gameCode)
+
+    gameReference.runTransaction(
+        object : Transaction.Handler {
+
+            override fun doTransaction(
+                currentData: MutableData
+            ): Transaction.Result {
+
+                if (!currentData.exists()) {
+                    return Transaction.abort()
+                }
+
+                val status =
+                    currentData.child("status")
+                        .getValue(String::class.java)
+                        ?: "waiting"
+
+                if (status != "waiting") {
+                    return Transaction.abort()
+                }
+
+                val isPublic =
+                    currentData.child("isPublic")
+                        .getValue(Boolean::class.java)
+                        ?: (
+                            currentData.child("roomType")
+                                .getValue(String::class.java)
+                                ?.lowercase() == "public"
+                        )
+
+                if (!isPublic) {
+                    return Transaction.abort()
+                }
+
+                val players =
+                    currentData.child("players")
+
+                val hostUid =
+                    currentData.child("hostUid")
+                        .getValue(String::class.java)
+                        ?: ""
+
+                val hostExistsByUid =
+                    hostUid.isNotBlank() &&
+                    players.child(hostUid).value != null
+
+                val hostExistsByFlag =
+                    players.children.any {
+                        it.child("isHost")
+                            .getValue(Boolean::class.java) == true
+                    }
+
+                if (hostExistsByUid || hostExistsByFlag) {
+                    return Transaction.abort()
+                }
+
+                val disconnectedAt =
+                    currentData.child("hostDisconnectedAt")
+                        .getValue(Long::class.java)
+                        ?: return Transaction.abort()
+
+                if (
+                    System.currentTimeMillis() - disconnectedAt <
+                    10 * 60 * 1000L
+                ) {
+                    return Transaction.abort()
+                }
+
+                currentData.value = null
+                return Transaction.success(currentData)
+            }
+
+            override fun onComplete(
+                error: DatabaseError?,
+                committed: Boolean,
+                currentData: DataSnapshot?
+            ) {
+                // No action needed here.
+            }
+        }
+    )
+}
 
     // LISTENER CLEANUP
     private fun removePublicGamesListener() {
