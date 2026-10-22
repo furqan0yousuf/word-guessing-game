@@ -1156,6 +1156,61 @@ joinButton.setOnClickListener {
                     return@addOnSuccessListener
                 }
 
+                                // Prevent joining a public game without a host.
+                val isPublic =
+                    snapshot.child("isPublic")
+                        .getValue(Boolean::class.java)
+                        ?: (
+                            snapshot.child("roomType")
+                                .getValue(String::class.java)
+                                ?.lowercase() == "public"
+                        )
+
+                if (isPublic) {
+                    val hostUid =
+                        snapshot.child("hostUid")
+                            .getValue(String::class.java) ?: ""
+
+                    val playersSnapshot =
+                        snapshot.child("players")
+
+                    val hostExistsByUid =
+                        hostUid.isNotBlank() &&
+                        playersSnapshot.child(hostUid).exists()
+
+                    val hostExistsByFlag =
+                        playersSnapshot.children.any {
+                            it.child("isHost")
+                                .getValue(Boolean::class.java) == true
+                        }
+
+                    if (!hostExistsByUid && !hostExistsByFlag) {
+                        val disconnectedAt =
+                            snapshot.child("hostDisconnectedAt")
+                                .getValue(Long::class.java)
+
+                        if (disconnectedAt == null) {
+                            gameReference.child("hostDisconnectedAt")
+                                .setValue(ServerValue.TIMESTAMP)
+                        } else if (
+                            System.currentTimeMillis() - disconnectedAt >=
+                            10 * 60 * 1000L
+                        ) {
+                            deleteAbandonedPublicGame(gameCode)
+                        }
+
+                        joinButton.isEnabled = true
+
+                        Toast.makeText(
+                            this@JoinGameActivity,
+                            "The host has left this game. Please join another game.",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        return@addOnSuccessListener
+                    }
+                }
+
                 val gamePassword =
                     snapshot.child("password")
                         .getValue(String::class.java)
@@ -1416,7 +1471,8 @@ isHost: Boolean
 
 private fun deleteAbandonedPublicGame(
     gameCode: String
-) {
+) 
+    {
     val gameReference =
         database.getReference("games")
             .child(gameCode)
@@ -1430,7 +1486,7 @@ private fun deleteAbandonedPublicGame(
 
                 if (currentData.value == null) {
     return Transaction.abort()
-}
+
                 }
 
                 val status =
