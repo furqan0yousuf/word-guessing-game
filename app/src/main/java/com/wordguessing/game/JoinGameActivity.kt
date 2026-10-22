@@ -585,23 +585,24 @@ class JoinGameActivity : Activity() {
                             continue
                         }
 
-                        // Hide abandoned public rooms and start the
+// Hide abandoned public rooms and start the
 // 10-minute grace period when needed.
-val players = game.child("players")
+val hostPlayersSnapshot = game.child("players")
 val hostUid = game.child("hostUid")
     .getValue(String::class.java) ?: ""
 
 val hostExistsByUid =
     hostUid.isNotBlank() &&
-    players.child(hostUid).exists()
+    hostPlayersSnapshot.child(hostUid).exists()
 
 val hostExistsByFlag =
-    players.children.any {
+    hostPlayersSnapshot.children.any {
         it.child("isHost")
             .getValue(Boolean::class.java) == true
     }
 
 val hostExists = hostExistsByUid || hostExistsByFlag
+
 
 if (!hostExists) {
     val gameCode = game.key ?: continue
@@ -1427,8 +1428,9 @@ private fun deleteAbandonedPublicGame(
                 currentData: MutableData
             ): Transaction.Result {
 
-                if (!currentData.exists()) {
-                    return Transaction.abort()
+                if (currentData.value == null) {
+    return Transaction.abort()
+}
                 }
 
                 val status =
