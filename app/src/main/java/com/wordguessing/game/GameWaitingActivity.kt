@@ -15,6 +15,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -23,6 +24,7 @@ import com.google.firebase.database.ValueEventListener
 class GameWaitingActivity : Activity() {
 
     private val database = FirebaseDatabase.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     private var gameCode = "------"
 
@@ -68,7 +70,122 @@ class GameWaitingActivity : Activity() {
 
         readIntentData()
         buildScreen()
+        registerDisconnectCleanup()
         listenToGame()
+    }
+
+    private fun registerDisconnectCleanup() {
+        val uid = auth.currentUser?.uid ?: return
+
+        database.getReference("games")
+            .child(gameCode)
+            .child("players")
+            .child(uid)
+            .onDisconnect()
+            .removeValue()
+    }
+
+    /**
+     * If the host disappears because of a lost connection, transfer
+     * ownership to the earliest remaining player. If nobody remains,
+     * remove the abandoned waiting room.
+     */
+    private fun repairWaitingRoomHost(snapshot: DataSnapshot) {
+        if (!snapshot.exists()) return
+
+        val currentStatus = snapshot.child("status")
+            .getValue(String::class.java) ?: "waiting"
+
+        if (currentStatus != "waiting") return
+
+        val hostUid = snapshot.child("hostUid")
+            .getValue(String::class.java).orEmpty()
+
+        val playersSnapshot = snapshot.child("players")
+        val hostStillPresent = if (hostUid.isNotBlank()) {
+            playersSnapshot.child(hostUid).exists()
+        } else {
+            playersSnapshot.children.any {
+                it.child("isHost")
+                    .getValue(Boolean::class.java) == true
+            }
+        }
+
+        if (hostStillPresent) return
+
+        database.getReference("games")
+            .child(gameCode)
+            .runTransaction(
+                object : com.google.firebase.database.Transaction.Handler {
+
+                    override fun doTransaction(
+                        data: com.google.firebase.database.MutableData
+                    ): com.google.firebase.database.Transaction.Result {
+                        if (
+                            data.child("status")
+                                .getValue(String::class.java) != "waiting"
+                        ) {
+                            return com.google.firebase.database.Transaction.abort()
+                        }
+
+                        val players = data.child("players")
+                        val storedHostUid = data.child("hostUid")
+                            .getValue(String::class.java).orEmpty()
+
+                        val storedHostPresent = if (storedHostUid.isNotBlank()) {
+                            players.child(storedHostUid).value != null
+                        } else {
+                            players.children.any {
+                                it.child("isHost")
+                                    .getValue(Boolean::class.java) == true
+                            }
+                        }
+
+                        if (storedHostPresent) {
+                            return com.google.firebase.database.Transaction.abort()
+                        }
+
+                        val remaining = players.children
+                            .sortedBy {
+                                it.child("joinedAt")
+                                    .getValue(Long::class.java) ?: 0L
+                            }
+
+                        if (remaining.isEmpty()) {
+                            data.value = null
+                            return com.google.firebase.database.Transaction.success(data)
+                        }
+
+                        val newHost = remaining.first()
+                        val newHostUid = newHost.key
+                            ?: return com.google.firebase.database.Transaction.abort()
+
+                        val newHostName = newHost.child("name")
+                            .getValue(String::class.java) ?: "Player"
+
+                        data.child("hostUid").value = newHostUid
+                        data.child("hostName").value = newHostName
+
+                        for (player in remaining) {
+                            player.child("isHost").value =
+                                player.key == newHostUid
+                        }
+
+                        data.child("hostDisconnectedAt").value = null
+
+                        return com.google.firebase.database.Transaction.success(data)
+                    }
+
+                    override fun onComplete(
+                        error: com.google.firebase.database.DatabaseError?,
+                        committed: Boolean,
+                        currentData: DataSnapshot?
+                    ) {
+                        // The Firebase listener refreshes the waiting room.
+                    }
+                },
+                false
+            )
     }
 
     private fun readIntentData() {
@@ -382,6 +499,7 @@ leaveButton.setOnClickListener {
 
                 updatePlayerDisplay(snapshot)
                 updateStatus(snapshot)
+                repairWaitingRoomHost(snapshot)
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -519,22 +637,43 @@ leaveButton.setOnClickListener {
     }
 
     private fun updateStatus(snapshot: DataSnapshot) {
-        val players = snapshot.child("players")
-        val count = players.children.count()
+        val currentUid = auth.currentUser?.uid.orEmpty()
+        val hostUid = snapshot.child("hostUid")
+            .getValue(String::class.java).orEmpty()
+
+        // The host UID in Firebase is authoritative. Fall back to the
+        // legacy player flag only for rooms created before hostUid existed.
+        isHost = if (hostUid.isNotBlank()) {
+            hostUid == currentUid
+        } else {
+            snapshot.child("players")
+                .child(currentUid)
+                .child("isHost")
+                .getValue(Boolean::class.java) ?: false
+        }
+
+        val activeCount = snapshot.child("players").children.count { player ->
+            player.child("isActive")
+                .getValue(Boolean::class.java) ?: true
+        }
+
+        startButton.visibility =
+            if (isHost) View.VISIBLE else View.GONE
 
         if (isHost) {
-            if (count >= 2) {
-                startButton.isEnabled =
-                    !openingOnlineGame && !checkingStart
+            startButton.isEnabled =
+                activeCount >= 2 &&
+                !openingOnlineGame &&
+                !checkingStart
 
-                statusText.text = "You can start the game."
-            } else {
-                startButton.isEnabled = false
-
-                statusText.text =
-                    "Waiting for at least 2 players..."
-            }
+            statusText.text =
+                if (activeCount >= 2) {
+                    "You can start the game."
+                } else {
+                    "Waiting for at least 2 active players..."
+                }
         } else {
+            startButton.isEnabled = false
             statusText.text =
                 "Waiting for the host to start the game..."
         }
@@ -582,18 +721,36 @@ leaveButton.setOnClickListener {
                     return@addOnSuccessListener
                 }
 
-                val count = snapshot
-                    .child("players")
-                    .children
-                    .count()
+                val currentUid = auth.currentUser?.uid.orEmpty()
+                val hostUid = snapshot.child("hostUid")
+                    .getValue(String::class.java).orEmpty()
 
-                if (count < 2) {
+                if (hostUid.isNotBlank() && hostUid != currentUid) {
                     checkingStart = false
-                    startButton.isEnabled = true
+                    updateStatus(snapshot)
 
                     Toast.makeText(
                         this,
-                        "At least 2 players are required.",
+                        "You are no longer the host.",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    return@addOnSuccessListener
+                }
+
+                val activeCount = snapshot.child("players")
+                    .children.count { player ->
+                        player.child("isActive")
+                            .getValue(Boolean::class.java) ?: true
+                    }
+
+                if (activeCount < 2) {
+                    checkingStart = false
+                    updateStatus(snapshot)
+
+                    Toast.makeText(
+                        this,
+                        "At least 2 active players are required.",
                         Toast.LENGTH_SHORT
                     ).show()
 
