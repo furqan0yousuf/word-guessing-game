@@ -1309,163 +1309,119 @@ gameReference()
     private fun repairRoomAfterDeparture(
         snapshot: DataSnapshot
     ) {
-        val players =
-            snapshot.child("players")
+        val players = snapshot.child("players")
+        val playerIds = players.children.mapNotNull { it.key }
+        val hostUid = snapshot.child("hostUid")
+            .getValue(String::class.java).orEmpty()
+        val currentUid = snapshot.child("currentPlayerUid")
+            .getValue(String::class.java).orEmpty()
+        val masterUid = snapshot.child("wordMasterUid")
+            .getValue(String::class.java).orEmpty()
+        val gameStatus = snapshot.child("status")
+            .getValue(String::class.java).orEmpty()
 
-        val playerIds =
-            players.children.mapNotNull {
-                it.key
-            }
+        val hostFlagsNeedRepair = players.children.any { player ->
+            val playerUid = player.key ?: return@any false
+            val shouldBeHost = playerUid == hostUid
+            (player.child("isHost").getValue(Boolean::class.java) ?: false) != shouldBeHost
+        }
 
-        val hostUid =
-            snapshot.child("hostUid")
-                .getValue(String::class.java)
-                ?: ""
-
-        val currentUid =
-            snapshot.child("currentPlayerUid")
-                .getValue(String::class.java)
-                ?: ""
-
-        val masterUid =
-            snapshot.child("wordMasterUid")
-                .getValue(String::class.java)
-                ?: ""
+        val currentPlayerIsActive = currentUid.isNotEmpty() &&
+            players.child(currentUid).exists() &&
+            isPlayerActive(players.child(currentUid))
 
         val needsRepair =
             playerIds.isEmpty() ||
+                hostUid.isEmpty() ||
                 !playerIds.contains(hostUid) ||
-                (
-                    masterUid.isNotEmpty() &&
-                        !playerIds.contains(masterUid)
-                ) ||
-                (
-                    currentUid.isNotEmpty() &&
-                        !playerIds.contains(currentUid)
-                ) ||
-                (
-                    status == "playing" &&
-                        currentUid.isEmpty()
-                )
+                hostFlagsNeedRepair ||
+                (masterUid.isNotEmpty() && !playerIds.contains(masterUid)) ||
+                (currentUid.isNotEmpty() && !currentPlayerIsActive) ||
+                (gameStatus == "playing" && currentUid.isEmpty())
 
-        if (!needsRepair) {
-            return
-        }
+        if (!needsRepair) return
 
         gameReference().runTransaction(
             object : Transaction.Handler {
+                override fun doTransaction(data: MutableData): Transaction.Result {
+                    if (data.value == null) {
+                        return Transaction.abort()
+                    }
 
-                override fun doTransaction(
-                    data: MutableData
-                ): Transaction.Result {
+                    val playersNode = data.child("players")
+                    val orderedPlayers = playersNode.children
+                        .filter { it.key != null }
+                        .sortedBy {
+                            it.child("joinedAt").getValue(Long::class.java) ?: 0L
+                        }
 
-                    val remaining =
-                        data.child("players")
-                            .children
-                            .mapNotNull {
-                                it.key
-                            }
-
-                    if (remaining.isEmpty()) {
+                    if (orderedPlayers.isEmpty()) {
                         data.value = null
-
                         return Transaction.success(data)
                     }
 
-                    val active =
-                        getActivePlayerIds(data)
-                            .filter {
-                                remaining.contains(it)
-                            }
+                    val remainingIds = orderedPlayers.mapNotNull { it.key }
+                    val activeIds = orderedPlayers
+                        .filter {
+                            it.child("isActive").getValue(Boolean::class.java) ?: true
+                        }
+                        .mapNotNull { it.key }
 
-                    val oldHost =
-                        data.child("hostUid")
-                            .getValue(String::class.java)
-                            ?: ""
+                    val oldHost = data.child("hostUid")
+                        .getValue(String::class.java).orEmpty()
 
-                    if (!remaining.contains(oldHost)) {
-                        val newHost =
-                            active.firstOrNull()
-                                ?: remaining.first()
-
-                        data.child("hostUid").value =
-                            newHost
-
-                        data.child("players")
-                            .child(newHost)
-                            .child("isHost")
-                            .value = true
+                    val selectedHost = if (oldHost in remainingIds) {
+                        oldHost
+                    } else {
+                        activeIds.firstOrNull() ?: remainingIds.first()
                     }
 
-                    var master =
-                        data.child("wordMasterUid")
-                            .getValue(String::class.java)
-                            ?: ""
+                    data.child("hostUid").value = selectedHost
+                    data.child("hostName").value =
+                        playersNode.child(selectedHost).child("name")
+                            .getValue(String::class.java) ?: "Player"
 
-                    if (
-                        !remaining.contains(master) &&
-                        (
-                            master.isNotEmpty() ||
-                                data.child("status")
-                                    .getValue(String::class.java)
-                                    == "playing"
-                        )
-                    ) {
-                        master =
-                            active.firstOrNull() ?: ""
-
-                        data.child("wordMasterUid").value =
-                            master
+                    // Keep the UID and per-player host flags consistent.
+                    for (player in orderedPlayers) {
+                        val playerUid = player.key ?: continue
+                        playersNode.child(playerUid).child("isHost").value =
+                            playerUid == selectedHost
                     }
 
-                    val current =
-                        data.child("currentPlayerUid")
-                            .getValue(String::class.java)
-                            ?: ""
+                    // A previous host's disconnect marker must not survive host transfer.
+                    data.child("hostDisconnectedAt").value = null
 
-                    val gameStatus =
-                        data.child("status")
-                            .getValue(String::class.java)
-                            ?: ""
+                    var masterUid = data.child("wordMasterUid")
+                        .getValue(String::class.java).orEmpty()
 
-                    if (
-                        gameStatus == "playing" &&
-                        (
-                            current.isEmpty() ||
-                                !remaining.contains(current)
-                        )
-                    ) {
-                        
-                        val candidates =
-                            active.filter { candidateUid ->
-                                val isEliminated =
-                                    data.child("eliminatedPlayers")
-                                        .child(candidateUid)
-                                        .getValue(Boolean::class.java)
-                                        ?: false
+                    if (masterUid.isNotEmpty() && masterUid !in remainingIds) {
+                        masterUid = activeIds.firstOrNull().orEmpty()
+                        data.child("wordMasterUid").value = masterUid
+                    }
 
-                                candidateUid != master &&
-                                    !isEliminated
-                            }
+                    val currentStatus = data.child("status")
+                        .getValue(String::class.java).orEmpty()
+                    val currentUid = data.child("currentPlayerUid")
+                        .getValue(String::class.java).orEmpty()
+                    val currentIsActive = currentUid in activeIds
 
-                        val nextPlayer =
-                            candidates.firstOrNull()
-                                ?: active.firstOrNull()
-                                ?: ""
+                    if (currentStatus == "playing" && !currentIsActive) {
+                        val eliminated = data.child("eliminatedPlayers")
+                        val eligible = activeIds.filter { candidateUid ->
+                            candidateUid != masterUid &&
+                                eliminated.child(candidateUid)
+                                    .getValue(Boolean::class.java) != true
+                        }
+                        val nextPlayer = eligible.firstOrNull()
+                            ?: activeIds.firstOrNull().orEmpty()
 
-                        data.child("currentPlayerUid").value =
-                            nextPlayer
-
+                        data.child("currentPlayerUid").value = nextPlayer
                         data.child("turnEndsAt").value =
-                            if (
-                                nextPlayer.isEmpty() ||
-                                secondsPerTurn <= 0
-                            ) {
+                            if (nextPlayer.isEmpty() || secondsPerTurn <= 0) {
                                 0L
                             } else {
-                                System.currentTimeMillis() +
-                                    secondsPerTurn * 1000L
-                            } 
+                                System.currentTimeMillis() + secondsPerTurn * 1000L
+                            }
                     }
 
                     return Transaction.success(data)
@@ -1476,12 +1432,12 @@ gameReference()
                     committed: Boolean,
                     currentData: DataSnapshot?
                 ) {
-                    // No additional action is needed here.
+                    // The Firebase value listener refreshes the game after repair.
                 }
             }
         )
     }
-    
+
     private fun isPlayerActive(
         player: DataSnapshot
     ): Boolean {
@@ -1560,31 +1516,17 @@ gameReference()
         data: MutableData
     ): List<String> {
 
-        val active =
-            mutableListOf<String>()
-
-        for (
-            child in data.child(
-                "players"
-            ).children
-        ) {
-
-            val uid =
-                child.key ?: continue
-
-            if (
+        return data.child("players")
+            .children
+            .filter { child ->
                 child.child("isActive")
-                    .getValue(
-                        Boolean::class.java
-                    )
-                    ?: true
-            ) {
-
-                active.add(uid)
+                    .getValue(Boolean::class.java) ?: true
             }
-        }
-
-        return active
+            .sortedBy { child ->
+                child.child("joinedAt")
+                    .getValue(Long::class.java) ?: 0L
+            }
+            .mapNotNull { it.key }
     }
 
     private fun showPlayerLeftNotification(
@@ -5449,43 +5391,28 @@ private fun setWordDisplayText(displayText: String) {
                     data: MutableData
                 ): Transaction.Result {
 
-                    val playersNode =
-                        data.child(
-                            "players"
-                        )
+                    val playersNode = data.child("players")
 
-                    if (
-                        playersNode
-                            .child(uid)
-                            .value == null
-                    ) {
-
-                        return Transaction.success(
-                            data
-                        )
+                    if (playersNode.child(uid).value == null) {
+                        return Transaction.success(data)
                     }
 
-                    /*
-                     * Removing the player completely means the
-                     * remaining clients will detect the departure
-                     * through their Firebase listener.
-                     */
-                    playersNode
-                        .child(uid)
-                        .value =
-                        null
-
-                    val remaining =
-                        mutableListOf<String>()
-
-                    for (
-                        child in playersNode.children
-                    ) {
-
-                        child.key?.let {
-                            remaining.add(it)
+                    // Preserve the original join order before removing this player.
+                    val originalOrder = playersNode.children
+                        .filter { it.key != null }
+                        .sortedBy {
+                            it.child("joinedAt").getValue(Long::class.java) ?: 0L
                         }
-                    }
+                        .mapNotNull { it.key }
+
+                    playersNode.child(uid).value = null
+
+                    val remaining = playersNode.children
+                        .filter { it.key != null }
+                        .sortedBy {
+                            it.child("joinedAt").getValue(Long::class.java) ?: 0L
+                        }
+                        .mapNotNull { it.key }
 
 if (remaining.isEmpty()) {
     // Nobody remains: delete the entire room.
@@ -5536,30 +5463,19 @@ if (remaining.isEmpty()) {
                      * remaining player so the room does not lose
                      * its host.
                      */
-                    if (
-                        oldHost == uid
-                    ) {
+                    if (oldHost == uid || oldHost !in remaining) {
+                        val newHost = activeRemaining.firstOrNull() ?: remaining.first()
+                        data.child("hostUid").value = newHost
+                        data.child("hostName").value =
+                            playersNode.child(newHost).child("name")
+                                .getValue(String::class.java) ?: "Player"
 
-                        val newHost =
-                            activeRemaining.firstOrNull()
-                                ?: remaining.first()
+                        for (playerUid in remaining) {
+                            playersNode.child(playerUid).child("isHost").value =
+                                playerUid == newHost
+                        }
 
-                        data.child(
-                            "hostUid"
-                        ).value =
-                            newHost
-
-                        /*
-                         * Keep the host flag in sync if the player
-                         * nodes use it.
-                         */
-                        data.child(
-                            "players"
-                        )
-                            .child(newHost)
-                            .child("isHost")
-                            .value =
-                            true
+                        data.child("hostDisconnectedAt").value = null
                     }
 
                     /*
@@ -5609,45 +5525,21 @@ if (remaining.isEmpty()) {
                             candidates.isNotEmpty()
                         ) {
 
-                            val oldIndex =
-                                remaining.indexOf(uid)
-
-                            var chosen =
-                                candidates.first()
-
-                            if (
-                                oldIndex >= 0
-                            ) {
-
-                                for (
-                                    step in 1..remaining.size
-                                ) {
-
-                                    val index =
-                                        (
-                                            oldIndex +
-                                                step
-                                        ) %
-                                            remaining.size
-
-                                    val candidate =
-                                        remaining[
-                                            index
+                            val oldIndex = originalOrder.indexOf(uid)
+                            val orderedCandidates = if (oldIndex >= 0) {
+                                (1..originalOrder.size)
+                                    .map { step ->
+                                        originalOrder[
+                                            (oldIndex + step) % originalOrder.size
                                         ]
-
-                                    if (
-                                        candidates.contains(
-                                            candidate
-                                        )
-                                    ) {
-
-                                        chosen =
-                                            candidate
-
-                                        break
                                     }
-                                }
+                                    .filter { it in candidates }
+                            } else {
+                                candidates
                             }
+
+                            val chosen = orderedCandidates.firstOrNull()
+                                ?: candidates.first()
 
                             data.child(
                                 "currentPlayerUid"
