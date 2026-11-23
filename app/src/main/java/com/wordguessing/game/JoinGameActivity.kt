@@ -1554,17 +1554,17 @@ private fun deleteAbandonedPublicGame(
                         .getValue(String::class.java)
                         ?: ""
 
-                val hostExistsByUid =
-                    hostUid.isNotBlank() &&
-                    players.child(hostUid).value != null
-
-                val hostExistsByFlag =
-                    players.children.any {
-                        it.child("isHost")
-                            .getValue(Boolean::class.java) == true
+                val hostExists =
+                    if (hostUid.isNotBlank()) {
+                        players.child(hostUid).value != null
+                    } else {
+                        players.children.any {
+                            it.child("isHost")
+                                .getValue(Boolean::class.java) == true
+                        }
                     }
 
-                if (hostExistsByUid || hostExistsByFlag) {
+                if (hostExists) {
                     return Transaction.abort()
                 }
 
