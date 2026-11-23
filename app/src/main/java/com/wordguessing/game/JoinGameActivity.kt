@@ -591,17 +591,15 @@ val hostPlayersSnapshot = game.child("players")
 val hostUid = game.child("hostUid")
     .getValue(String::class.java) ?: ""
 
-val hostExistsByUid =
-    hostUid.isNotBlank() &&
-    hostPlayersSnapshot.child(hostUid).exists()
-
-val hostExistsByFlag =
-    hostPlayersSnapshot.children.any {
-        it.child("isHost")
-            .getValue(Boolean::class.java) == true
+val hostExists =
+    if (hostUid.isNotBlank()) {
+        hostPlayersSnapshot.child(hostUid).exists()
+    } else {
+        hostPlayersSnapshot.children.any {
+            it.child("isHost")
+                .getValue(Boolean::class.java) == true
+        }
     }
-
-val hostExists = hostExistsByUid || hostExistsByFlag
 
 
 if (!hostExists) {
@@ -1174,17 +1172,17 @@ joinButton.setOnClickListener {
                     val playersSnapshot =
                         snapshot.child("players")
 
-                    val hostExistsByUid =
-                        hostUid.isNotBlank() &&
-                        playersSnapshot.child(hostUid).exists()
-
-                    val hostExistsByFlag =
-                        playersSnapshot.children.any {
-                            it.child("isHost")
-                                .getValue(Boolean::class.java) == true
+                    val hostExists =
+                        if (hostUid.isNotBlank()) {
+                            playersSnapshot.child(hostUid).exists()
+                        } else {
+                            playersSnapshot.children.any {
+                                it.child("isHost")
+                                    .getValue(Boolean::class.java) == true
+                            }
                         }
 
-                    if (!hostExistsByUid && !hostExistsByFlag) {
+                    if (!hostExists) {
                         val disconnectedAt =
                             snapshot.child("hostDisconnectedAt")
                                 .getValue(Long::class.java)
@@ -1257,48 +1255,85 @@ joinButton.setOnClickListener {
                                 return Transaction.abort()
                             }
 
-                            val playersData =
-                                currentData.child("players")
+                            val playersData = currentData.child("players")
+                            val currentIsPublic =
+                                currentData.child("isPublic")
+                                    .getValue(Boolean::class.java)
+                                    ?: (
+                                        currentData.child("roomType")
+                                            .getValue(String::class.java)
+                                            ?.lowercase() == "public"
+                                    )
 
-val existingPlayer =
-    playersData.child(uid)
-
-if (existingPlayer.value != null) {
-    val hostUid =
-        currentData.child("hostUid")
-            .getValue(String::class.java)
-
-    existingPlayer.child("name").value =
-        playerName
-
-    existingPlayer.child("isHost").value =
-        hostUid == uid
-
-    return Transaction.success(currentData)
-}
-
-                            var totalPlayers = 0
-                            var activePlayers = 0
-
-                            for (player in playersData.children) {
-                                totalPlayers++
-
-                                val isActive =
-                                    player.child("isActive")
-                                        .getValue(Boolean::class.java)
-                                        ?: (totalPlayers <= maxPlayers)
-
-                                if (isActive) {
-                                    activePlayers++
+                            // Revalidate the host inside the transaction so a
+                            // host departure between the initial read and join
+                            // cannot admit players into an abandoned public room.
+                            if (currentIsPublic) {
+                                val currentHostUid = currentData.child("hostUid")
+                                    .getValue(String::class.java).orEmpty()
+                                val hostAvailable = if (currentHostUid.isNotBlank()) {
+                                    playersData.child(currentHostUid).value != null
+                                } else {
+                                    playersData.children.any {
+                                        it.child("isHost")
+                                            .getValue(Boolean::class.java) == true
+                                    }
+                                }
+                                if (!hostAvailable) {
+                                    return Transaction.abort()
                                 }
                             }
 
-                            if (totalPlayers >= roomCapacity) {
+                            val currentPassword = currentData.child("password")
+                                .getValue(String::class.java).orEmpty()
+                            if (currentPassword != enteredPassword) {
                                 return Transaction.abort()
                             }
 
-                            val shouldBeActive =
-                                activePlayers < maxPlayers
+                            val currentMaxPlayers = currentData.child("maxPlayers")
+                                .getValue(Int::class.java) ?: maxPlayers
+                            val currentRoomCapacity = currentData.child("roomCapacity")
+                                .getValue(Int::class.java) ?: roomCapacity
+
+                            val orderedPlayers = playersData.children
+                                .filter { it.key != null }
+                                .sortedBy {
+                                    it.child("joinedAt").getValue(Long::class.java) ?: 0L
+                                }
+
+                            val existingPlayer = playersData.child(uid)
+                            if (existingPlayer.value != null) {
+                                val currentHostUid = currentData.child("hostUid")
+                                    .getValue(String::class.java).orEmpty()
+                                existingPlayer.child("name").value = playerName
+                                existingPlayer.child("isHost").value =
+                                    currentHostUid == uid
+                                if (existingPlayer.child("isActive").value == null) {
+                                    val existingIndex = orderedPlayers.indexOfFirst {
+                                        it.key == uid
+                                    }
+                                    existingPlayer.child("isActive").value =
+                                        existingIndex in 0 until currentMaxPlayers
+                                }
+                                return Transaction.success(currentData)
+                            }
+
+                            val totalPlayers = orderedPlayers.size
+                            if (totalPlayers >= currentRoomCapacity) {
+                                return Transaction.abort()
+                            }
+
+                            // Legacy player records without isActive are evaluated
+                            // by join order, not Firebase's key iteration order.
+                            var activePlayers = 0
+                            for (player in orderedPlayers) {
+                                val isActive = player.child("isActive")
+                                    .getValue(Boolean::class.java)
+                                    ?: (activePlayers < currentMaxPlayers)
+                                if (isActive) activePlayers++
+                            }
+
+                            val shouldBeActive = activePlayers < currentMaxPlayers
 
                             val playerData =
                                 hashMapOf<String, Any>(
