@@ -1359,11 +1359,8 @@ gameReference()
                     }
 
                     val remainingIds = orderedPlayers.mapNotNull { it.key }
-                    val activeIds = orderedPlayers
-                        .filter {
-                            it.child("isActive").getValue(Boolean::class.java) ?: true
-                        }
-                        .mapNotNull { it.key }
+                    val activeIds =
+                        getActivePlayerIds(data)
 
                     val oldHost = data.child("hostUid")
                         .getValue(String::class.java).orEmpty()
