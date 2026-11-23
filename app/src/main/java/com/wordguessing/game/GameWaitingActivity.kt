@@ -636,6 +636,29 @@ leaveButton.setOnClickListener {
         return null
     }
 
+    private fun getActivePlayerCount(snapshot: DataSnapshot): Int {
+        var activeCount = 0
+
+        val orderedPlayers = snapshot.child("players")
+            .children
+            .toList()
+            .sortedBy {
+                it.child("joinedAt").getValue(Long::class.java) ?: 0L
+            }
+
+        for (player in orderedPlayers) {
+            val isActive = player.child("isActive")
+                .getValue(Boolean::class.java)
+                ?: (activeCount < playerCount)
+
+            if (isActive) {
+                activeCount++
+            }
+        }
+
+        return activeCount
+    }
+
     private fun updateStatus(snapshot: DataSnapshot) {
         val currentUid = auth.currentUser?.uid.orEmpty()
         val hostUid = snapshot.child("hostUid")
@@ -652,10 +675,7 @@ leaveButton.setOnClickListener {
                 .getValue(Boolean::class.java) ?: false
         }
 
-        val activeCount = snapshot.child("players").children.count { player ->
-            player.child("isActive")
-                .getValue(Boolean::class.java) ?: true
-        }
+        val activeCount = getActivePlayerCount(snapshot)
 
         startButton.visibility =
             if (isHost) View.VISIBLE else View.GONE
@@ -738,11 +758,7 @@ leaveButton.setOnClickListener {
                     return@addOnSuccessListener
                 }
 
-                val activeCount = snapshot.child("players")
-                    .children.count { player ->
-                        player.child("isActive")
-                            .getValue(Boolean::class.java) ?: true
-                    }
+                val activeCount = getActivePlayerCount(snapshot)
 
                 if (activeCount < 2) {
                     checkingStart = false
