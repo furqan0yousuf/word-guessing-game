@@ -1160,6 +1160,11 @@ gameReference()
         playerOrder.clear()
         playerActiveStates.clear()
 
+        maxPlayers =
+            snapshot.child("maxPlayers")
+                .getValue(Int::class.java)
+                ?: maxPlayers
+
         val playersSnapshot =
             snapshot.child("players")
 
@@ -1189,22 +1194,8 @@ gameReference()
                     )
                     ?: 0L
 
-            /*
-             * Older games may not have isActive.
-             * In that case we treat the player as active.
-             */
-            val isActive =
-                child.child("isActive")
-                    .getValue(
-                        Boolean::class.java
-                    )
-                    ?: true
-
             playerNames[uid] =
                 name
-
-            playerActiveStates[uid] =
-                isActive
 
             temp.add(
                 Triple(
@@ -1219,19 +1210,26 @@ gameReference()
             it.third
         }
 
+        var activeCount = 0
+
         for (item in temp) {
 
-            playerOrder.add(
-                item.first
-            )
-        }
+            val uid = item.first
+            val storedActive =
+                playersSnapshot.child(uid)
+                    .child("isActive")
+                    .getValue(Boolean::class.java)
 
-        maxPlayers =
-            snapshot.child("maxPlayers")
-                .getValue(
-                    Int::class.java
-                )
-                ?: maxPlayers
+            val isActive =
+                storedActive ?: (activeCount < maxPlayers)
+
+            if (isActive) {
+                activeCount++
+            }
+
+            playerOrder.add(uid)
+            playerActiveStates[uid] = isActive
+        }
 
         roomCapacity =
             snapshot.child("roomCapacity")
@@ -1439,28 +1437,11 @@ gameReference()
     }
 
     private fun isPlayerActive(
-        player: DataSnapshot
-    ): Boolean {
-
-        return player.child("isActive")
-            .getValue(
-                Boolean::class.java
-            )
-            ?: true
-    }
-
-    private fun isPlayerActive(
         data: MutableData,
         uid: String
     ): Boolean {
 
-        return data.child("players")
-            .child(uid)
-            .child("isActive")
-            .getValue(
-                Boolean::class.java
-            )
-            ?: true
+        return getActivePlayerIds(data).contains(uid)
     }
 
     private fun isMyPlayerActive(): Boolean {
@@ -1478,35 +1459,33 @@ gameReference()
         snapshot: DataSnapshot
     ): List<String> {
 
-        val active =
-            mutableListOf<String>()
-
-        for (
-            child in snapshot.child(
-                "players"
-            ).children
-        ) {
-
-            val uid =
-                child.key ?: continue
-
-            if (
-                isPlayerActive(child)
-            ) {
-
-                active.add(uid)
-            }
-        }
-
-        active.sortBy { uid ->
-
+        val orderedPlayers =
             snapshot.child("players")
-                .child(uid)
-                .child("joinedAt")
-                .getValue(
-                    Long::class.java
-                )
-                ?: 0L
+                .children
+                .sortedBy { child ->
+                    child.child("joinedAt")
+                        .getValue(Long::class.java) ?: 0L
+                }
+
+        val active = mutableListOf<String>()
+        var activeCount = 0
+        val activeLimit =
+            snapshot.child("maxPlayers")
+                .getValue(Int::class.java)
+                ?: maxPlayers
+
+        for (child in orderedPlayers) {
+            val uid = child.key ?: continue
+            val storedActive =
+                child.child("isActive")
+                    .getValue(Boolean::class.java)
+            val isActive =
+                storedActive ?: (activeCount < activeLimit)
+
+            if (isActive) {
+                active.add(uid)
+                activeCount++
+            }
         }
 
         return active
@@ -1516,17 +1495,36 @@ gameReference()
         data: MutableData
     ): List<String> {
 
-        return data.child("players")
-            .children
-            .filter { child ->
+        val orderedPlayers =
+            data.child("players")
+                .children
+                .sortedBy { child ->
+                    child.child("joinedAt")
+                        .getValue(Long::class.java) ?: 0L
+                }
+
+        val active = mutableListOf<String>()
+        var activeCount = 0
+        val activeLimit =
+            data.child("maxPlayers")
+                .getValue(Int::class.java)
+                ?: maxPlayers
+
+        for (child in orderedPlayers) {
+            val uid = child.key ?: continue
+            val storedActive =
                 child.child("isActive")
-                    .getValue(Boolean::class.java) ?: true
+                    .getValue(Boolean::class.java)
+            val isActive =
+                storedActive ?: (activeCount < activeLimit)
+
+            if (isActive) {
+                active.add(uid)
+                activeCount++
             }
-            .sortedBy { child ->
-                child.child("joinedAt")
-                    .getValue(Long::class.java) ?: 0L
-            }
-            .mapNotNull { it.key }
+        }
+
+        return active
     }
 
     private fun showPlayerLeftNotification(
