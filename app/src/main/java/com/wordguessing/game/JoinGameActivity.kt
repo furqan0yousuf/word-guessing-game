@@ -1142,7 +1142,22 @@ joinButton.setOnClickListener {
                         .getValue(String::class.java)
                         ?: "waiting"
 
-                if (status != "waiting") {
+                // Public games can only be joined while waiting.
+                // Private rooms also allow players to rejoin an ongoing game.
+                val isPublic =
+                    snapshot.child("isPublic")
+                        .getValue(Boolean::class.java)
+                        ?: (
+                            snapshot.child("roomType")
+                                .getValue(String::class.java)
+                                ?.lowercase() == "public"
+                        )
+
+                val canJoinCurrentStatus =
+                    status == "waiting" ||
+                        (!isPublic && status in setOf("playing", "roundFinished"))
+
+                if (!canJoinCurrentStatus) {
                     joinButton.isEnabled = true
 
                     Toast.makeText(
@@ -1154,15 +1169,7 @@ joinButton.setOnClickListener {
                     return@addOnSuccessListener
                 }
 
-                                // Prevent joining a public game without a host.
-                val isPublic =
-                    snapshot.child("isPublic")
-                        .getValue(Boolean::class.java)
-                        ?: (
-                            snapshot.child("roomType")
-                                .getValue(String::class.java)
-                                ?.lowercase() == "public"
-                        )
+                // Prevent joining a public game without a host.
 
                 if (isPublic) {
                     val hostUid =
@@ -1251,10 +1258,6 @@ joinButton.setOnClickListener {
                                     .getValue(String::class.java)
                                     ?: "waiting"
 
-                            if (statusNow != "waiting") {
-                                return Transaction.abort()
-                            }
-
                             val playersData = currentData.child("players")
                             val currentIsPublic =
                                 currentData.child("isPublic")
@@ -1264,6 +1267,18 @@ joinButton.setOnClickListener {
                                             .getValue(String::class.java)
                                             ?.lowercase() == "public"
                                     )
+
+                            // Keep public joining limited to waiting rooms.
+                            // A player may rejoin a private room during an active
+                            // game or between rounds, provided room capacity allows it.
+                            val canJoinCurrentStatus =
+                                statusNow == "waiting" ||
+                                    (!currentIsPublic &&
+                                        statusNow in setOf("playing", "roundFinished"))
+
+                            if (!canJoinCurrentStatus) {
+                                return Transaction.abort()
+                            }
 
                             // Revalidate the host inside the transaction so a
                             // host departure between the initial read and join
@@ -1478,10 +1493,20 @@ isHost: Boolean
                 .getValue(String::class.java)
                 ?: "Winner becomes Word Master"
 
+        val destinationActivity =
+            if (
+                gameSnapshot.child("status")
+                    .getValue(String::class.java) != "waiting"
+            ) {
+                OnlineGameRoundActivity::class.java
+            } else {
+                GameWaitingActivity::class.java
+            }
+
         val intent =
             Intent(
                 this,
-                GameWaitingActivity::class.java
+                destinationActivity
             )
 
         intent.putExtra("gameCode", gameCode)
