@@ -1326,7 +1326,7 @@ gameReference()
 
         val currentPlayerIsActive = currentUid.isNotEmpty() &&
             players.child(currentUid).exists() &&
-            isPlayerActive(players.child(currentUid))
+            getActivePlayersFromSnapshot(snapshot).contains(currentUid)
 
         val needsRepair =
             playerIds.isEmpty() ||
