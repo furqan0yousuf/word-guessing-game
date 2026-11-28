@@ -6,6 +6,10 @@ import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
 import android.graphics.Typeface
+import android.widget.ScrollView
+import android.view.ViewGroup
+import android.view.View
+import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.Button
@@ -437,312 +441,173 @@ class GameActivity : Activity() {
     }
 
     private fun createGameScreen() {
+        val pageColor = Color.rgb(247, 249, 245)
+        val forestColor = Color.rgb(53, 75, 63)
+        val bodyColor = Color.rgb(105, 119, 108)
+        val sageColor = Color.rgb(226, 235, 224)
+        val borderColor = Color.rgb(229, 235, 227)
 
-        val layout =
-            LinearLayout(this)
+        window.statusBarColor = pageColor
+        window.navigationBarColor = pageColor
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
-        layout.orientation =
-            LinearLayout.VERTICAL
+        val scrollView = android.widget.ScrollView(this).apply {
+            setBackgroundColor(pageColor)
+            isFillViewport = true
+            clipToPadding = false
+        }
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(28))
+        }
 
-        layout.setPadding(
-            20,
-            20,
-            20,
-            20
-        )
+        fun label(value: String, size: Float, color: Int, bold: Boolean = false): TextView =
+            TextView(this).apply {
+                text = value
+                textSize = size
+                setTextColor(color)
+                typeface = Typeface.create("sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
+                includeFontPadding = true
+            }
 
-        val title =
-            TextView(this)
+        fun card(): LinearLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), borderColor)
+            }
+            setPadding(dp(15), dp(13), dp(15), dp(13))
+        }
 
-        title.text =
-            "Word Guessing Game"
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(0, dp(3), 0, dp(18))
+        }
+        header.addView(label("WORDPLAY", 11f, forestColor, true).apply {
+            letterSpacing = 0.16f
+            gravity = Gravity.CENTER
+        })
+        header.addView(label("LOCAL MULTIPLAYER", 9f, bodyColor).apply {
+            letterSpacing = 0.12f
+            gravity = Gravity.CENTER
+            setPadding(0, dp(3), 0, 0)
+        })
+        header.addView(label("Let the word battle begin.", 25f, forestColor, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(13), 0, 0)
+        })
+        layout.addView(header)
 
-        title.textSize =
-            26f
-
-        title.gravity =
-            Gravity.CENTER
-
-        title.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        title.setPadding(
-            0,
-            0,
-            0,
-            15
-        )
-
-        layout.addView(title)
-
-        val topRow =
-            LinearLayout(this)
-
-        topRow.orientation =
-            LinearLayout.HORIZONTAL
-
-        topRow.gravity =
-            Gravity.CENTER_VERTICAL
-
-        categoryText =
-            TextView(this)
-
-        categoryText.textSize =
-            18f
-
-        categoryText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        categoryText.setTextColor(
-            Color.rgb(
-                0,
-                102,
-                204
-            )
-        )
-
-        categoryText.setPadding(
-            0,
-            5,
-            5,
-            5
-        )
-
-        topRow.addView(
-            categoryText,
-            LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        )
-
-        timerText =
-            TextView(this)
-
-        timerText.textSize =
-            20f
-
-        timerText.gravity =
-            Gravity.CENTER
-
-        timerText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        topRow.addView(
-            timerText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        layout.addView(topRow)
-
+        val infoCard = card()
+        val topRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        categoryText = label("", 13f, forestColor, true)
+        categoryText.setPadding(0, dp(5), dp(5), dp(5))
+        topRow.addView(categoryText, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        timerText = label("", 15f, forestColor, true).apply {
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(sageColor)
+                cornerRadius = dp(12).toFloat()
+            }
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+        }
+        topRow.addView(timerText)
+        infoCard.addView(topRow)
         updateCategoryDisplay()
 
-        // WORD MASTER DISPLAY
-        if (
-            wordSelection ==
-            "Host Chooses Word"
-        ) {
-
-            val wordMasterText =
-                TextView(this)
-
-            wordMasterText.text =
-                "Word Master: ${playerNames[0]}"
-
-            wordMasterText.textSize =
-                18f
-
-            wordMasterText.gravity =
-                Gravity.CENTER
-
-            wordMasterText.setTypeface(
-                null,
-                Typeface.BOLD
-            )
-
-            wordMasterText.setTextColor(
-                Color.DKGRAY
-            )
-
-            wordMasterText.setPadding(
-                0,
-                8,
-                0,
-                5
-            )
-
-            layout.addView(
-                wordMasterText
-            )
+        if (wordSelection == "Host Chooses Word") {
+            infoCard.addView(label("Word Master: ${playerNames[0]}", 13f, bodyColor, true).apply {
+                setPadding(0, dp(10), 0, 0)
+            })
         }
+        layout.addView(infoCard)
 
-        turnText =
-            TextView(this)
-
-        turnText.textSize =
-            22f
-
-        turnText.gravity =
-            Gravity.CENTER
-
-        turnText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        turnText.setPadding(
-            0,
-            15,
-            0,
-            12
-        )
-
+        turnText = label("", 19f, forestColor, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(16), dp(8), dp(13))
+        }
         layout.addView(turnText)
 
-        scoresText =
-            TextView(this)
+        val scoreCard = card()
+        scoreCard.addView(label("SCOREBOARD", 10f, bodyColor, true).apply {
+            letterSpacing = 0.12f
+            setPadding(0, 0, 0, dp(8))
+        })
+        scoresText = label("", 13f, forestColor)
+        scoresText.setLineSpacing(dp(3).toFloat(), 1f)
+        scoreCard.addView(scoresText)
+        layout.addView(scoreCard)
 
-        scoresText.textSize =
-            17f
-
-        scoresText.setPadding(
-            0,
-            5,
-            0,
-            12
-        )
-
-        layout.addView(scoresText)
-
-
-        wordText =
-            TextView(this)
-
-        wordText.textSize =
-            30f
-
-        wordText.gravity =
-            Gravity.CENTER
-
-        wordText.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        wordText.setPadding(
-            4,
-            16,
-            4,
-            16
-        )
-
-        // Use the same word display as single-player.
-        wordText.maxLines = 3
-        wordText.isSingleLine = false
-        wordText.ellipsize = null
-
+        val wordCard = card().apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(10), dp(18), dp(10), dp(18))
+        }
+        wordText = label("", 30f, forestColor, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(4), dp(7), dp(4), dp(7))
+            maxLines = 3
+            isSingleLine = false
+            ellipsize = null
+        }
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-            wordText,
-            12,
-            30,
-            1,
-            TypedValue.COMPLEX_UNIT_SP
+            wordText, 12, 30, 1, TypedValue.COMPLEX_UNIT_SP
         )
+        wordCard.addView(wordText, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
+        val wordHint = label("Find the hidden word one letter at a time.", 12f, bodyColor).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(5), 0, 0)
+        }
+        wordCard.addView(wordHint)
+        layout.addView(wordCard, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(14) })
 
-        layout.addView(
-            wordText,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
+        val lettersHeading = label("Choose a letter", 17f, forestColor, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(20), 0, dp(10))
+        }
+        layout.addView(lettersHeading)
+        lettersLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        layout.addView(lettersLayout)
 
-        val lettersTitle =
-            TextView(this)
-
-        lettersTitle.text =
-            "Choose a letter"
-
-        lettersTitle.textSize =
-            19f
-
-        lettersTitle.gravity =
-            Gravity.CENTER
-
-        lettersTitle.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        lettersTitle.setPadding(
-            0,
-            5,
-            0,
-            8
-        )
-
-        layout.addView(
-            lettersTitle
-        )
-
-        lettersLayout =
-            LinearLayout(this)
-
-        lettersLayout.orientation =
-            LinearLayout.VERTICAL
-
-        layout.addView(
-            lettersLayout
-        )
-
-        fullWordButton =
-            Button(this)
-
-        fullWordButton.text =
-            "Guess Whole Word"
-
-        fullWordButton.textSize =
-            18f
-
-        fullWordButton.setTypeface(
-            null,
-            Typeface.BOLD
-        )
-
-        layout.addView(
-            fullWordButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        fullWordButton.setOnClickListener {
-
-            if (
-                !roundFinished
-            ) {
-
-                showWholeWordDialog()
+        fullWordButton = Button(this).apply {
+            text = "Guess Whole Word"
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            typeface = Typeface.DEFAULT_BOLD
+            background = GradientDrawable().apply {
+                setColor(forestColor)
+                cornerRadius = dp(14).toFloat()
             }
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            isAllCaps = false
+        }
+        layout.addView(fullWordButton, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(14) })
+        fullWordButton.setOnClickListener {
+            if (!roundFinished) showWholeWordDialog()
         }
 
-        setContentView(layout)
-
+        scrollView.addView(layout)
+        setContentView(scrollView)
         updateTurnAndScores()
-
         updateWordDisplay()
-
         createLetterButtons()
     }
 
