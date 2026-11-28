@@ -179,7 +179,7 @@ class PlayerSetupActivity : Activity() {
                 textSize = 15f
                 setTextColor(forestColor)
                 setHintTextColor(bodyColor)
-                singleLine = true
+                setSingleLine(true)
                 background = roundedBackground(backgroundColor, dp(11)).also {
                     it.setStroke(dp(1), borderColor)
                 }
