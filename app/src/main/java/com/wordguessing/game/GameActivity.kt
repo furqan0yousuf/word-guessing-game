@@ -646,74 +646,35 @@ class GameActivity : Activity() {
                 val letter =
                     alphabet[i]
 
-                val letterButton =
-                    Button(this)
-
-                if (
-                    !selectedLetters.contains(
-                        letter
-                    )
-                ) {
-
-                    letterButton.text =
-                        letter.toString()
-
-                    letterButton.setTextColor(
-                        Color.WHITE
-                    )
-
-                    letterButton.setBackgroundColor(
-                        Color.rgb(
-                            0,
-                            100,
-                            0
-                        )
-                    )
-
-                } else {
-
-                    letterButton.setBackgroundColor(
-                        Color.RED
-                    )
-
-                    letterButton.setTextColor(
-                        Color.WHITE
-                    )
-
-                    letterButton.setTypeface(
-                        null,
-                        Typeface.BOLD
-                    )
-
-                    letterButton.text =
-                        letter.toString()
-
-                    letterButton.isEnabled =
-                        false
+                val letterButton = Button(this).apply {
+                    text = letter.toString()
+                    textSize = 14f
+                    typeface = Typeface.DEFAULT_BOLD
+                    isAllCaps = false
+                    setTextColor(Color.rgb(53, 75, 63))
+                    background = GradientDrawable().apply {
+                        setColor(if (selectedLetters.contains(letter)) {
+                            Color.rgb(226, 235, 224)
+                        } else {
+                            Color.WHITE
+                        })
+                        cornerRadius = dp(10).toFloat()
+                        setStroke(dp(1), Color.rgb(229, 235, 227))
+                    }
+                    minHeight = dp(42)
+                    setPadding(0, dp(5), 0, dp(5))
+                    if (selectedLetters.contains(letter)) isEnabled = false
                 }
-
-                letterButton.textSize =
-                    15f
-
-                letterButton.setTypeface(
-                    null,
-                    Typeface.BOLD
-                )
-
-                letterButton.setPadding(
-                    0,
-                    5,
-                    0,
-                    5
-                )
 
                 row.addView(
                     letterButton,
                     LinearLayout.LayoutParams(
                         0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        dp(44),
                         1f
-                    )
+                    ).apply {
+                        setMargins(dp(3), dp(3), dp(3), dp(3))
+                    }
                 )
 
                 letterButton.setOnClickListener {
@@ -749,9 +710,11 @@ class GameActivity : Activity() {
                         letter
                     )
 
-                    letterButton.setBackgroundColor(
-                        Color.RED
-                    )
+                    letterButton.background = GradientDrawable().apply {
+                        setColor(Color.rgb(226, 235, 224))
+                        cornerRadius = dp(10).toFloat()
+                        setStroke(dp(1), Color.rgb(190, 207, 190))
+                    }
 
                     letterButton.setTextColor(
                         Color.WHITE
@@ -1895,6 +1858,9 @@ private inner class WordBoxSpan(
     }
 }
     
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
     override fun onBackPressed() {
 
         if (
