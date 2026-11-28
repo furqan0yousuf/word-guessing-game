@@ -9,11 +9,9 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.google.android.material.card.MaterialCardView
 
 class MainActivity : Activity() {
 
@@ -166,16 +164,12 @@ class MainActivity : Activity() {
         description: String,
         iconColor: Int,
         onClick: () -> Unit
-    ): MaterialCardView {
-        val card = MaterialCardView(this).apply {
-            radius = dp(18).toFloat()
-            cardElevation = dp(1).toFloat()
-            setCardBackgroundColor(Color.WHITE)
-            strokeWidth = dp(1)
-            setStrokeColor(borderColor)
+    ): LinearLayout {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground()
             isClickable = true
             isFocusable = true
-            useCompatPadding = false
         }
 
         val row = LinearLayout(this).apply {
@@ -236,6 +230,13 @@ class MainActivity : Activity() {
         GradientDrawable().apply {
             setColor(color)
             cornerRadius = radius.toFloat()
+        }
+
+    private fun cardBackground(): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(Color.WHITE)
+            cornerRadius = dp(18).toFloat()
+            setStroke(dp(1), borderColor)
         }
 
     private fun spacedParams(top: Int = 0): LinearLayout.LayoutParams =
